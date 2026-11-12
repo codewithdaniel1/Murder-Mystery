@@ -12,7 +12,7 @@ Poly Haven fern, shrubs, tree and wooden armchair, with 1K material maps. The tr
 
 ## Characters and dog
 
-Innerscene Harper and Jordan models use MakeHuman/MPFB CC0 assets and original Innerscene styling and animation. Both include idle and walking clips. Pip uses an original Innerscene dog model. All are CC0. See [character credits](public/models/people/CREDITS.md).
+Innerscene Harper and Jordan models use MakeHuman/MPFB CC0 assets and original Innerscene styling and animation. Both include idle and walking clips. Pip uses an original Innerscene dog model, with a project-authored four-leg skeleton, skin weights and procedural trot added at load time. All are CC0. See [character credits](public/models/people/CREDITS.md).
 
 The civilian clothes are interim art and have not been verified as historically exact WWII costumes. Several NPCs share a base figure with different scale and fabric tint.
 

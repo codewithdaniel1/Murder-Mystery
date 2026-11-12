@@ -1,0 +1,4 @@
+import fs from 'node:fs';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+// Strip only browser-decoded textures; retain the real mesh, bones, and animations.
+export async function loadModel(name:string){const f=fs.readFileSync(new URL('../public/models/people/'+name+'.glb',import.meta.url)),n=f.readUInt32LE(12),j=JSON.parse(f.subarray(20,20+n)),bin=f.subarray(28+n);j.images=[];j.textures=[];j.materials=j.materials.map(()=>({}));const t=Buffer.from(JSON.stringify(j)),json=Buffer.alloc(Math.ceil(t.length/4)*4,32);t.copy(json);const h=Buffer.alloc(20);h.writeUInt32LE(0x46546c67);h.writeUInt32LE(2,4);h.writeUInt32LE(28+json.length+bin.length,8);h.writeUInt32LE(json.length,12);h.writeUInt32LE(0x4e4f534a,16);const bh=Buffer.alloc(8);bh.writeUInt32LE(bin.length);bh.writeUInt32LE(0x004e4942,4);const b=Buffer.concat([h,json,bh,bin]);return new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.length),'')}

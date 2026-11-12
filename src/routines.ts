@@ -17,9 +17,9 @@ export interface RoutineResult {position:Point;moving:boolean;face:number;activi
 export class EstateRoutines {
  memory=new Map<PersonId,Memory>();
  reset(){this.memory.clear()}
- update(id:PersonId,position:Point,dt:number,barriers:Obstacle[],doors:Record<string,boolean>,paused:boolean,player?:Point):RoutineResult{
+ update(id:PersonId,position:Point,dt:number,barriers:Obstacle[],doors:Record<string,boolean>,paused:boolean,player?:Point,facing?:number):RoutineResult{
  let m=this.memory.get(id);if(!m){m={index:0,remaining:0,path:[],replan:0,started:false};this.memory.set(id,m)}const stops=ROUTINES[id];let task=stops[m.index];
- const still=():RoutineResult=>({position:{...position},moving:false,face:task.face,activity:Math.hypot(position.x-task.x,position.z-task.z)<.3?task.activity:null,label:task.label});
+ const still=():RoutineResult=>({position:{...position},moving:false,face:Math.hypot(position.x-task.x,position.z-task.z)<.3?task.face:(facing??task.face),activity:Math.hypot(position.x-task.x,position.z-task.z)<.3?task.activity:null,label:task.label});
  if(paused)return {...still(),activity:null};
  if(player&&Math.hypot(position.x-player.x,position.z-player.z)<1.35)return still();
  if(Math.hypot(position.x-task.x,position.z-task.z)<.14){if(!m.started){m.remaining=task.seconds;m.started=true}m.remaining-=dt;if(m.remaining>0)return still();m.index=(m.index+1)%stops.length;m.path=[];m.started=false;task=stops[m.index]}
@@ -28,9 +28,13 @@ export class EstateRoutines {
  // Open a door only when physically approaching it; collision still guards the next step.
  for(const b of barriers)if(b.door&&Math.hypot(position.x-b.x,position.z-b.z)<2.2)doors[b.door]=true;
  const distance=Math.hypot(destination.x-position.x,destination.z-position.z);if(distance<.08){m.path.shift();return still()}
- const travel=Math.min(distance,dt*.9),next={x:position.x+(destination.x-position.x)/distance*travel,z:position.z+(destination.z-position.z)/distance*travel};
+ const face=Math.atan2(destination.x-position.x,destination.z-position.z);
+ // Turn toward the next path segment before translating, avoiding sideways skating.
+ const angle=facing===undefined?0:Math.abs(Math.atan2(Math.sin(face-facing),Math.cos(face-facing)));
+ if(angle>.65)return {...still(),face,activity:null};
+ const travel=Math.min(distance,dt*.9*Math.max(.3,Math.cos(angle))),next={x:position.x+(destination.x-position.x)/distance*travel,z:position.z+(destination.z-position.z)/distance*travel};
  if(!clearSegment(position,next,barriers,doors,.3)){m.path=[];m.replan=.5;return still()}
  if(player&&Math.hypot(next.x-player.x,next.z-player.z)<1.1)return still();
- return {position:next,moving:true,face:Math.atan2(destination.x-position.x,destination.z-position.z),activity:null,label:'Walking · '+task.label.toLowerCase()};
+ return {position:next,moving:true,face,activity:null,label:'Walking · '+task.label.toLowerCase()};
  }
 }
