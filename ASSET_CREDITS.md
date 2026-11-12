@@ -18,4 +18,8 @@ The civilian clothes are interim art and have not been verified as historically 
 
 ## Project-authored content
 
-Estate architecture, decorative geometry, remaining props and vehicle, interface, case text, geometric rug pattern and synthesized Web Audio effects were authored for this project. No GTA assets, paid fonts or voice recordings are included.
+Estate architecture, decorative geometry, remaining props and vehicle, interface, case text, geometric rug pattern were authored for this project. No GTA assets, paid fonts or voice recordings are included.
+
+## Recorded environmental and interaction audio
+
+CC0 recordings replace the original synthesized effects: birds, wind, water, fire, footsteps, doors, paper, dog, engine, a nonverbal acknowledgment and a vintage telephone. Exact authors, sources, licenses and adaptations are in [audio credits](public/audio/CREDITS.md). Clips total approximately 1.56 MiB, with loop crossfades and conservative peak levels; measured metadata is in `public/audio/manifest.json`.

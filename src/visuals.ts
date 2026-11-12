@@ -51,12 +51,17 @@ export function landscape(e:Estate){
 export function castle(e:Estate){
  const {stone,trim,wood,plaster}=e.mats;
  e.box(42,.15,28,0,0,-2,wood);e.box(42,.25,28,0,4.9,-2,plaster);
- e.wall(18.8,1,.6,-11.6,.5,12);e.wall(18.8,1,.6,11.6,.5,12);e.wall(42,1,.65,0,4.35,12);e.wall(3.4,1.4,.65,0,4.1,12);
+ e.wall(19.2,1,.6,-11.4,.5,12);e.wall(19.2,1,.6,11.4,.5,12);e.wall(42,1,.65,0,4.35,12);e.wall(3.6,1.4,.65,0,4.1,12);
  const cuts=[-21,-18,-16,-12,-10,-1.8,1.8,10,12,16,18,21];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1],mid=(a+b)/2;if(Math.abs(mid)<1.81||[-17,-11,11,17].some(x=>Math.abs(mid-x)<.1))continue;e.wall(b-a,2.85,.6,mid,2.425,12);}
  for(const x of[-17,-11,11,17])windowDetail(e,x,2.45,12.12,2,2.7);
  e.wall(.6,4.8,28,-21,2.4,-2);e.wall(.6,4.8,28,21,2.4,-2);e.wall(19.2,4.8,.6,-11.4,2.4,-16);e.wall(19.2,4.8,.6,11.4,2.4,-16);e.wall(3.6,1.4,.6,0,4.1,-16);
- for(const x of[-7,7]){e.wall(.32,4.8,13,x,2.4,-3.5,plaster);e.wall(.32,4.8,5.5,x,2.4,9.25,plaster);e.wall(.34,1.6,3,x,4,4.5,plaster);e.addDoor(x<0?'study':'library',x,6.2,Math.PI/2);}
- for(const x of[-17,17])e.wall(8,4.8,.3,x,2.4,-10,plaster);e.wall(10,4.8,.3,0,2.4,-10,plaster);e.addDoor('front',-1.6,12,0,true);e.addDoor('rear',-1.6,-16,0,true);
+ for(const x of[-7,7]){e.wall(.32,4.8,13,x,2.4,-3.5,plaster);e.wall(.32,4.8,5.5,x,2.4,9.25,plaster);e.wall(.34,1.6,3.5,x,4,4.75,plaster);e.addDoor(x<0?'study':'library',x,6.3,Math.PI/2);for(const z of[3.1,6.4])e.wall(.46,3.3,.2,x,1.65,z,e.mats.panel);}
+ // Rear room connections are two deliberately framed 2.4m doorways.
+ for(const [x,w]of[[-15.7,10.6],[0,16],[15.7,10.6]])e.wall(w,4.8,.35,x,2.4,-10,plaster);
+ for(const x of[-9.2,9.2]){e.wall(2.4,1.6,.35,x,4,-10,plaster);for(const dx of[-1.2,1.2])e.box(.14,3.25,.48,x+dx,1.625,-10,e.mats.panel);e.box(2.55,.16,.48,x,3.24,-10,e.mats.panel);}
+ e.addDoor('front',-1.55,12,0,true);e.addDoor('rear',-1.55,-16,0,true);
+ for(const z of[12,-16]){for(const x of[-1.675,1.675])e.wall(.25,3.4,.72,x,1.7,z,trim);e.wall(3.6,.18,.72,0,3.32,z,trim);}
+
  // A second storey restores manor-house proportions. It is architectural scenery.
  e.box(42,3.6,28,0,6.8,-2,stone);roof(e,0,8.72,-2,43.2,29.2,4.8);
  for(const z of[12.4,-16.4]){for(const y of[.23,4.72,8.52])mould(e,42,.09,.22,0,y,z);for(const x of[-17,-11,-5,0,5,11,17]){const group=new T.Group();group.position.set(x,6.65,z);if(z<0)group.rotation.y=Math.PI;e.scene.add(group);windowDetail(e,0,0,.02,1.45,2.15,true,group);}}

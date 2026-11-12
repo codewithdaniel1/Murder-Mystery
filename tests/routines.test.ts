@@ -1,0 +1,12 @@
+import {describe,it,expect} from 'vitest';
+import {EstateRoutines,ROUTINES} from '../src/routines';
+import {findPath,clearSegment} from '../src/navigation';
+import type {PersonId} from '../src/state';
+import {furnishedEstate} from './estate-fixture';
+const e=furnishedEstate();const homes:Record<PersonId,{x:number;z:number}>={june:{x:2,z:6},rook:{x:-12,z:3},mara:{x:13,z:1},ada:{x:-9,z:-20},tomas:{x:23,z:-21},beatrice:{x:4,z:20},jonah:{x:7,z:24}};
+describe('purposeful NPC routines',()=>{
+ for(const id of Object.keys(ROUTINES) as PersonId[])it(id+' can reach every work station and return without crossing architecture',()=>{let position=homes[id];for(const stop of [...ROUTINES[id],ROUTINES[id][0]]){const path=findPath(position,stop,e.barriers,{});expect(path.length,`${id} to ${stop.x},${stop.z}`).toBeGreaterThan(0);for(const next of path){expect(clearSegment(position,next,e.barriers,{},.3,true)).toBe(true);position=next}expect(Math.hypot(position.x-stop.x,position.z-stop.z)).toBeLessThan(.01)}});
+ it('makes a witness walk, work, leave for another station and resume after conversation',()=>{const routines=new EstateRoutines(),doors:Record<string,boolean>={};let p={...homes.june},distance=0;const visited=new Set<string>();for(let i=0;i<600;i++){const r=routines.update('june',p,.1,e.barriers,doors,false);distance+=Math.hypot(r.position.x-p.x,r.position.z-p.z);p=r.position;if(r.activity)visited.add(r.label)}expect(distance).toBeGreaterThan(10);expect(visited.size).toBeGreaterThanOrEqual(2);const saved=JSON.stringify(routines.memory.get('june'));for(let i=0;i<100;i++)expect(routines.update('june',p,.1,e.barriers,doors,true).position).toEqual(p);expect(JSON.stringify(routines.memory.get('june'))).toBe(saved);let resumed=0;for(let i=0;i<100;i++){const r=routines.update('june',p,.1,e.barriers,doors,false);resumed+=Math.hypot(r.position.x-p.x,r.position.z-p.z);p=r.position}expect(resumed).toBeGreaterThan(0)});
+ it('opens a door on approach instead of clipping through it',()=>{const routines=new EstateRoutines(),doors:Record<string,boolean>={};let p={...homes.beatrice};for(let i=0;i<350;i++){const r=routines.update('beatrice',p,.1,e.barriers,doors,false);expect(clearSegment(p,r.position,e.barriers,doors)).toBe(true);p=r.position}expect(doors.front).toBe(true);expect(p.z).toBeLessThan(12)});
+ it('avoids corner cutting and reports an unreachable destination',()=>{const barriers=[{x:0,z:0,w:2,d:2}];expect(clearSegment({x:-1.4,z:0},{x:0,z:-1.4},barriers,{})).toBe(false);expect(findPath({x:-3,z:0},{x:0,z:0},barriers,{})).toEqual([])});
+});

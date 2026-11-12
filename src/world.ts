@@ -7,14 +7,16 @@ import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {loadCharacters,animateCharacter} from './characters';
 import type {CharacterMotion} from './characters';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+import {EstateRoutines} from './routines';
+import type {Activity} from './routines';
 import type { GameState,PersonId,Pose } from './state';
 export interface Target {id:string;label:string;verb:string;root:T.Object3D;distance?:number}
 interface Barrier {x:number;z:number;w:number;d:number;door?:string}
-interface Actor {root:T.Group;head:T.Group;arms:T.Group[];legs:T.Group[];home:T.Vector3;id:PersonId}
+interface Actor {isWalking?:boolean;activity?:Activity|null;activityLabel?:string;root:T.Group;head:T.Group;arms:T.Group[];legs:T.Group[];home:T.Vector3;id:PersonId}
 const rnd=(()=>{let s=4217;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}})();
 export class Estate {
  scene=new T.Scene();camera=new T.PerspectiveCamera(65,innerWidth/innerHeight,.06,220);renderer:T.WebGLRenderer;
- characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;angle:number;open:number}>();
+ routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;angle:number;open:number}>();
  ray=new T.Raycaster();clock=0;car:T.Group;dog:T.Group;dogLegs:T.Object3D[]=[];hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
  composer:EffectComposer;ao:GTAOPass;sun:T.DirectionalLight; mats:Record<string,T.MeshStandardMaterial>={}; pointer=new T.Vector2(0,0);lastMove=false;inspectRotation=0;ready:Promise<void>;quality='Auto';
  constructor(container:HTMLElement){
@@ -65,7 +67,7 @@ export class Estate {
  this.table(16,7,2.3,.8);for(let i=0;i<4;i++)this.box(.6,.07,.85,15.6+i*.2,1+i*.07,7,this.mats.red);
  // Bell alcove, garment snag and office display.
  const mechanism=new T.Group();mechanism.position.set(-17,1.8,-15.5);this.box(1.3,1.2,.22,0,0,0,this.mats.wood,mechanism);for(const x of[-.28,.28]){const gear=this.cyl(.23,.23,.12,x,0,.16,this.mats.gold,mechanism,12);gear.rotation.x=Math.PI/2;}this.box(.045,.7,.045,0,-1,.18,this.mats.cream,mechanism);this.scene.add(mechanism);this.target(mechanism,'bell','Bell mechanism & repair notice');this.sign('MANUAL ROPE REMOVED',-17,2.9,-15.15,2.3);
- const latch=new T.Group();latch.position.set(-9.2,1.5,-10);this.box(.12,.3,.1,0,0,0,this.mats.gold,latch);this.box(.18,.23,.04,.08,-.04,.07,this.mat(0x73506d),latch);this.scene.add(latch);this.target(latch,'lining','Fabric caught on the latch');
+ const latch=new T.Group();latch.position.set(-10.43,1.5,-9.75);this.box(.12,.3,.1,0,0,0,this.mats.gold,latch);this.box(.18,.23,.04,.08,-.04,.07,this.mat(0x73506d),latch);this.scene.add(latch);this.target(latch,'lining','Fabric caught on the latch');
  this.table(14,-13.5,2.2,.8);const plinth=new T.Group();plinth.position.set(14,1.04,-13.5);this.box(.75,.1,.6,0,0,0,this.mats.black,plinth);this.scene.add(plinth);this.target(plinth,'display','An empty bronze-falcon display');this.sign('EDMUND ROOK · STEWARD',14,2.2,-15.65,3);
  }
  garden(){const stone=this.mats.trim,gravel=this.mats.gravel;this.box(5,.04,20,0,-.02,-25,gravel,this.scene,false);this.box(31,.04,3,13,-.01,-23,gravel,this.scene,false);this.box(3,.04,13,25,-.01,-29,gravel,this.scene,false);this.box(29,.04,3,12,-.01,-35,gravel,this.scene,false);
@@ -92,15 +94,20 @@ export class Estate {
  pose():Pose{return {x:this.camera.position.x,z:this.camera.position.z,yaw:this.camera.rotation.y,pitch:this.camera.rotation.x};}
  setPose(p:Pose){this.camera.rotation.order='YXZ';this.camera.position.set(p.x,1.73,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,'YXZ');}
  move(dx:number,dz:number,s:GameState){let x=this.camera.position.x,z=this.camera.position.z;const clear=(xx:number,zz:number)=>Math.abs(xx)<52&&zz<53&&zz>-49&&!this.barriers.some(b=>!(b.door&&s.doors[b.door])&&Math.abs(xx-b.x)<b.w/2+.26&&Math.abs(zz-b.z)<b.d/2+.26);if(clear(x+dx,z))x+=dx;if(clear(x,z+dz))z+=dz;this.lastMove=Math.hypot(x-this.camera.position.x,z-this.camera.position.z)>.0001;this.camera.position.x=x;this.camera.position.z=z;}
- targetAt():Target|null{this.ray.setFromCamera(this.pointer,this.camera);let best:Target|null=null,near=3.25;for(const t of this.targets){if(!t.root.visible||!t.root.parent?.visible)continue;const hit=this.ray.intersectObject(t.root,true)[0];if(hit&&hit.distance<near){const occluder=this.ray.intersectObjects(this.walls,false)[0];if(occluder&&occluder.distance<hit.distance-.08)continue;near=hit.distance;best={...t,distance:near};}}return best;}
+ targetAt():Target|null{this.ray.setFromCamera(this.pointer,this.camera);let best:Target|null=null,near=3.25;for(const t of this.targets){if(!t.root.visible||!t.root.parent?.visible)continue;const hit=this.ray.intersectObject(t.root,true)[0];if(hit&&hit.distance<near){const occluder=this.ray.intersectObjects([...this.walls,...[...this.doors.values()].map(d=>d.pivot)],true)[0];if(occluder&&occluder.distance<hit.distance-.08)continue;near=hit.distance;best={...t,distance:near};}}return best;}
  location(){const {x,z}=this.camera.position;if(z>12)return 'The front drive';if(z<-24&&x>20)return 'The glasshouse';if(z<-16)return 'The castle gardens';if(z<-10)return 'The service passage';if(x<-7)return 'Elias’s study';if(x>7)return 'The library';return 'The entrance hall';}
  setQuality(q:string){this.quality=q;const cap=q==='Low'?.85:q==='High'?1.8:q==='Medium'?1.25:Math.min(devicePixelRatio,1.25);this.renderer.setPixelRatio(Math.min(devicePixelRatio,cap));this.renderer.shadowMap.enabled=q!=='Low';this.ao.enabled=q!=='Low';this.renderer.setSize(innerWidth,innerHeight);this.composer.setPixelRatio(this.renderer.getPixelRatio());this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));}
  update(dt:number,s:GameState,playing:boolean,talking:PersonId|null,arrivalT:number,menu=false){if(playing||talking)this.clock+=dt;
  for(const[id,d]of this.doors){const goal=s.doors[id]?-Math.PI/2:0;d.angle=T.MathUtils.damp(d.angle,goal,10,dt);d.pivot.rotation.y=d.angle;}
- for(const[id,a]of this.actors){if((id==='beatrice'||id==='jonah')&&s.arrival!=='present'){a.root.visible=false;continue;}a.root.visible=true;let moving=false;
- if(playing&&id!==talking){let dest=a.home;if(id==='beatrice')dest=new T.Vector3(3,.13,1);if(id==='mara'&&s.dog==='done')dest=new T.Vector3(11,.13,4);if(a.root.position.distanceTo(dest)>.15){const dir=dest.clone().sub(a.root.position); // Owner follows front doorway, never cuts through walls.
- if(id==='beatrice'&&a.root.position.z>10)dir.set(-a.root.position.x,0,10-a.root.position.z);dir.y=0;if(dir.length()>.1){const speed=Math.min(dt*.95,dir.length());a.root.rotation.y=Math.atan2(dir.x,dir.z);a.root.position.add(dir.normalize().multiplyScalar(speed));moving=true;}}
- }if(id===talking){const p=this.camera.position;a.root.rotation.y=Math.atan2(p.x-a.root.position.x,p.z-a.root.position.z);a.arms[1].rotation.x=Math.sin(this.clock*3)*.12;}else{a.arms.forEach((o,i)=>o.rotation.x=moving?Math.sin(this.clock*6+i*Math.PI)*.35:0);}a.legs.forEach((o,i)=>o.rotation.x=moving?Math.sin(this.clock*6+i*Math.PI)*.3:0);animateCharacter(this,id,moving,dt,!playing&&!talking);}
+ for(const[id,a]of this.actors){
+ if((id==='beatrice'||id==='jonah')&&s.arrival!=='present'){a.root.visible=false;continue;}a.root.visible=true;
+ const result=this.routines.update(id,a.root.position,dt,this.barriers,s.doors,!playing||id===talking,this.camera.position);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
+ a.root.position.y=(Math.abs(a.root.position.x)<21&&a.root.position.z>-16&&a.root.position.z<12)?.08:-.03;a.isWalking=result.moving;a.activity=id===talking?null:result.activity;a.activityLabel=result.label;
+ const targetAngle=id===talking?Math.atan2(this.camera.position.x-a.root.position.x,this.camera.position.z-a.root.position.z):result.face;
+ if(playing||id===talking){const delta=Math.atan2(Math.sin(targetAngle-a.root.rotation.y),Math.cos(targetAngle-a.root.rotation.y));a.root.rotation.y+=delta*Math.min(1,dt*5);}
+ animateCharacter(this,id,result.moving,dt,!playing&&!talking,a.activity??null,this.clock);
+ }
+
  this.car.visible=s.arrival!=='absent'&&s.arrival!=='queued';if(s.arrival==='arriving')this.car.position.z=56-32*T.MathUtils.smoothstep(arrivalT,0,1);if(s.arrival==='present')this.car.position.z=24;
  if(playing&&s.dog==='walking'){const p=this.camera.position;const dist=this.dog.position.distanceTo(new T.Vector3(p.x,.1,p.z));if(dist>2){const dir=new T.Vector3(p.x-this.dog.position.x,0,p.z-this.dog.position.z);this.dog.rotation.y=Math.atan2(dir.x,dir.z);const step=dir.normalize().multiplyScalar(Math.min(dt*3,dist-1.7));const next=this.dog.position.clone().add(step);const blocked=this.barriers.some(b=>!(b.door&&s.doors[b.door])&&Math.abs(next.x-b.x)<b.w/2+.13&&Math.abs(next.z-b.z)<b.d/2+.13);if(!blocked)this.dog.position.copy(next);if(dist>9)this.dog.position.set(p.x-Math.sin(this.camera.rotation.y)*1.5,.1,p.z-Math.cos(this.camera.rotation.y)*1.5);this.dogLegs.forEach((l,i)=>l.rotation.x=Math.sin(this.clock*9+i)*.35);}}
  if(s.dog!=='walking'){const a=this.actors.get('mara')!.root.position;this.dog.position.set(a.x-1,.1,a.z+1.5);}

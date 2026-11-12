@@ -1,0 +1,200 @@
+[
+  {
+    "file": "birds.ogg",
+    "seconds": 30.038,
+    "peak_db": -10.3,
+    "rms_db": -33.4,
+    "bytes": 252572,
+    "source": "birds-isaiah658_0.ogg",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0.65
+  },
+  {
+    "file": "wind.ogg",
+    "seconds": 33.5,
+    "peak_db": -10.0,
+    "rms_db": -33.6,
+    "bytes": 487070,
+    "source": "park_ambience_wind.wav",
+    "start": 40,
+    "end": 75,
+    "crossfade_s": 1.5
+  },
+  {
+    "file": "fountain.ogg",
+    "seconds": 28.8,
+    "peak_db": -10.4,
+    "rms_db": -28.8,
+    "bytes": 270488,
+    "source": "park_ambience_river.wav",
+    "start": 80,
+    "end": 110,
+    "crossfade_s": 1.2
+  },
+  {
+    "file": "fireplace.ogg",
+    "seconds": 28.464,
+    "peak_db": -10.0,
+    "rms_db": -32.9,
+    "bytes": 289095,
+    "source": "fire.wav",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0.8
+  },
+  {
+    "file": "step-wood-1.ogg",
+    "seconds": 0.245,
+    "peak_db": -11.6,
+    "rms_db": -28.6,
+    "bytes": 6099,
+    "source": "[kdd]DifferentSteps_0/wood01.ogg",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "step-wood-2.ogg",
+    "seconds": 0.318,
+    "peak_db": -12.1,
+    "rms_db": -31.2,
+    "bytes": 6718,
+    "source": "[kdd]DifferentSteps_0/wood03.ogg",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "step-gravel-1.ogg",
+    "seconds": 0.704,
+    "peak_db": -12.8,
+    "rms_db": -39.7,
+    "bytes": 11110,
+    "source": "[kdd]DifferentSteps_0/gravel.ogg",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "step-stone-1.ogg",
+    "seconds": 0.293,
+    "peak_db": -12.5,
+    "rms_db": -37.1,
+    "bytes": 6508,
+    "source": "[kdd]DifferentSteps_0/stone01.ogg",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "step-grass-1.ogg",
+    "seconds": 0.391,
+    "peak_db": -12.6,
+    "rms_db": -35.3,
+    "bytes": 7936,
+    "source": "[kdd]DifferentSteps_0/leaves01.ogg",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "step-grass-2.ogg",
+    "seconds": 0.474,
+    "peak_db": -12.8,
+    "rms_db": -33.4,
+    "bytes": 8620,
+    "source": "[kdd]DifferentSteps_0/leaves02.ogg",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "door-open.ogg",
+    "seconds": 1.0,
+    "peak_db": -12.7,
+    "rms_db": -39.0,
+    "bytes": 10669,
+    "source": "qubodup-DoorSet/qubodup-DoorSet/flac/qubodup-DoorOpen01.flac",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "door-close.ogg",
+    "seconds": 1.0,
+    "peak_db": -12.5,
+    "rms_db": -37.7,
+    "bytes": 11401,
+    "source": "qubodup-DoorSet/qubodup-DoorSet/flac/qubodup-DoorClose01.flac",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "paper-1.ogg",
+    "seconds": 0.982,
+    "peak_db": -14.8,
+    "rms_db": -34.2,
+    "bytes": 12681,
+    "source": "BookFlip_SFX/BookFlip1.wav",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "paper-2.ogg",
+    "seconds": 0.592,
+    "peak_db": -15.1,
+    "rms_db": -42.6,
+    "bytes": 9296,
+    "source": "BookFlip_SFX/BookFlip4.wav",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "dog-bark.ogg",
+    "seconds": 0.45,
+    "peak_db": -13.8,
+    "rms_db": -29.4,
+    "bytes": 7826,
+    "source": "dog barking.ogg",
+    "start": 2.72,
+    "end": 3.17,
+    "crossfade_s": 0
+  },
+  {
+    "file": "engine.ogg",
+    "seconds": 8.51,
+    "peak_db": -12.0,
+    "rms_db": -25.5,
+    "bytes": 96522,
+    "source": "engine.mp3",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0.3
+  },
+  {
+    "file": "murmur.ogg",
+    "seconds": 1.305,
+    "peak_db": -14.0,
+    "rms_db": -26.4,
+    "bytes": 14185,
+    "source": "murmur.mp3",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  },
+  {
+    "file": "telephone-ring.ogg",
+    "seconds": 5.169,
+    "peak_db": -15.9,
+    "rms_db": -32.6,
+    "bytes": 47340,
+    "source": "telephone.mp3",
+    "start": 0,
+    "end": null,
+    "crossfade_s": 0
+  }
+]

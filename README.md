@@ -1,6 +1,6 @@
 # The Last Bell at Bramblewick
 
-A first-person browser murder mystery set at a fictional English estate in 1942. This is a playable prototype with a second-pass estate art overhaul, built with TypeScript, Three.js and Vite. All source, assets, plans and generated output live in this single project folder.
+A first-person browser murder mystery set at a fictional English estate in 1942. This is a playable prototype with an estate art overhaul, NPC routines and recorded environmental sound, built with TypeScript, Three.js and Vite. All source, assets, plans and generated output live in this single project folder.
 
 ## Run locally
 
@@ -40,22 +40,22 @@ Publish the contents of `dist/` on a static HTTP(S) server. Relative asset paths
 ## Implemented
 
 - Walkable castle, study, library, service passage, gardens, fountain and greenhouse.
-- Seven named NPCs, state-dependent dialogue topics, conversation interruptions and synthesized vocal reactions.
+- Seven named NPCs with collision-aware routines, reading/work gestures, state-dependent dialogue topics, conversation interruptions and recorded nonverbal reactions.
 - Evidence inspection, 16 notebook entries, five deductions, supported accusation routes and a case ending.
 - Pip’s garden walk and an alternative route to translating the ledger.
 - Owner/driver arrival after June’s report and a completed gatehouse call; an animated car approach.
-- Spatial synthesized birds, dog and car sounds; footsteps and interaction effects.
+- Recorded birds, wind, fountain, fireplace, dog, engine, footsteps and interaction effects, with positional playback and indoor/outdoor mixing.
 - Manual save/Continue and rendering-quality controls.
 
 ## Current art pass
 
-The estate now has slate roofs and turrets, an arched portico, detailed window surrounds, guttering, chimney stacks, walnut panelling, curtains, chandeliers, patterned rugs and scanned wooden chairs. Eight scanned PBR material sets supply color, normal and roughness detail. Natural HDR sky lighting and screen-space ambient occlusion replace the original flat lighting. Plants and trees are textured scanned models; vegetation is instanced and the tree mesh is simplified for browser rendering. NPCs use textured human meshes with idle and walk animations. Pip uses a more detailed dog mesh.
+The estate now has slate roofs and turrets, an arched portico, detailed window surrounds, guttering, chimney stacks, walnut panelling, curtains, chandeliers, patterned rugs and scanned wooden chairs. Eight scanned PBR material sets supply color, normal and roughness detail. Natural HDR sky lighting and screen-space ambient occlusion replace the original flat lighting. Plants and trees are textured scanned models; vegetation is instanced and the tree mesh is simplified for browser rendering. NPCs use textured human meshes with idle and walk animations. Each witness now follows a loop of work stations, with reading, housekeeping, gardening or car-checking gestures. NPCs navigate around walls and furniture, open doors on approach, stop for conversations and resume afterward. Pip uses a more detailed dog mesh.
 
 Low rendering quality disables ambient occlusion and shadows. Pixel ratio is capped, and ambient occlusion uses a reduced resolution. There is a loading screen while the larger art assets load; the total local asset set is approximately 81 MiB. No external asset requests occur at runtime.
 
 ## Remaining visual and testing work
 
-This is not a finished photorealistic production game. The cast currently shares two base human models with different scale and fabric tint. Their civilian clothes need a historically precise WWII costume pass. Some props, the vehicle, interaction hands and dog motion still use prototype geometry or behavior. The updated architecture and lighting require a new in-browser visual review and performance measurements on target laptops. Browser-control tooling became unavailable during this art pass, so the earlier browser smoke test does not validate these new visuals.
+This is not a finished photorealistic production game. The cast currently shares two base human models with different scale and fabric tint. Their civilian clothes need a historically precise WWII costume pass. Some props, the vehicle, interaction hands and dog motion still use prototype geometry or behavior. The updated architecture, routines and sound mix require an in-browser visual/listening review and performance measurements on target laptops. Recorded nonverbal reactions currently share one performer with modest playback-rate differences. NPC routine positions restart on load; investigation state and player position retain the existing manual save behavior. Browser-control tooling remains unavailable, so the earlier browser smoke test does not validate the new visuals, routines or subjective sound quality.
 
 The 30–45 minute play length has not yet been validated. No mobile support or public deployment has been completed.
 
@@ -66,6 +66,6 @@ npm test
 npm run build
 ```
 
-Twenty-two automated tests cover arrival prerequisites/idempotence, three valid solution routes, unsupported accusations, deduction prerequisites, save validation/restoration, all eight GLB assets, simplified mesh indices, character scales and animation rigs. Chrome smoke testing verified rendering, entrance navigation, June’s conversation, objective changes, notebook evidence and a save/reload/Continue cycle. A complete human playthrough and broad device/browser performance testing are still needed.
+Forty-two automated tests cover the mystery and save state, all eight GLB assets and animation rigs, front-wall and internal-door seams, framed passage openings, reachable NPC work stations, collision-safe movement, interrupted routines, continuous ambience, sound attenuation and canceled vocals. The architecture tests construct the same castle geometry without a WebGL renderer and raycast the relevant wall surfaces. Chrome smoke testing verified rendering, entrance navigation, June’s conversation, objective changes, notebook evidence and a save/reload/Continue cycle. A complete human playthrough and broad device/browser performance testing are still needed.
 
 See `ASSET_CREDITS.md` for texture sources and licenses. `GAME_DESIGN.md`, `CASE_SCRIPT.md` and `PLANNING_CHECKLIST.md` preserve the design; the case script contains spoilers.
