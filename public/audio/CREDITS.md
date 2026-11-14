@@ -1,6 +1,6 @@
 # Recorded sound credits
 
-All recordings below are offered under **Creative Commons Zero 1.0 (CC0)** by their source pages. They may be redistributed and adapted, including in commercial projects. Source licenses checked on 2026-11-11. This file credits the recordists even though CC0 does not require attribution.
+All recordings below are offered under **Creative Commons Zero 1.0 (CC0)** by their source pages. They may be redistributed and adapted, including in commercial projects. Source licenses checked on 2026-11-14. This file credits the recordists even though CC0 does not require attribution.
 
 License: https://creativecommons.org/publicdomain/zero/1.0/
 Legal text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
@@ -16,6 +16,10 @@ Legal text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
 | `dog-bark.ogg` | Random Sounds Samples — Augmentality (Brandon Morris), submitted by HaelDB; CC0 option selected from the dual license | https://opengameart.org/content/random-sounds-samples |
 | `engine.ogg` | engine_idle_loop_1.wav — RichieMcMullen | https://freesound.org/people/RichieMcMullen/sounds/386793/ |
 | `murmur.ogg` | hmmmm — DAN2008 | https://freesound.org/people/DAN2008/sounds/165011/ |
+| `voice-f-mmm.ogg`, `voice-f-mhm.ogg`, `voice-f-hmm.ogg`, `voice-f-huh.ogg` | Hmms various 2.wav — esperar | https://freesound.org/people/esperar/sounds/170766/ |
+| `voice-f-ah.ogg`, `voice-f-ahh.ogg` | Ah! sound female — marythewitch | https://freesound.org/people/marythewitch/sounds/536839/ |
+| `voice-m-mmm.ogg`, `voice-m-hmm.ogg`, `voice-m-ah.ogg`, `voice-m-ahh.ogg` | Hmm Ahh.wav — esperar | https://freesound.org/people/esperar/sounds/170781/ |
+| `voice-m-mhm.ogg`, `voice-m-huh.ogg` | intrigued — andrutzab | https://freesound.org/people/andrutzab/sounds/337615/ |
 | `telephone-ring.ogg` | Old style phone ringer.wav — MPTSound | https://freesound.org/people/MPTSound/sounds/552484/ |
 
 ## Adaptations and recording notes
@@ -30,13 +34,18 @@ Files are Ogg Vorbis, with DC offset removal, conservative level adjustment and 
 - Paper: `BookFlip_SFX.zip`, `BookFlip1.wav` and `BookFlip4.wav`.
 - Dog: `dog barking.ogg`, source seconds 2.72–3.17, isolated short bark.
 - Engine: the creator describes a car engine ticking over; no exact vehicle model or historical authenticity claimed.
-- Murmur: a person's short thinking “hmm”, used as a nonverbal acknowledgment; one performer, not a full character voice library.
+- Murmur: a person's short thinking “hmm”, retained as a fallback while the new vocal clips load.
+- Dialogue reactions: twelve short spoken acknowledgments cut from four recordings. Each cut was given a short fade, reduced DC offset and leveled to a similar RMS. The six syllables vary by NPC and are shuffled without adjacent repeats for that NPC. They are expressive filler sounds, not spoken dialogue or a full character voice library. The `voice-m-mhm.ogg` cut joins two hums from the same source with 45 ms of silence.
 - Telephone: recorded vintage-style ringer, recorded by MPTSound using a Tascam DR-40 and condenser microphones.
 
 Freesound supplies public encoded previews of its recordings; these were used rather than an authenticated original-file download:
 
 - Engine: https://cdn.freesound.org/previews/386/386793_7236624-hq.mp3
 - Murmur: https://cdn.freesound.org/previews/165/165011_2992529-hq.mp3
+- Female hums: https://cdn.freesound.org/previews/170/170766_377731-hq.mp3
+- Female ahs: https://cdn.freesound.org/previews/536/536839_11890919-hq.mp3
+- Male hums and ahs: https://cdn.freesound.org/previews/170/170781_377731-hq.mp3
+- Male hums: https://cdn.freesound.org/previews/337/337615_1025018-hq.mp3
 - Telephone: https://cdn.freesound.org/previews/552/552484_2481400-hq.mp3
 
 The audio assets were verified to decode, have nonzero signal and retain peak headroom. Levels and seams have been checked numerically; final subjective listening and in-game mixing remain part of game QA.

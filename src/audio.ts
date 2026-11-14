@@ -1,6 +1,8 @@
 type Position=[number,number,number];
 type Playing={source:AudioBufferSourceNode;gain:GainNode;pan?:PannerNode;filter?:BiquadFilterNode};
-const FILES=['birds','wind','fountain','fireplace','step-wood-1','step-wood-2','step-gravel-1','step-stone-1','step-grass-1','step-grass-2','door-open','door-close','paper-1','paper-2','dog-bark','engine','murmur','telephone-ring'];
+const VOICE_SYLLABLES=['mmm','mhm','hmm','ah','ahh','huh'];
+const VOICE_FILES=['f','m'].flatMap(kind=>VOICE_SYLLABLES.map(syllable=>`voice-${kind}-${syllable}`));
+const FILES=['birds','wind','fountain','fireplace','step-wood-1','step-wood-2','step-gravel-1','step-stone-1','step-grass-1','step-grass-2','door-open','door-close','paper-1','paper-2','dog-bark','engine','murmur','telephone-ring',...VOICE_FILES];
 export function surfaceAt(x:number,z:number){
  if(z>-16&&z<12&&Math.abs(x)<21){if((Math.abs(x)<1.5&&z>-7&&z<9)||(Math.abs(x+15)<2.1&&Math.abs(z-3.5)<2.7))return 'carpet';return 'wood'}
  if(x>21&&x<31&&z<-25&&z>-33)return 'stone';
@@ -8,7 +10,7 @@ export function surfaceAt(x:number,z:number){
  return 'grass';
 }
 export class EstateAudio {
- context:AudioContext|null=null;master:GainNode|null=null;volume=.65;active=new Set<Playing>();buffers=new Map<string,AudioBuffer>();loops=new Map<string,Playing>();loading:Promise<void>|null=null;voice:Playing|null=null;phone:Playing|null=null;npcSteps=new Map<string,number>();lastPosition:Position|null=null;distance=0;stepIndex=0;barkAt=18;lastBark=-Infinity;paused=true;
+ context:AudioContext|null=null;master:GainNode|null=null;volume=.65;active=new Set<Playing>();buffers=new Map<string,AudioBuffer>();loops=new Map<string,Playing>();loading:Promise<void>|null=null;voice:Playing|null=null;phone:Playing|null=null;npcSteps=new Map<string,number>();voiceBags=new Map<string,string[]>();lastVoices=new Map<string,string>();lastPosition:Position|null=null;distance=0;stepIndex=0;barkAt=18;lastBark=-Infinity;paused=true;
  start(){if(!this.context){this.context=new AudioContext();this.master=this.context.createGain();this.master.gain.value=this.volume;const limiter=this.context.createDynamicsCompressor();limiter.threshold.value=-16;limiter.knee.value=16;limiter.ratio.value=3;limiter.attack.value=.015;limiter.release.value=.2;this.master.connect(limiter);limiter.connect(this.context.destination);this.loading=this.load();}this.paused=false;void this.context.resume();}
  async load(){await Promise.all(FILES.map(async name=>{try{const res=await fetch(import.meta.env.BASE_URL+'audio/'+name+'.ogg');if(!res.ok)throw Error(String(res.status));const data=await res.arrayBuffer();this.buffers.set(name,await this.context!.decodeAudioData(data));}catch(err){console.warn('Recorded sound unavailable:',name,err)}}));}
  playClip(name:string,volume:number,position?:Position,rate=1,loop=false):Playing|null{
@@ -19,7 +21,18 @@ export class EstateAudio {
  }
  position(p:PannerNode,xyz:Position){const time=this.context!.currentTime;p.positionX.setTargetAtTime(xyz[0],time,.08);p.positionY.setTargetAtTime(xyz[1],time,.08);p.positionZ.setTargetAtTime(xyz[2],time,.08)}
  loop(name:string,gain:number,position?:Position,cutoff=18000){let clip=this.loops.get(name);if(!clip){const created=this.playClip(name,0,position,1,true);if(!created)return;clip=created;this.loops.set(name,clip)}const t=this.context!.currentTime;clip.gain.gain.setTargetAtTime(gain,t,.65);clip.filter?.frequency.setTargetAtTime(cutoff,t,.55);if(position&&clip.pan)this.position(clip.pan,position)}
- vocal(person:string,position?:Position){this.stopVoice();const rates:Record<string,number>={june:1.08,mara:1.03,ada:1.12,beatrice:1.02,rook:.92,tomas:.96,jonah:1};this.voice=this.playClip('murmur',.43,position,rates[person]??1)}
+ nextVoice(person:string){
+  const kind=['june','mara','ada','beatrice'].includes(person)?'f':'m';
+  const available=VOICE_SYLLABLES.map(syllable=>`voice-${kind}-${syllable}`).filter(name=>this.buffers.has(name));
+  if(!available.length)return 'murmur';
+  let bag=this.voiceBags.get(person)?.filter(name=>available.includes(name))??[];
+  if(!bag.length){bag=[...available];for(let i=bag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]]}}
+  const last=this.lastVoices.get(person),index=bag.findIndex(name=>name!==last);
+  const [chosen]=bag.splice(index<0?0:index,1);
+  this.voiceBags.set(person,bag);this.lastVoices.set(person,chosen);
+  return chosen;
+ }
+ vocal(person:string,position?:Position){this.stopVoice();const rates:Record<string,number>={june:1.025,mara:.99,ada:1.04,beatrice:.97,rook:.96,tomas:.99,jonah:1.01};const rate=(rates[person]??1)*(.98+Math.random()*.04);this.voice=this.playClip(this.nextVoice(person),.38+Math.random()*.05,position,rate)}
  stopVoice(){if(this.voice){this.stop(this.voice);this.voice=null}if(this.phone){this.stop(this.phone);this.phone=null}}
  stop(clip:Playing){try{clip.source.stop()}catch{}this.active.delete(clip)}
  effect(type:string,pos?:Position){
