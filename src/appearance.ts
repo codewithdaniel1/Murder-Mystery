@@ -96,38 +96,21 @@ function addFittedShortSleeves(model:T.Object3D,color:number){
  sleeves.castShadow=true;sleeves.receiveShadow=true;
 }
 
-function addGardenerWaistcoat(model:T.Object3D){
+function flattenGardenerShirt(model:T.Object3D){
  const shirt=model.getObjectByName('male_casualsuit02_1');
- if(!(shirt instanceof T.SkinnedMesh)||!shirt.parent)return;
- const pelvis=shirt.skeleton.bones.findIndex(b=>b.name==='pelvis');
- const spine=shirt.skeleton.bones.findIndex(b=>b.name==='spine_02');
- if(pelvis<0||spine<0)return;
- const rings=[
-  {y:1.04,x:.205,z:.165,gap:.12,spine:0},
-  {y:1.12,x:.226,z:.176,gap:.13,spine:.35},
-  {y:1.28,x:.248,z:.181,gap:.32,spine:.8},
-  {y:1.4,x:.236,z:.169,gap:.64,spine:1}
- ];
- const segments=48,positions:number[]=[],uvs:number[]=[],indices:number[]=[],skinIndices:number[]=[],skinWeights:number[]=[];
- for(let row=0;row<rings.length;row++)for(let i=0;i<=segments;i++){
-  const r=rings[row],t=i/segments,angle=r.gap+(Math.PI*2-2*r.gap)*t;
-  positions.push(Math.sin(angle)*r.x,r.y,Math.cos(angle)*r.z);
-  uvs.push(t,row/(rings.length-1));
-  skinIndices.push(pelvis,spine,0,0);skinWeights.push(1-r.spine,r.spine,0,0);
+ if(!(shirt instanceof T.SkinnedMesh))return;
+ // Keep the original fitted shirt and its rig; soften only the two raised
+ // areas across the front chest. Clone first so no source mesh is altered.
+ shirt.geometry=shirt.geometry.clone();
+ const positions=shirt.geometry.getAttribute('position');
+ for(let i=0;i<positions.count;i++){
+  const x=positions.getX(i),y=positions.getY(i),z=positions.getZ(i);
+  if(z<=.13)continue;
+  const chest=T.MathUtils.smoothstep(y,1.15,1.23)*(1-T.MathUtils.smoothstep(y,1.34,1.42));
+  const center=1-T.MathUtils.smoothstep(Math.abs(x),.12,.22);
+  positions.setZ(i,z-Math.max(0,z-.13)*.75*chest*center);
  }
- for(let row=0;row<rings.length-1;row++)for(let i=0;i<segments;i++){
-  const a=row*(segments+1)+i,b=a+segments+1;indices.push(a,b,a+1,a+1,b,b+1);
- }
- const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));
- geometry.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));
- geometry.setAttribute('skinIndex',new T.Uint16BufferAttribute(skinIndices,4));
- geometry.setAttribute('skinWeight',new T.Float32BufferAttribute(skinWeights,4));
- geometry.setIndex(indices);geometry.computeVertexNormals();
- const material=new T.MeshStandardMaterial({color:0x6d5540,roughness:.98,metalness:0,side:T.DoubleSide});
- const vest=new T.SkinnedMesh(geometry,material);vest.name='1942 gardener waistcoat';
- vest.position.copy(shirt.position);vest.quaternion.copy(shirt.quaternion);vest.scale.copy(shirt.scale);
- shirt.parent.add(vest);vest.bind(shirt.skeleton,shirt.bindMatrix.clone());
- vest.castShadow=true;vest.receiveShadow=true;
+ positions.needsUpdate=true;shirt.geometry.computeVertexNormals();shirt.geometry.computeBoundingSphere();
 }
 
 export function dressCharacter(id:PersonId,model:T.Object3D){
@@ -137,7 +120,7 @@ export function dressCharacter(id:PersonId,model:T.Object3D){
   if(/tailored business fabric/i.test(m.name)){if(id==='june'){m.map=null;m.needsUpdate=true;m.color.setHex(style.coat)}else m.color.setHex(style.coat).multiplyScalar(2.15);m.roughness=.98;m.metalness=0;}
   if(/plum satin full-length top/i.test(m.name)){m.map=null;m.color.setHex(style.blouse??style.coat);m.roughness=.98;m.metalness=0;m.needsUpdate=true;}
   if(/charcoal tailored trousers/i.test(m.name)){m.map=null;m.color.setHex(style.skirt??0x3e3c39);m.roughness=1;m.metalness=0;m.needsUpdate=true;}
-  if(/original top/i.test(m.name)){m.color.setHex(style.coat).multiplyScalar(id==='tomas'?1.15:1.7);m.roughness=.98;m.metalness=0;}
+  if(/original top/i.test(m.name)){if(id==='tomas'){m.map=null;m.color.setHex(style.coat);m.needsUpdate=true}else m.color.setHex(style.coat).multiplyScalar(1.7);m.roughness=.98;m.metalness=0;}
   if(/original bottom/i.test(m.name)){m.color.setHex(style.trousers??style.coat).multiplyScalar(1.7);m.roughness=.98;m.metalness=0;}
   if(/hair|afro|short01|ponytail/i.test(m.name))m.color.setHex(style.hair);
   if(/Original accessory|Accessory detail/i.test(m.name))o.visible=false;
@@ -152,7 +135,7 @@ export function dressCharacter(id:PersonId,model:T.Object3D){
  });
  addPeriodClothing(model,style);
  if(id==='ada')addFittedShortSleeves(model,style.blouse??style.coat);
- if(id==='tomas')addGardenerWaistcoat(model);
+ if(id==='tomas')flattenGardenerShirt(model);
  const head=model.getObjectByName('head');if(!head)return;
  model.updateWorldMatrix(true,false);model.updateMatrixWorld(true);
  const headPosition=head.getWorldPosition(new T.Vector3()),eyeBounds=new T.Box3();let crownY=headPosition.y+.15;
