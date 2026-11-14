@@ -10,11 +10,11 @@ import {narrowStride} from './locomotion';
 function updateRig(root:T.Object3D){root.updateWorldMatrix(true,false);root.updateMatrixWorld(true)}
 export interface CharacterMotion {
  mixer:T.AnimationMixer;idle:T.AnimationAction;walk:T.AnimationAction;root:T.Object3D;
- bones:Map<string,T.Bone>;basePose:Map<string,T.Quaternion>;basePositions:Map<string,T.Vector3>;book:T.Group;cloth:T.Mesh;
+ bones:Map<string,T.Bone>;basePose:Map<string,T.Quaternion>;basePositions:Map<string,T.Vector3>;book:T.Group;
  soleSamples:{mesh:T.SkinnedMesh;point:T.Vector3;index:number}[];baseY:number;walkWeight:number;strideSpeed:number;activityWeights:Record<Activity,number>;
 }
 // Keep both actions alive. Rapid stop/start events change weights, never restart a stride.
-export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],book:T.Group,cloth:T.Mesh):CharacterMotion{
+export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],book:T.Group):CharacterMotion{
  const mixer=new T.AnimationMixer(model),idle=mixer.clipAction(clips.find(c=>c.name==='Idle_Standing')!),walk=mixer.clipAction(clips.find(c=>c.name==='Walk_Relaxed')!);
  const bones=new Map<string,T.Bone>();model.traverse(o=>{if(o instanceof T.Bone)bones.set(o.name,o)});
  // Measure the actual rig's stride instead of guessing a playback rate. The modest
@@ -33,7 +33,7 @@ export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],b
  points.sort((a,b)=>a.y-b.y);const low=points.filter(p=>p.y<points[0].y+.035);
  const step=Math.max(1,Math.floor(low.length/96));for(let i=0;i<low.length;i+=step)soleSamples.push({mesh:o,index:low[i].index,point:low[i].point});
  });
- return {mixer,idle,walk,root:model,bones,basePose,basePositions,book,cloth,soleSamples,baseY:model.position.y,walkWeight:0,strideSpeed:Math.max(.2,strideSpeed),activityWeights:{read:0,tidy:0,garden:0,car:0,look:0}};
+ return {mixer,idle,walk,root:model,bones,basePose,basePositions,book,soleSamples,baseY:model.position.y,walkWeight:0,strideSpeed:Math.max(.2,strideSpeed),activityWeights:{read:0,tidy:0,garden:0,car:0,look:0}};
 }
 export async function loadCharacters(e:Estate){
  const loader=new GLTFLoader();
@@ -48,8 +48,7 @@ export async function loadCharacters(e:Estate){
  const list=Array.isArray(o.material)?o.material:[o.material];const copies=list.map(mat=>{const m=mat.clone() as T.MeshStandardMaterial;if(m.map)m.map.anisotropy=Math.min(4,e.renderer.capabilities.getMaxAnisotropy());m.envMapIntensity=.65;return m});o.material=Array.isArray(o.material)?copies:copies[0];});
  a.root.clear();a.root.add(model);a.root.position.y=.08;
  const book=new T.Group();e.box(.29,.035,.37,0,0,0,e.mats.red,book);e.box(.265,.018,.34,0,.025,0,e.mats.paper,book);book.visible=false;a.root.add(book);
- const cloth=e.box(.18,.02,.17,0,0,0,e.mats.cream,a.root);cloth.visible=false;
- e.characterMotion.set(id,createCharacterMotion(model,source.animations,book,cloth));dressCharacter(id,model);
+ e.characterMotion.set(id,createCharacterMotion(model,source.animations,book));dressCharacter(id,model);
  }
  e.dogMotion=rigDog(dog.scene);e.dog.clear();e.dog.add(e.dogMotion.root);
 }
@@ -67,7 +66,7 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  for(const [name,q]of a.basePose)q.copy(a.bones.get(name)!.quaternion);
  for(const [name,p]of a.basePositions)p.copy(a.bones.get(name)!.position);
  for(const key of Object.keys(a.activityWeights) as Activity[])a.activityWeights[key]=T.MathUtils.damp(a.activityWeights[key],!moving&&activity===key?1:0,8,dt);
- a.book.visible=false;a.cloth.visible=false;
+ a.book.visible=false;
  updateRig(a.root);narrowStride(a.bones,e.actors.get(id)!.root,a.walkWeight/.82);updateRig(a.root);
  if(a.soleSamples.length&&typeof e.groundHeight==='function'){
   let clearance=Infinity;const point=new T.Vector3();
@@ -81,9 +80,8 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  const read=a.activityWeights.read,work=a.activityWeights.tidy+a.activityWeights.car+a.activityWeights.garden;
  turn('upperarm_l',right,-.4*read);turn('upperarm_r',right,-.4*read);
  turn('lowerarm_l',right,-.9*read);turn('lowerarm_r',right,-.9*read);turn('head',right,.15*read);
- turn('spine_02',right,.08*work);turn('upperarm_r',right,(-.55+Math.sin(time*1.7)*.06)*work);turn('lowerarm_r',right,-.45*work);turn('head',right,.1*work);
+ turn('spine_02',right,.045*work);turn('upperarm_r',right,(-.3+Math.sin(time*1.7)*.035)*work);turn('lowerarm_r',right,-.2*work);turn('head',right,.1*work);
  turn('head',up,Math.sin(time*.35)*.08*a.activityWeights.look);
  const l=a.bones.get('hand_l'),r=a.bones.get('hand_r');
  if(read>.5&&l&&r){const left=actor.worldToLocal(l.getWorldPosition(new T.Vector3())),rightHand=actor.worldToLocal(r.getWorldPosition(new T.Vector3()));a.book.position.copy(left).add(rightHand).multiplyScalar(.5);a.book.rotation.set(-.18,0,Math.atan2(left.y-rightHand.y,left.x-rightHand.x));a.book.visible=true;}
- if(a.activityWeights.tidy+a.activityWeights.car>.5&&r){a.cloth.position.copy(actor.worldToLocal(r.getWorldPosition(new T.Vector3())));a.cloth.quaternion.copy(actor.getWorldQuaternion(new T.Quaternion()).invert().multiply(r.getWorldQuaternion(new T.Quaternion())));a.cloth.visible=true;}
 }

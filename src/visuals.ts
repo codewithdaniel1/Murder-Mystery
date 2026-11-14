@@ -55,7 +55,8 @@ export function landscape(e:Estate){
 }
 export function castle(e:Estate){
  const {stone,trim,wood,plaster}=e.mats;
- e.floor(42,.15,28,0,0,-2,wood);e.box(42,.25,28,0,4.9,-2,plaster);
+ const entranceOak=wood.clone();entranceOak.color.setHex(0xc3ac87);entranceOak.roughness=.72;
+ e.floor(42,.15,28,0,0,-2,entranceOak);e.box(42,.25,28,0,4.9,-2,plaster);
  e.wall(19.2,1,.6,-11.4,.5,12);e.wall(19.2,1,.6,11.4,.5,12);e.wall(42,1,.65,0,4.35,12);e.wall(3.6,1.4,.65,0,4.1,12);
  const cuts=[-21,-18,-16,-12,-10,-1.8,1.8,10,12,16,18,21];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1],mid=(a+b)/2;if(Math.abs(mid)<1.81||[-17,-11,11,17].some(x=>Math.abs(mid-x)<.1))continue;e.wall(b-a,2.85,.6,mid,2.425,12);}
  for(const x of[-17,-11,11,17])windowDetail(e,x,2.45,12.12,2,2.7);
