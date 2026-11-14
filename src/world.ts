@@ -52,9 +52,63 @@ export class Estate {
  sign(text:string,x:number,y:number,z:number,width=1.6,rotation=0,parent:T.Object3D=this.scene){const c=document.createElement('canvas');c.width=512;c.height=160;const ctx=c.getContext('2d')!;ctx.fillStyle='#243b32';ctx.fillRect(0,0,512,160);ctx.strokeStyle='#b9a673';ctx.lineWidth=4;ctx.strokeRect(10,10,492,140);ctx.fillStyle='#eadfbc';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='28px Georgia';ctx.fillText(text,256,81);const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;const m=new T.Mesh(new T.PlaneGeometry(width,width*.3125),new T.MeshStandardMaterial({map:tex,roughness:.8}));m.position.set(x,y,z);m.rotation.y=rotation;parent.add(m);return m;}
  landscape(){landscape(this)}
  castle(){castle(this)}
- addDoor(id:string,x:number,z:number,rotation:number,open=false){const pivot=new T.Group();pivot.position.set(x,.12,z);pivot.rotation.y=rotation;const door=new T.Group();this.box(3.1,3.15,.16,1.55,1.58,0,this.mats.dark,door);for(const y of[.85,2.2])this.box(2.6,1.05,.04,1.55,y,.105,this.mats.wood,door);this.cyl(.065,.065,.28,2.8,1.45,.22,this.mats.gold,door).rotation.x=Math.PI/2;pivot.add(door);this.scene.add(pivot);this.target(door,'door:'+id,id==='front'?'Entrance doors':id==='rear'?'Garden door':id==='study'?'Study door':'Library door','Open / close');this.doors.set(id,{pivot:door,angle:open?-Math.PI/2:0,open:open?1:0});door.rotation.y=open?-Math.PI/2:0;const along=Math.abs(Math.sin(rotation))>.5;this.barrier(x+(along?0:1.55),z+(along?-1.55:0),along?.28:3.1,along?3.1:.28,id);}
- lamp(x:number,y:number,z:number){this.cyl(.17,.24,.08,x,y,z,this.mats.gold);this.cyl(.025,.04,.55,x,y+.3,z,this.mats.gold);const shade=this.mat(0xe5c28a);shade.emissive=new T.Color(0xd19444);shade.emissiveIntensity=.6;this.cyl(.22,.4,.43,x,y+.72,z,shade);const l=new T.PointLight(0xffcf87,35,9,2);l.position.set(x,y+.65,z);this.scene.add(l);}
- table(x:number,z:number,w=2,d=1,h=.92){const g=new T.Group();g.position.set(x,0,z);this.box(w,.14,d,0,h,0,this.mats.wood,g);for(const a of[-1,1])for(const b of[-1,1])this.box(.09,h,.09,a*(w/2-.15),h/2,b*(d/2-.12),this.mats.dark,g);this.scene.add(g);this.barrier(x,z,w,d);return g;}
+ addDoor(id:string,x:number,z:number,rotation:number,open=false){
+  const pivot=new T.Group();pivot.position.set(x,.12,z);pivot.rotation.y=rotation;
+  const door=new T.Group(),wood=this.mats.panel,trim=this.mats.wood,gold=this.mats.gold;
+  this.box(3.1,3.15,.16,1.55,1.58,0,this.mats.dark,door);
+  // Matching raised, four-panel joinery on both faces of the moving leaf.
+  for(const side of[-1,1]){
+   const face=side*.094;
+   this.box(2.98,3.02,.035,1.55,1.58,face,trim,door);
+   for(const xx of[.16,1.55,2.94])this.box(.13,2.92,.07,xx,1.58,side*.12,wood,door);
+   for(const yy of[.18,1.08,2.15,2.98])this.box(2.92,.13,.07,1.55,yy,side*.12,wood,door);
+   for(const xx of[.84,2.26])for(const yy of[.63,2.57]){
+    const pw=1.12,ph=.7,zf=side*.145;
+    this.box(pw,ph,.025,xx,yy,zf,this.mats.dark,door);
+    for(const dx of[-1,1])this.box(.065,ph+.1,.055,xx+dx*(pw/2),yy,side*.17,gold,door);
+    for(const dy of[-1,1])this.box(pw+.1,.065,.055,xx,yy+dy*(ph/2),side*.17,gold,door);
+    this.box(pw-.16,ph-.16,.025,xx,yy,side*.16,wood,door);
+   }
+   // Three brass hinges and matching handles make the reverse face finished too.
+   for(const yy of[.42,1.58,2.74]){
+    this.box(.12,.32,.035,.105,yy,side*.165,gold,door);
+    this.cyl(.038,.038,.13,.105,yy,side*.19,gold,door,12).rotation.x=Math.PI/2;
+   }
+   this.box(.18,.3,.04,2.78,1.48,side*.165,gold,door);
+   this.cyl(.065,.065,.11,2.78,1.48,side*.21,gold,door,20).rotation.x=Math.PI/2;
+   this.sphere(.06,2.78,1.48,side*.27,gold,door,.85,1,.85);
+   this.cyl(.018,.018,.1,2.78,1.25,side*.19,gold,door,10).rotation.x=Math.PI/2;
+  }
+  pivot.add(door);this.scene.add(pivot);this.target(door,'door:'+id,id==='front'?'Entrance doors':id==='rear'?'Garden door':id==='study'?'Study door':'Library door','Open / close');this.doors.set(id,{pivot:door,angle:open?-Math.PI/2:0,open:open?1:0});door.rotation.y=open?-Math.PI/2:0;
+  const along=Math.abs(Math.sin(rotation))>.5;this.barrier(x+(along?0:1.55),z+(along?-1.55:0),along?.28:3.1,along?3.1:.28,id);
+ }
+ lamp(x:number,y:number,z:number){this.cyl(.17,.24,.08,x,y,z,this.mats.gold);this.cyl(.13,.13,.045,x,y+.07,z,this.mats.dark);this.cyl(.025,.04,.55,x,y+.3,z,this.mats.gold);const shade=this.mat(0xe5c28a);shade.emissive=new T.Color(0xd19444);shade.emissiveIntensity=.6;this.cyl(.22,.4,.43,x,y+.72,z,shade);this.cyl(.4,.4,.035,x,y+.51,z,this.mats.gold);this.cyl(.22,.22,.035,x,y+.94,z,this.mats.gold);this.sphere(.045,x,y+.99,z,this.mats.gold);const l=new T.PointLight(0xffcf87,35,9,2);l.position.set(x,y+.65,z);this.scene.add(l);}
+ table(x:number,z:number,w=2,d=1,h=.92){
+  const g=new T.Group();g.position.set(x,0,z);const wood=this.mats.panel,edge=this.mats.wood,gold=this.mats.gold;
+  // Layered top, fine perimeter inlay and softened overhanging edge.
+  this.box(w,.12,d,0,h,0,edge,g);this.box(w+.07,.045,d+.07,0,h+.075,0,wood,g);
+  for(const side of[-1,1]){
+   this.box(w-.16,.018,.025,0,h+.1,side*(d/2-.1),gold,g);
+   this.box(.025,.018,d-.16,side*(w/2-.1),h+.1,0,gold,g);
+   const z=side*(d/2+.005);
+   this.box(w-.32,.27,.055,0,h-.13,z,wood,g);
+   const drawers=Math.max(1,Math.min(4,Math.floor((w-.35)/.72)));
+   for(let i=0;i<drawers;i++){
+    const dw=(w-.48-(drawers-1)*.04)/drawers,dx=-(w-.48)/2+dw/2+i*(dw+.04);
+    this.box(dw,.19,.035,dx,h-.13,z+side*.04,this.mats.wood,g);
+    for(const sx of[-1,1])this.box(.025,.15,.018,dx+sx*(dw/2-.035),h-.13,z+side*.065,gold,g);
+    this.box(dw-.08,.025,.018,dx,h-.045,z+side*.065,gold,g);
+    this.cyl(.027,.027,.075,dx,h-.13,z+side*.095,gold,g,14).rotation.x=Math.PI/2;
+   }
+  }
+  for(const a of[-1,1])for(const b of[-1,1]){
+   const lx=a*(w/2-.17),lz=b*(d/2-.15);
+   this.box(.15,h-.13,.15,lx,h/2,lz,edge,g);
+   for(const yy of[.12,.2,h-.22])this.cyl(.09,.1,.045,lx,yy,lz,gold,g,12);
+   this.box(.11,.12,.11,lx,.06,lz,wood,g);
+  }
+  this.scene.add(g);this.barrier(x,z,w,d);return g;
+ }
  paper(title:string,lines:string[],x:number,y:number,z:number,book=false,parent:T.Object3D=this.scene){const g=new T.Group();g.position.set(x,y,z);if(book)this.box(.65,.07,.85,0,0,0,this.mats.red,g);const cv=document.createElement('canvas');cv.width=512;cv.height=640;const ctx=cv.getContext('2d')!;ctx.fillStyle='#e6d6ae';ctx.fillRect(0,0,512,640);ctx.fillStyle='#3f372b';ctx.font='bold 28px Georgia';ctx.fillText(title,35,70);ctx.font='22px Georgia';lines.forEach((l,i)=>ctx.fillText(l,35,130+i*42));ctx.strokeStyle='#a78f62';ctx.strokeRect(20,20,472,600);const tex=new T.CanvasTexture(cv);tex.colorSpace=T.SRGBColorSpace;const sheet=new T.Mesh(new T.PlaneGeometry(.56,.72),new T.MeshStandardMaterial({map:tex,roughness:.95,side:T.DoubleSide}));sheet.rotation.x=-Math.PI/2;sheet.position.y=.045;g.add(sheet);parent.add(g);return g;}
  falcon(parent:T.Object3D=this.scene){const g=new T.Group();this.cyl(.3,.35,.14,0,.08,0,this.mats.gold,g);this.sphere(.2,0,.42,0,this.mats.gold,g,.8,1.5,.7);this.sphere(.12,.02,.73,0,this.mats.gold,g);const beak=new T.Mesh(new T.ConeGeometry(.06,.2,5),this.mats.gold);beak.rotation.z=-Math.PI/2;beak.position.set(.15,.73,0);g.add(beak);for(const s of[-1,1]){const wing=this.sphere(.19,s*.17,.45,0,this.mats.gold,g,.45,1.5,.8);wing.rotation.z=s*.3;}this.cyl(.035,.035,.23,0,.22,0,this.mats.gold,g);parent.add(g);return g;}
  interiors(){
@@ -69,7 +123,7 @@ export class Estate {
  // Covered chair, fireplace, rug, books.
 
  this.box(.6,2.2,3,-20.65,1.1,4.5,this.mats.stone);this.box(.2,1.3,1.9,-20.25,.75,4.5,this.mats.black);this.box(.95,.15,3.3,-20.4,2.1,4.5,this.mats.trim);const ember=this.mat(0x992a0e);ember.emissive=new T.Color(0xff6a1c);ember.emissiveIntensity=2;this.box(.18,.12,1.3,-20.08,.2,4.5,ember);const fire=new T.PointLight(0xffa058,7,8,2);fire.position.set(-19.6,.8,4.5);this.scene.add(fire);
- for(let j=0;j<3;j++){const x=12+j*3.4;this.barrier(x,-9.35,2.9,.9);this.box(2.8,3.4,.65,x,1.7,-9.6,this.mats.wood);for(let level=0;level<4;level++){this.box(2.9,.09,.8,x,.35+level*.8,-9.4,this.mats.dark);for(let b=0;b<10;b++){this.box(.16+rnd()*.06,.42+rnd()*.23,.35,x-1.15+b*.25,.6+level*.8,-9.15,this.mat([0x735647,0x536454,0x8c714e,0x40586c][b%4]));}}}
+ for(let j=0;j<3;j++){const x=12+j*3.4;this.barrier(x,-9.35,2.9,.9);this.box(2.8,3.4,.65,x,1.7,-9.6,this.mats.wood);for(const side of[-1,1]){this.box(.13,3.48,.82,x+side*1.39,1.72,-9.38,this.mats.panel);for(const y of[.18,3.34])this.box(.2,.12,.9,x+side*1.39,y,-9.38,this.mats.gold);}this.box(2.98,.16,.88,x,.18,-9.38,this.mats.panel);this.box(3,.16,.9,x,3.43,-9.38,this.mats.panel);for(let level=0;level<4;level++){const sy=.35+level*.8;this.box(2.9,.13,.88,x,sy,-9.35,this.mats.panel);this.box(2.94,.035,.91,x,sy+.07,-9.35,this.mats.gold);for(const side of[-1,1])this.box(.12,.3,.34,x+side*1.22,sy+.22,-9.05,this.mats.wood);for(let b=0;b<10;b++){const bx=x-1.15+b*.25,bh=.42+rnd()*.23,bookmat=this.mat([0x735647,0x536454,0x8c714e,0x40586c][b%4]);this.box(.16+rnd()*.06,bh,.35,bx,.6+level*.8,-9.15,bookmat);this.box(.028,.09,.018,bx,.6+level*.8,-8.965,this.mats.gold);}}}
  this.table(16,3,2,1.1);this.lamp(16.6,1.03,3);this.target(this.paper('AVELLIC REGISTER',['vel aran si:','received personally','by the steward.','','A reference for archivists.'],15.55,1.04,3,true),'lexicon','Avellic reference volume');
  this.table(16,7,2.3,.8);for(let i=0;i<4;i++)this.box(.6,.07,.85,15.6+i*.2,1+i*.07,7,this.mats.red);
  // Bell alcove, garment snag and office display.
@@ -82,7 +136,7 @@ export class Estate {
  this.cyl(3.15,3.2,.35,0,.1,-30,stone);this.cyl(2.9,2.9,.1,0,.32,-30,this.mat(0x446f6a,.23,.25));this.cyl(.55,.75,1.35,0,.8,-30,stone);this.cyl(1.2,.8,.23,0,1.55,-30,stone);this.sphere(.25,0,1.9,-30,this.mats.gold);this.barrier(0,-30,6.2,6.2);this.target(this.scene.children[this.scene.children.length-1],'fountain','The garden fountain','Visit');
  for(const x of[-12,12]){this.barrier(x,-29,1.1,10);}for(let i=0;i<6;i++){const x=-16+i*6;this.floor(4,.32,2,x,.1,-40,this.mats.stone);this.barrier(x,-40,4,2);}
  const flowers=new T.InstancedMesh(new T.SphereGeometry(.07,5,4),this.mat(0xddbd98),480),stems=new T.InstancedMesh(new T.CylinderGeometry(.018,.025,.45,4),this.mats.leaf,480);const m=new T.Matrix4();for(let i=0;i<480;i++){const x=-18+rnd()*36,z=-39.2-rnd()*1.5,y=.4+rnd()*.4;m.makeTranslation(x,y,z);flowers.setMatrixAt(i,m);m.makeTranslation(x,y-.2,z);stems.setMatrixAt(i,m);}this.scene.add(flowers,stems);
- for(const x of[-7,7]){this.barrier(x,-36,2.8,.9);this.box(2.6,.12,.65,x,.55,-36,this.mats.wood);this.box(2.6,.6,.12,x,.95,-36.3,this.mats.wood);for(const a of[-1,1])this.box(.1,.6,.55,x+a,.22,-36,this.mats.dark);}
+ for(const x of[-7,7]){this.barrier(x,-36,2.8,.9);this.box(2.6,.12,.65,x,.55,-36,this.mats.wood);this.box(2.68,.035,.72,x,.63,-36,this.mats.panel);this.box(2.6,.6,.12,x,.95,-36.3,this.mats.wood);for(let i=0;i<7;i++)this.box(.055,.43,.045,x-.78+i*.26,.96,-36.22,this.mats.panel);for(const a of[-1,1]){this.box(.1,.6,.55,x+a,.22,-36,this.mats.dark);this.box(.17,.09,.66,x+a,.59,-36,this.mats.panel);for(const z of[-.24,.24])this.box(.15,.09,.13,x+a,.08,-36+z,this.mats.gold);}this.box(2.35,.3,.12,x,.28,-35.72,this.mats.panel);}
  // Greenhouse, with an accessible central entrance.
  const glass=this.mats.glass,metal=this.mats.dark;this.floor(10,.15,8,26,0,-29,this.mat(0x8e9277));for(const x of[21,31]){this.box(.1,3.5,8,x,1.75,-29,glass,this.scene,false);this.barrier(x,-29,.2,8);}this.box(10,3.5,.1,26,1.75,-33,glass,this.scene,false);this.barrier(26,-33,10,.2);for(const x of[22.8,29.2]){this.box(3.6,3.5,.1,x,1.75,-25,glass,this.scene,false);this.barrier(x,-25,3.6,.2);}for(let x=21;x<=31;x+=2){this.box(.08,3.6,.09,x,1.8,-25,metal);this.box(.08,3.6,.09,x,1.8,-33,metal);for(const z of[-25,-33]){const beam=this.box(5.5,.08,.09,x<26?23.5:28.5,4.2,z,metal);beam.rotation.z=x<26?.24:-.24;}}
  for(const x of[21,31])for(let z=-33;z<=-25;z+=2)this.box(.09,3.6,.08,x,1.8,z,metal);
