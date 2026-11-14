@@ -31,9 +31,12 @@ export class EstateRoutines {
  const face=Math.atan2(destination.x-position.x,destination.z-position.z);
  // Turn toward the next path segment before translating, avoiding sideways skating.
  const angle=facing===undefined?0:Math.abs(Math.atan2(Math.sin(face-facing),Math.cos(face-facing)));
- const cruise=.95*Math.max(0,Math.cos(angle));const desired=angle>.8?0:Math.min(cruise,Math.max(.12,Math.sqrt(2*1.4*Math.max(0,distance-.12))));
- m.speed+=Math.max(-dt*2,Math.min(dt*1.6,desired-m.speed));
- if(angle>.8||m.speed<.001)return {...still(),face,activity:null};
+ // Finish turning toward the next segment before taking a step. A wider angle
+ // threshold let the body travel sideways while the feet pointed elsewhere.
+ const turnLimit=.38,cruise=.88*Math.max(0,Math.cos(angle));
+ const desired=angle>turnLimit?0:Math.min(cruise,Math.max(.08,Math.sqrt(2*1.15*Math.max(0,distance-.2))));
+ m.speed+=Math.max(-dt*2.2,Math.min(dt*1.35,desired-m.speed));
+ if(angle>turnLimit||m.speed<.001)return {...still(),face,activity:null};
  const travel=Math.min(distance,dt*m.speed),next={x:position.x+(destination.x-position.x)/distance*travel,z:position.z+(destination.z-position.z)/distance*travel};
  if(!clearSegment(position,next,barriers,doors,.3)){m.speed=0;m.path=[];m.replan=.5;return still()}
  if(player&&Math.hypot(next.x-player.x,next.z-player.z)<1.1)return still();

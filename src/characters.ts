@@ -58,9 +58,12 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  a.root.position.y=a.baseY;
  for(const [name,q]of a.basePose)a.bones.get(name)!.quaternion.copy(q);
  for(const [name,p]of a.basePositions)a.bones.get(name)!.position.copy(p);
- a.walkWeight=T.MathUtils.damp(a.walkWeight,moving?.98:0,12,dt);
+ // Scale the walk pose with actual travel speed. Blending a full stride in
+ // during tiny start/stop movements made the feet pedal and slide in place.
+ const travelSpeed=Math.max(0,speed),gaitWeight=.96*T.MathUtils.smoothstep(travelSpeed,.1,.68);
+ a.walkWeight=T.MathUtils.damp(a.walkWeight,moving?gaitWeight:0,8,dt);
  a.walk.enabled=a.idle.enabled=true;a.walk.setEffectiveWeight(a.walkWeight);a.idle.setEffectiveWeight(1-a.walkWeight);
- a.walk.setEffectiveTimeScale(moving?Math.max(0,speed)/a.strideSpeed:0);
+ a.walk.setEffectiveTimeScale(moving&&travelSpeed>.02?travelSpeed/a.strideSpeed:0);
  a.mixer.update(dt);
  for(const [name,q]of a.basePose)q.copy(a.bones.get(name)!.quaternion);
  for(const [name,p]of a.basePositions)p.copy(a.bones.get(name)!.position);

@@ -190,7 +190,7 @@ export class Estate {
  const result=this.routines.update(id,a.root.position,dt,[...solid,...nearby],s.doors,!playing||id===talking,this.camera.position,a.root.rotation.y);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
  a.root.position.y=this.groundHeight(a.root.position.x,a.root.position.z);a.isWalking=result.moving;a.activity=id===talking?null:result.activity;a.activityLabel=result.label;
  const targetAngle=id===talking?Math.atan2(this.camera.position.x-a.root.position.x,this.camera.position.z-a.root.position.z):result.face;
- if(playing||id===talking){const delta=Math.atan2(Math.sin(targetAngle-a.root.rotation.y),Math.cos(targetAngle-a.root.rotation.y));a.root.rotation.y+=delta*Math.min(1,dt*5);}
+ if(playing||id===talking){const delta=Math.atan2(Math.sin(targetAngle-a.root.rotation.y),Math.cos(targetAngle-a.root.rotation.y));a.root.rotation.y+=delta*Math.min(1,dt*3.4);}
  animateCharacter(this,id,result.moving,dt,!playing&&!talking,a.activity??null,this.clock,dt>0?Math.hypot(a.root.position.x-before.x,a.root.position.z-before.z)/dt:0);
  }
 
