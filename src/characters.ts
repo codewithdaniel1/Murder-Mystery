@@ -8,26 +8,15 @@ import {rigDog} from './dog';
 import {CAST,dressCharacter} from './appearance';
 function updateRig(root:T.Object3D){root.updateWorldMatrix(true,false);root.updateMatrixWorld(true)}
 export interface CharacterMotion {
- mixer:T.AnimationMixer;idle:T.AnimationAction;walk:T.AnimationAction;root:T.Object3D;
- bones:Map<string,T.Bone>;basePose:Map<string,T.Quaternion>;idlePose:Map<string,T.Quaternion>;basePositions:Map<string,T.Vector3>;book:T.Group;
- soleSamples:{mesh:T.SkinnedMesh;point:T.Vector3;index:number}[];baseY:number;groundOffset:number|null;walkWeight:number;strideSpeed:number;activityWeights:Record<Activity,number>;
+ mixer:T.AnimationMixer;idle:T.AnimationAction;root:T.Object3D;
+ bones:Map<string,T.Bone>;basePose:Map<string,T.Quaternion>;basePositions:Map<string,T.Vector3>;book:T.Group;
+ soleSamples:{mesh:T.SkinnedMesh;point:T.Vector3;index:number}[];baseY:number;groundOffset:number|null;walkWeight:number;stridePhase:number;activityWeights:Record<Activity,number>;
 }
-// Keep both actions alive. Rapid stop/start events change weights, never restart a stride.
 export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],book:T.Group):CharacterMotion{
- const walkClip=clips.find(c=>c.name==='Walk_Relaxed')!.clone();
- // The imported clip drives individual fingers and an obsolete held prop.
- // Exclude those tracks while preserving its natural shoulder and leg poses.
- walkClip.tracks=walkClip.tracks.filter(track=>!/held_accessory|index_|middle_|pinky_|ring_|thumb_/.test(track.name));
- const mixer=new T.AnimationMixer(model),idle=mixer.clipAction(clips.find(c=>c.name==='Idle_Standing')!),walk=mixer.clipAction(walkClip);
+ const mixer=new T.AnimationMixer(model),idle=mixer.clipAction(clips.find(c=>c.name==='Idle_Standing')!);
  const bones=new Map<string,T.Bone>();model.traverse(o=>{if(o instanceof T.Bone)bones.set(o.name,o)});
- // Measure the actual rig's stride instead of guessing a playback rate. The modest
- // idle blend reduces the wide, exaggerated stride of these interim character clips.
- walk.play();let min=Infinity,max=-Infinity;const foot=bones.get('foot_l'),v=new T.Vector3();
- for(let i=0;i<60;i++){mixer.setTime(walk.getClip().duration*i/60);updateRig(model);if(foot){model.worldToLocal(foot.getWorldPosition(v));min=Math.min(min,v.z);max=Math.max(max,v.z)}}
- const strideSpeed=Number.isFinite(max-min)?2*(max-min)*model.scale.y*1/walk.getClip().duration:.7;
- mixer.stopAllAction();idle.reset().play();walk.reset().play().setEffectiveWeight(0);mixer.update(0);
+ idle.reset().play();mixer.update(0);
  const basePose=new Map<string,T.Quaternion>();for(const [name,bone]of bones)basePose.set(name,bone.quaternion.clone());
- const idlePose=new Map<string,T.Quaternion>();for(const [name,bone]of bones)idlePose.set(name,bone.quaternion.clone());
  const basePositions=new Map<string,T.Vector3>();for(const name of['foot_l','foot_r'])if(bones.has(name))basePositions.set(name,bones.get(name)!.position.clone());
  const soleSamples:CharacterMotion['soleSamples']=[];
  updateRig(model);
@@ -37,7 +26,7 @@ export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],b
  points.sort((a,b)=>a.y-b.y);const low=points.filter(p=>p.y<points[0].y+.035);
  const step=Math.max(1,Math.floor(low.length/96));for(let i=0;i<low.length;i+=step)soleSamples.push({mesh:o,index:low[i].index,point:low[i].point});
  });
- return {mixer,idle,walk,root:model,bones,basePose,idlePose,basePositions,book,soleSamples,baseY:model.position.y,groundOffset:null,walkWeight:0,strideSpeed:Math.max(.2,strideSpeed),activityWeights:{read:0,tidy:0,garden:0,car:0,look:0}};
+ return {mixer,idle,root:model,bones,basePose,basePositions,book,soleSamples,baseY:model.position.y,groundOffset:null,walkWeight:0,stridePhase:0,activityWeights:{read:0,tidy:0,garden:0,car:0,look:0}};
 }
 export async function loadCharacters(e:Estate){
  const loader=new GLTFLoader();
@@ -63,38 +52,42 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  a.root.position.y=a.baseY;
  for(const [name,q]of a.basePose)a.bones.get(name)!.quaternion.copy(q);
  for(const [name,p]of a.basePositions)a.bones.get(name)!.position.copy(p);
- // Scale the walk pose with actual travel speed. Blending a full stride in
- // during tiny start/stop movements made the feet pedal and slide in place.
- const travelSpeed=Math.max(0,speed),gaitWeight=.96*T.MathUtils.smoothstep(travelSpeed,.1,.68);
- a.walkWeight=T.MathUtils.damp(a.walkWeight,moving?gaitWeight:0,8,dt);
- a.walk.enabled=a.idle.enabled=true;a.walk.setEffectiveWeight(a.walkWeight);a.idle.setEffectiveWeight(1-a.walkWeight);
- a.walk.setEffectiveTimeScale(moving&&travelSpeed>.02?travelSpeed/a.strideSpeed:0);
+ // Advance the gait by distance travelled, so a blocked character cannot
+ // keep cycling its feet. The imported walk animation was visibly crossing
+ // the legs and twisting the arms; the idle clip supplies a stable base pose.
+ const travelSpeed=moving?Math.max(0,speed):0;
+ a.walkWeight=T.MathUtils.damp(a.walkWeight,T.MathUtils.smoothstep(travelSpeed,.08,.72),7,dt);
+ a.stridePhase=(a.stridePhase+travelSpeed*dt/.98*Math.PI*2)%(Math.PI*2);
  a.mixer.update(dt);
- // Reduce the clip's broad shoulder swing without flattening the leg cycle.
- for(const name of['upperarm_l','upperarm_r','lowerarm_l','lowerarm_r']){
-  const bone=a.bones.get(name),idle=a.idlePose.get(name);
-  if(bone&&idle)bone.quaternion.slerp(idle,.32*a.walkWeight);
- }
  for(const [name,q]of a.basePose)q.copy(a.bones.get(name)!.quaternion);
  for(const [name,p]of a.basePositions)p.copy(a.bones.get(name)!.position);
  for(const key of Object.keys(a.activityWeights) as Activity[])a.activityWeights[key]=T.MathUtils.damp(a.activityWeights[key],!moving&&activity===key?1:0,8,dt);
  a.book.visible=false;
+ const actor=e.actors.get(id)!.root;
+ const right=new T.Vector3(1,0,0).applyQuaternion(actor.quaternion),up=new T.Vector3(0,1,0);
+ const turn=(name:string,axis:T.Vector3,angle:number)=>{const bone=a.bones.get(name);if(!bone?.parent||Math.abs(angle)<1e-6)return;const parent=bone.parent.getWorldQuaternion(new T.Quaternion()),localAxis=axis.clone().applyQuaternion(parent.invert());bone.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(localAxis,angle));bone.updateMatrixWorld(true)};
+ const left=Math.sin(a.stridePhase),rightStep=-left,stride=.19*a.walkWeight;
+ for(const [side,step]of [['l',left],['r',rightStep]] as const){
+  const thigh=-step*stride,knee=Math.max(0,step)*.16*a.walkWeight;
+  turn('thigh_'+side,right,thigh);turn('calf_'+side,right,knee);turn('foot_'+side,right,-thigh-knee*.7);
+ }
+ turn('upperarm_l',right,left*.1*a.walkWeight);turn('upperarm_r',right,-left*.1*a.walkWeight);
+ turn('lowerarm_l',right,-.05*a.walkWeight);turn('lowerarm_r',right,-.05*a.walkWeight);
+ turn('spine_01',up,left*.025*a.walkWeight);
+ const pelvis=a.bones.get('pelvis');if(pelvis)pelvis.position.y+=Math.cos(a.stridePhase*2)*.004*a.walkWeight;
+ const read=a.activityWeights.read,work=a.activityWeights.tidy+a.activityWeights.car+a.activityWeights.garden;
+ turn('upperarm_l',right,-.4*read);turn('upperarm_r',right,-.4*read);
+ turn('lowerarm_l',right,-.9*read);turn('lowerarm_r',right,-.9*read);turn('head',right,.15*read);
+ turn('spine_02',right,.045*work);turn('upperarm_r',right,(-.3+Math.sin(time*1.7)*.035)*work);turn('lowerarm_r',right,-.2*work);turn('head',right,.1*work);
+ turn('head',up,Math.sin(time*.35)*.08*a.activityWeights.look);
  updateRig(a.root);
- if(a.soleSamples.length&&typeof e.groundHeight==='function'){
+ if(a.soleSamples.length){
   let clearance=Infinity;const point=new T.Vector3();
   for(const sample of a.soleSamples){sample.mesh.applyBoneTransform(sample.index,point.copy(sample.point)).applyMatrix4(sample.mesh.matrixWorld);clearance=Math.min(clearance,point.y-e.groundHeight(point.x,point.z))}
   const correction=.008-clearance;
   a.groundOffset=a.groundOffset===null?correction:T.MathUtils.damp(a.groundOffset,correction,20,dt);
   a.root.position.y+=a.groundOffset;updateRig(a.root);
  }
- const actor=e.actors.get(id)!.root;
- const right=new T.Vector3(1,0,0).applyQuaternion(actor.quaternion),up=new T.Vector3(0,1,0);
- const turn=(name:string,axis:T.Vector3,angle:number)=>{const bone=a.bones.get(name);if(!bone?.parent||Math.abs(angle)<1e-6)return;const parent=bone.parent.getWorldQuaternion(new T.Quaternion()),localAxis=axis.clone().applyQuaternion(parent.invert());bone.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(localAxis,angle));bone.updateMatrixWorld(true)};
- const read=a.activityWeights.read,work=a.activityWeights.tidy+a.activityWeights.car+a.activityWeights.garden;
- turn('upperarm_l',right,-.4*read);turn('upperarm_r',right,-.4*read);
- turn('lowerarm_l',right,-.9*read);turn('lowerarm_r',right,-.9*read);turn('head',right,.15*read);
- turn('spine_02',right,.045*work);turn('upperarm_r',right,(-.3+Math.sin(time*1.7)*.035)*work);turn('lowerarm_r',right,-.2*work);turn('head',right,.1*work);
- turn('head',up,Math.sin(time*.35)*.08*a.activityWeights.look);
  const l=a.bones.get('hand_l'),r=a.bones.get('hand_r');
  if(read>.5&&l&&r){const left=actor.worldToLocal(l.getWorldPosition(new T.Vector3())),rightHand=actor.worldToLocal(r.getWorldPosition(new T.Vector3()));a.book.position.copy(left).add(rightHand).multiplyScalar(.5);a.book.rotation.set(-.18,0,Math.atan2(left.y-rightHand.y,left.x-rightHand.x));a.book.visible=true;}
 }
