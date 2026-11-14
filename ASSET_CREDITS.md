@@ -8,17 +8,17 @@ Eight Poly Haven materials include color, OpenGL normal and roughness maps at 1K
 
 ## Scanned vegetation and furnishings
 
-Poly Haven fern, shrubs, tree and wooden armchair, with 1K material maps. The tree was simplified from approximately 1.6 million triangles to about 54,000; instancing reuses shared geometry across the grounds. All are CC0. See [scenery credits](public/models/CREDITS.md).
+Poly Haven fern, shrubs, tree and wooden armchair, with 1K material maps. The active garden tree has approximately 58,000 triangles and uses 1K leaf color/alpha plus 512px secondary textures; instancing reuses shared geometry across the grounds. All are CC0. See [scenery credits](public/models/CREDITS.md).
 
 ## Characters and dog
 
-Innerscene Harper and Jordan models use MakeHuman/MPFB CC0 assets and original Innerscene styling and animation. Both include idle and walking clips. Pip uses an original Innerscene dog model, with a project-authored four-leg skeleton, skin weights and procedural trot added at load time. All are CC0. See [character credits](public/models/people/CREDITS.md).
+Innerscene Harper, Jordan, Sam and Maya models use MakeHuman/MPFB CC0 assets and original Innerscene styling and animation. All four include idle and walking clips. Pip uses an original Innerscene dog model, with a project-authored four-leg skeleton, skin weights and procedural trot added at load time. All are CC0. See [character credits](public/models/people/CREDITS.md).
 
-The civilian clothes are interim art and have not been verified as historically exact WWII costumes. Several NPCs share a base figure with different scale and fabric tint.
+The civilian clothes are interim art and have not been verified as historically exact WWII costumes. Several NPCs share a base figure with different scale, fabric tint, hair colors and project-authored fitted accessories.
 
 ## Project-authored content
 
-Estate architecture, decorative geometry, remaining props and vehicle, interface, case text, geometric rug pattern were authored for this project. No GTA assets, paid fonts or voice recordings are included.
+Estate architecture, decorative geometry, remaining props and vehicle, interface, case text, geometric rug pattern were authored for this project. No GTA assets or paid fonts are included. The longcase clock, dial, costume accessories and planting layout are project-authored.
 
 ## Recorded environmental and interaction audio
 

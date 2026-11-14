@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import {materials,landscape,castle,interiorDetail,sceneryAssets,batchDetail} from './visuals';
+import {materials,landscape,castle,interiorDetail,sceneryAssets,batchDetail,grandfatherClock} from './visuals';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
@@ -10,7 +10,7 @@ import type {DogMotion} from './dog';
 import type {CharacterMotion} from './characters';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {EstateRoutines} from './routines';
-import {clearAt} from './navigation';
+import {clearAt,clearSegment,resolveOverlap} from './navigation';
 import type {Activity} from './routines';
 import type { GameState,PersonId,Pose } from './state';
 export interface Target {id:string;label:string;verb:string;root:T.Object3D;distance?:number}
@@ -19,8 +19,8 @@ interface Actor {isWalking?:boolean;activity?:Activity|null;activityLabel?:strin
 const rnd=(()=>{let s=4217;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}})();
 export class Estate {
  scene=new T.Scene();camera=new T.PerspectiveCamera(65,innerWidth/innerHeight,.06,220);renderer:T.WebGLRenderer;
- routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;angle:number;open:number}>();
- ray=new T.Raycaster();clock=0;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
+ surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;angle:number;open:number}>();
+ ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
  composer:EffectComposer;ao:GTAOPass;sun:T.DirectionalLight; mats:Record<string,T.MeshStandardMaterial>={}; pointer=new T.Vector2(0,0);lastMove=false;inspectRotation=0;ready:Promise<void>;quality='Auto';
  constructor(container:HTMLElement){
  this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));this.renderer.setSize(innerWidth,innerHeight);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.95;container.appendChild(this.renderer.domElement);
@@ -34,7 +34,7 @@ export class Estate {
  this.car=this.makeCar();this.car.position.set(4,0,56);this.car.visible=false;this.scene.add(this.car);
  this.dog=this.makeDog();this.dog.position.set(11,.1,3);this.scene.add(this.dog);this.target(this.dog,'pip','Pip','Greet');
  this.hands=this.makeHands();this.camera.add(this.hands);this.scene.add(this.camera);this.camera.position.set(0,6.2,38);this.camera.lookAt(0,3,0);
- this.composer=new EffectComposer(this.renderer);this.composer.addPass(new RenderPass(this.scene,this.camera));this.ao=new GTAOPass(this.scene,this.camera,innerWidth,innerHeight);this.ao.blendIntensity=.65;this.ao.updateGtaoMaterial({radius:.45,distanceExponent:1.5,thickness:1,scale:1});this.composer.addPass(this.ao);this.composer.addPass(new OutputPass());this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));
+ this.composer=new EffectComposer(this.renderer);this.composer.addPass(new RenderPass(this.scene,this.camera));this.ao=new GTAOPass(this.scene,this.camera,innerWidth,innerHeight);this.ao.blendIntensity=.35;this.ao.updateGtaoMaterial({radius:.45,distanceExponent:1.5,thickness:1,scale:1});this.composer.addPass(this.ao);this.composer.addPass(new OutputPass());this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));
  loaded.push(sceneryAssets(this),loadCharacters(this));batchDetail(this);this.ready=Promise.all(loaded).then(()=>{});addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));});
  }
  mat(c:number,roughness=.75,metalness=0){return new T.MeshStandardMaterial({color:c,roughness,metalness});}
@@ -42,6 +42,10 @@ export class Estate {
  round(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D){const m=new T.Mesh(new RoundedBoxGeometry(w,h,d,2,Math.min(w,h,d)*.15),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  cyl(rt:number,rb:number,h:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,seg=16){const geo=new T.CylinderGeometry(rt,rb,h,seg);if(mat===this.mats.stone){const uv=geo.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*Math.PI*(rt+rb)/2,uv.getY(i)*h/2);}const m=new T.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  sphere(rad:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,sx=1,sy=1,sz=1){const m=new T.Mesh(new T.SphereGeometry(rad,24,18),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;parent.add(m);return m;}
+ floor(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material){this.surfaces.push({x,z,w,d,y:y+h/2});return this.box(w,h,d,x,y,z,mat,this.scene,false)}
+ groundHeight(x:number,z:number){let y=-.08;for(const f of this.surfaces)if(Math.abs(x-f.x)<=f.w/2&&Math.abs(z-f.z)<=f.d/2)y=Math.max(y,f.y);return y}
+ collisionBarriers(s:GameState){const list=[...this.barriers];if(s.arrival==='arriving'||s.arrival==='present')list.push({x:4,z:s.arrival==='present'?24:this.car.position.z,w:2.45,d:5.25});return list}
+ advanceArrival(progress:number,dt:number,s:GameState){const next=Math.min(1,progress+dt/15),from=56-32*T.MathUtils.smoothstep(progress,0,1),to=56-32*T.MathUtils.smoothstep(next,0,1);const people=[this.camera.position,...[...this.actors.values()].filter(a=>a.root.visible).map(a=>a.root.position),this.dog.position];if(people.some(p=>Math.abs(p.x-4)<1.65&&p.z>to-3.1&&p.z<from+3.1))return progress;return next}
  barrier(x:number,z:number,w:number,d:number,door?:string){this.barriers.push({x,z,w,d,door});}
  wall(w:number,h:number,d:number,x:number,y:number,z:number,mat=this.mats.stone){const m=this.box(w,h,d,x,y,z,mat);this.walls.push(m);if(y-h/2<1.85)this.barrier(x,z,w,d);return m;}
  target(root:T.Object3D,id:string,label:string,verb='Inspect'){this.targets.push({root,id,label,verb});return root;}
@@ -54,18 +58,18 @@ export class Estate {
  paper(title:string,lines:string[],x:number,y:number,z:number,book=false,parent:T.Object3D=this.scene){const g=new T.Group();g.position.set(x,y,z);if(book)this.box(.65,.07,.85,0,0,0,this.mats.red,g);const cv=document.createElement('canvas');cv.width=512;cv.height=640;const ctx=cv.getContext('2d')!;ctx.fillStyle='#e6d6ae';ctx.fillRect(0,0,512,640);ctx.fillStyle='#3f372b';ctx.font='bold 28px Georgia';ctx.fillText(title,35,70);ctx.font='22px Georgia';lines.forEach((l,i)=>ctx.fillText(l,35,130+i*42));ctx.strokeStyle='#a78f62';ctx.strokeRect(20,20,472,600);const tex=new T.CanvasTexture(cv);tex.colorSpace=T.SRGBColorSpace;const sheet=new T.Mesh(new T.PlaneGeometry(.56,.72),new T.MeshStandardMaterial({map:tex,roughness:.95,side:T.DoubleSide}));sheet.rotation.x=-Math.PI/2;sheet.position.y=.045;g.add(sheet);parent.add(g);return g;}
  falcon(parent:T.Object3D=this.scene){const g=new T.Group();this.cyl(.3,.35,.14,0,.08,0,this.mats.gold,g);this.sphere(.2,0,.42,0,this.mats.gold,g,.8,1.5,.7);this.sphere(.12,.02,.73,0,this.mats.gold,g);const beak=new T.Mesh(new T.ConeGeometry(.06,.2,5),this.mats.gold);beak.rotation.z=-Math.PI/2;beak.position.set(.15,.73,0);g.add(beak);for(const s of[-1,1]){const wing=this.sphere(.19,s*.17,.45,0,this.mats.gold,g,.45,1.5,.8);wing.rotation.z=s*.3;}this.cyl(.035,.035,.23,0,.22,0,this.mats.gold,g);parent.add(g);return g;}
  interiors(){
- this.box(3,.015,17,0,.1,1,this.mats.red,this.scene,false);for(const x of[-1.45,1.45])this.box(.035,.02,17,x,.115,1,this.mats.gold,this.scene,false);
+
  this.table(4,8,2.4,.85);this.lamp(4.8,1.02,8);
  const phone=new T.Group();phone.position.set(3.55,1.05,8);this.round(.55,.13,.42,0,0,0,this.mats.black,phone);this.cyl(.15,.15,.035,0,.09,.02,this.mats.gold,phone);this.cyl(.09,.09,.05,0,.12,.02,this.mats.black,phone);this.box(.45,.065,.09,0,.26,-.1,this.mats.black,phone);for(const x of[-.23,.23])this.sphere(.08,x,.23,-.1,this.mats.black,phone);this.scene.add(phone);this.target(phone,'phone','Hall telephone','Use');this.sign('GATEHOUSE · LINE 2',4,1.8,8.43,1.2,Math.PI);
  // Hall clock and paintings.
- this.box(.95,2.9,.52,-4,1.5,-8.8,this.mats.wood);const face=this.cyl(.32,.32,.08,-4,2.6,-8.46,this.mats.cream);face.rotation.x=Math.PI/2;this.box(.025,.22,.02,-4,2.66,-8.39,this.mats.black);this.box(.22,.025,.02,-3.91,2.6,-8.38,this.mats.black);
+ grandfatherClock(this,-4,-8.8);
 
  this.table(-15,0,3.6,1.5);this.lamp(-16.25,1.02,0);this.target(this.paper('TO LADY BEATRICE',['Before another payment,','compare the original invoice.','We must speak tonight.','                         E. Vale'],-15,1.02,.15),'note','Elias’s unfinished letter');this.target(this.paper('ESTATE ACCOUNTS',['Supplier invoice       £60','Estate claim            £180','Personal receipt       £120','','vel aran si'],-14,1.04,-.1,true),'ledger','The ledger & receipts');
  const fragment=new T.Group();fragment.position.set(-13.4,.18,1.25);const claw=this.cyl(.03,.09,.22,0,.05,0,this.mats.gold,fragment);claw.rotation.z=.7;this.scene.add(fragment);this.target(fragment,'fragment','A bronze fragment','Pick up');this.barrier(-15,0,3.6,1.5);
  // Covered chair, fireplace, rug, books.
- this.box(3,.025,3.7,-15,.13,3.5,this.mats.red,this.scene,false);
+
  this.box(.6,2.2,3,-20.65,1.1,4.5,this.mats.stone);this.box(.2,1.3,1.9,-20.25,.75,4.5,this.mats.black);this.box(.95,.15,3.3,-20.4,2.1,4.5,this.mats.trim);const ember=this.mat(0x992a0e);ember.emissive=new T.Color(0xff6a1c);ember.emissiveIntensity=2;this.box(.18,.12,1.3,-20.08,.2,4.5,ember);const fire=new T.PointLight(0xffa058,7,8,2);fire.position.set(-19.6,.8,4.5);this.scene.add(fire);
- for(let j=0;j<3;j++){const x=10+j*4;this.box(2.8,3.4,.65,x,1.7,-9.6,this.mats.wood);for(let level=0;level<4;level++){this.box(2.9,.09,.8,x,.35+level*.8,-9.4,this.mats.dark);for(let b=0;b<10;b++){this.box(.16+rnd()*.06,.42+rnd()*.23,.35,x-1.15+b*.25,.6+level*.8,-9.15,this.mat([0x735647,0x536454,0x8c714e,0x40586c][b%4]));}}}
+ for(let j=0;j<3;j++){const x=12+j*3.4;this.barrier(x,-9.35,2.9,.9);this.box(2.8,3.4,.65,x,1.7,-9.6,this.mats.wood);for(let level=0;level<4;level++){this.box(2.9,.09,.8,x,.35+level*.8,-9.4,this.mats.dark);for(let b=0;b<10;b++){this.box(.16+rnd()*.06,.42+rnd()*.23,.35,x-1.15+b*.25,.6+level*.8,-9.15,this.mat([0x735647,0x536454,0x8c714e,0x40586c][b%4]));}}}
  this.table(16,3,2,1.1);this.lamp(16.6,1.03,3);this.target(this.paper('AVELLIC REGISTER',['vel aran si:','received personally','by the steward.','','A reference for archivists.'],15.55,1.04,3,true),'lexicon','Avellic reference volume');
  this.table(16,7,2.3,.8);for(let i=0;i<4;i++)this.box(.6,.07,.85,15.6+i*.2,1+i*.07,7,this.mats.red);
  // Bell alcove, garment snag and office display.
@@ -73,14 +77,14 @@ export class Estate {
  const latch=new T.Group();latch.position.set(-10.43,1.5,-9.75);this.box(.12,.3,.1,0,0,0,this.mats.gold,latch);this.box(.18,.23,.04,.08,-.04,.07,this.mat(0x73506d),latch);this.scene.add(latch);this.target(latch,'lining','Fabric caught on the latch');
  this.table(14,-13.5,2.2,.8);const plinth=new T.Group();plinth.position.set(14,1.04,-13.5);this.box(.75,.1,.6,0,0,0,this.mats.black,plinth);this.scene.add(plinth);this.target(plinth,'display','An empty bronze-falcon display');this.sign('EDMUND ROOK · STEWARD',14,2.2,-15.65,3);
  }
- garden(){const stone=this.mats.trim,gravel=this.mats.gravel;this.box(5,.04,20,0,-.02,-25,gravel,this.scene,false);this.box(31,.04,3,13,-.01,-23,gravel,this.scene,false);this.box(3,.04,13,25,-.01,-29,gravel,this.scene,false);this.box(29,.04,3,12,-.01,-35,gravel,this.scene,false);
+ garden(){const stone=this.mats.trim,gravel=this.mats.gravel;this.floor(5,.04,20,0,-.02,-25,gravel);this.floor(31,.04,3,13,-.01,-23,gravel);this.floor(3,.04,13,25,-.01,-29,gravel);this.floor(29,.04,3,12,-.01,-35,gravel);
  // Fountain and water.
  this.cyl(3.15,3.2,.35,0,.1,-30,stone);this.cyl(2.9,2.9,.1,0,.32,-30,this.mat(0x446f6a,.23,.25));this.cyl(.55,.75,1.35,0,.8,-30,stone);this.cyl(1.2,.8,.23,0,1.55,-30,stone);this.sphere(.25,0,1.9,-30,this.mats.gold);this.barrier(0,-30,6.2,6.2);this.target(this.scene.children[this.scene.children.length-1],'fountain','The garden fountain','Visit');
- for(const x of[-12,12]){this.barrier(x,-29,1.1,10);}for(let i=0;i<6;i++){const x=-16+i*6;this.box(4,.32,2,x,.1,-40,this.mats.stone);}
+ for(const x of[-12,12]){this.barrier(x,-29,1.1,10);}for(let i=0;i<6;i++){const x=-16+i*6;this.floor(4,.32,2,x,.1,-40,this.mats.stone);this.barrier(x,-40,4,2);}
  const flowers=new T.InstancedMesh(new T.SphereGeometry(.07,5,4),this.mat(0xddbd98),480),stems=new T.InstancedMesh(new T.CylinderGeometry(.018,.025,.45,4),this.mats.leaf,480);const m=new T.Matrix4();for(let i=0;i<480;i++){const x=-18+rnd()*36,z=-39.2-rnd()*1.5,y=.4+rnd()*.4;m.makeTranslation(x,y,z);flowers.setMatrixAt(i,m);m.makeTranslation(x,y-.2,z);stems.setMatrixAt(i,m);}this.scene.add(flowers,stems);
- for(const x of[-7,7]){this.box(2.6,.12,.65,x,.55,-36,this.mats.wood);this.box(2.6,.6,.12,x,.95,-36.3,this.mats.wood);for(const a of[-1,1])this.box(.1,.6,.55,x+a,.27,-36,this.mats.dark);}
+ for(const x of[-7,7]){this.barrier(x,-36,2.8,.9);this.box(2.6,.12,.65,x,.55,-36,this.mats.wood);this.box(2.6,.6,.12,x,.95,-36.3,this.mats.wood);for(const a of[-1,1])this.box(.1,.6,.55,x+a,.22,-36,this.mats.dark);}
  // Greenhouse, with an accessible central entrance.
- const glass=this.mats.glass,metal=this.mats.dark;this.box(10,.15,8,26,0,-29,this.mat(0x8e9277));for(const x of[21,31]){this.box(.1,3.5,8,x,1.75,-29,glass,this.scene,false);this.barrier(x,-29,.2,8);}this.box(10,3.5,.1,26,1.75,-33,glass,this.scene,false);this.barrier(26,-33,10,.2);for(const x of[22.8,29.2]){this.box(3.6,3.5,.1,x,1.75,-25,glass,this.scene,false);this.barrier(x,-25,3.6,.2);}for(let x=21;x<=31;x+=2){this.box(.08,3.6,.09,x,1.8,-25,metal);this.box(.08,3.6,.09,x,1.8,-33,metal);for(const z of[-25,-33]){const beam=this.box(5.5,.08,.09,x<26?23.5:28.5,4.2,z,metal);beam.rotation.z=x<26?.24:-.24;}}
+ const glass=this.mats.glass,metal=this.mats.dark;this.floor(10,.15,8,26,0,-29,this.mat(0x8e9277));for(const x of[21,31]){this.box(.1,3.5,8,x,1.75,-29,glass,this.scene,false);this.barrier(x,-29,.2,8);}this.box(10,3.5,.1,26,1.75,-33,glass,this.scene,false);this.barrier(26,-33,10,.2);for(const x of[22.8,29.2]){this.box(3.6,3.5,.1,x,1.75,-25,glass,this.scene,false);this.barrier(x,-25,3.6,.2);}for(let x=21;x<=31;x+=2){this.box(.08,3.6,.09,x,1.8,-25,metal);this.box(.08,3.6,.09,x,1.8,-33,metal);for(const z of[-25,-33]){const beam=this.box(5.5,.08,.09,x<26?23.5:28.5,4.2,z,metal);beam.rotation.z=x<26?.24:-.24;}}
  for(const x of[21,31])for(let z=-33;z<=-25;z+=2)this.box(.09,3.6,.08,x,1.8,z,metal);
  for(const x of[23.5,28.5]){const roof=this.box(5.5,.04,8.2,x,4.15,-29,glass,this.scene,false);roof.rotation.z=x<26?.24:-.24;}this.box(.09,.09,8.3,26,4.85,-29,metal);this.sign('THE GLASSHOUSE',26,3.6,-24.9,2.5);
  this.table(28.8,-30,2.8,1.2,.8);for(let i=0;i<6;i++){const x=22+rnd()*1.2,z=-26-i;this.cyl(.3,.22,.5,x,.3,z,this.mat(0xa66e4d));}
@@ -100,31 +104,42 @@ export class Estate {
  if(this.dogMotion){this.dogMotion.weight=0;this.dogMotion.phase=0;animateDog(this.dogMotion,0,1/60)}
  }
  pose():Pose{return {x:this.camera.position.x,z:this.camera.position.z,yaw:this.camera.rotation.y,pitch:this.camera.rotation.x};}
- setPose(p:Pose){this.camera.rotation.order='YXZ';this.camera.position.set(p.x,1.73,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,'YXZ');}
- move(dx:number,dz:number,s:GameState){let x=this.camera.position.x,z=this.camera.position.z;const clear=(xx:number,zz:number)=>Math.abs(xx)<52&&zz<53&&zz>-49&&!this.barriers.some(b=>!(b.door&&s.doors[b.door])&&Math.abs(xx-b.x)<b.w/2+.26&&Math.abs(zz-b.z)<b.d/2+.26);if(clear(x+dx,z))x+=dx;if(clear(x,z+dz))z+=dz;this.lastMove=Math.hypot(x-this.camera.position.x,z-this.camera.position.z)>.0001;this.camera.position.x=x;this.camera.position.z=z;}
+ setPose(p:Pose){this.camera.rotation.order='YXZ';this.camera.position.set(p.x,this.groundHeight(p.x,p.z)+1.65,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,'YXZ');}
+ move(dx:number,dz:number,s:GameState){
+ const start=this.camera.position.clone(),barriers=this.collisionBarriers(s);
+ for(const a of this.actors.values())if(a.root.visible)barriers.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
+ let p=resolveOverlap(start,barriers,s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
+ for(let i=0;i<steps;i++){const px={x:p.x+dx/steps,z:p.z};if(Math.abs(px.x)<52&&clearSegment(p,px,barriers,s.doors,.26))p=px;const pz={x:p.x,z:p.z+dz/steps};if(pz.z<53&&pz.z>-49&&clearSegment(p,pz,barriers,s.doors,.26))p=pz;}
+ this.lastMove=Math.hypot(p.x-start.x,p.z-start.z)>.0001;this.camera.position.x=p.x;this.camera.position.z=p.z;
+ this.camera.position.y=T.MathUtils.lerp(this.camera.position.y,this.groundHeight(p.x,p.z)+1.65,.35);
+ }
+
  targetAt():Target|null{this.ray.setFromCamera(this.pointer,this.camera);let best:Target|null=null,near=3.25;for(const t of this.targets){if(!t.root.visible||!t.root.parent?.visible)continue;const hit=this.ray.intersectObject(t.root,true)[0];if(hit&&hit.distance<near){const occluder=this.ray.intersectObjects([...this.walls,...[...this.doors.values()].map(d=>d.pivot)],true)[0];if(occluder&&occluder.distance<hit.distance-.08)continue;near=hit.distance;best={...t,distance:near};}}return best;}
  location(){const {x,z}=this.camera.position;if(z>12)return 'The front drive';if(z<-24&&x>20)return 'The glasshouse';if(z<-16)return 'The castle gardens';if(z<-10)return 'The service passage';if(x<-7)return 'Elias’s study';if(x>7)return 'The library';return 'The entrance hall';}
  setQuality(q:string){this.quality=q;const cap=q==='Low'?.85:q==='High'?1.8:q==='Medium'?1.25:Math.min(devicePixelRatio,1.25);this.renderer.setPixelRatio(Math.min(devicePixelRatio,cap));this.renderer.shadowMap.enabled=q!=='Low';this.ao.enabled=q!=='Low';this.renderer.setSize(innerWidth,innerHeight);this.composer.setPixelRatio(this.renderer.getPixelRatio());this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));}
  update(dt:number,s:GameState,playing:boolean,talking:PersonId|null,arrivalT:number,menu=false){if(playing||talking)this.clock+=dt;
  for(const[id,d]of this.doors){const goal=s.doors[id]?-Math.PI/2:0;d.angle=T.MathUtils.damp(d.angle,goal,10,dt);d.pivot.rotation.y=d.angle;}
+ const solid=this.collisionBarriers(s);
  for(const[id,a]of this.actors){
  if((id==='beatrice'||id==='jonah')&&s.arrival!=='present'){a.root.visible=false;continue;}a.root.visible=true;
  const before=a.root.position.clone();
- const result=this.routines.update(id,a.root.position,dt,this.barriers,s.doors,!playing||id===talking,this.camera.position,a.root.rotation.y);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
- a.root.position.y=(Math.abs(a.root.position.x)<21&&a.root.position.z>-16&&a.root.position.z<12)?.08:-.03;a.isWalking=result.moving;a.activity=id===talking?null:result.activity;a.activityLabel=result.label;
+ const nearby=[...this.actors.values()].filter(other=>other.id!==id&&other.root.visible&&other.root.position.distanceTo(a.root.position)<4).map(other=>({x:other.root.position.x,z:other.root.position.z,w:.48,d:.48}));
+ const result=this.routines.update(id,a.root.position,dt,[...solid,...nearby],s.doors,!playing||id===talking,this.camera.position,a.root.rotation.y);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
+ a.root.position.y=this.groundHeight(a.root.position.x,a.root.position.z);a.isWalking=result.moving;a.activity=id===talking?null:result.activity;a.activityLabel=result.label;
  const targetAngle=id===talking?Math.atan2(this.camera.position.x-a.root.position.x,this.camera.position.z-a.root.position.z):result.face;
  if(playing||id===talking){const delta=Math.atan2(Math.sin(targetAngle-a.root.rotation.y),Math.cos(targetAngle-a.root.rotation.y));a.root.rotation.y+=delta*Math.min(1,dt*5);}
  animateCharacter(this,id,result.moving,dt,!playing&&!talking,a.activity??null,this.clock,dt>0?Math.hypot(a.root.position.x-before.x,a.root.position.z-before.z)/dt:0);
  }
 
- this.car.visible=s.arrival!=='absent'&&s.arrival!=='queued';if(s.arrival==='arriving')this.car.position.z=56-32*T.MathUtils.smoothstep(arrivalT,0,1);if(s.arrival==='present')this.car.position.z=24;
+ this.car.visible=s.arrival!=='absent'&&s.arrival!=='queued';if(s.arrival==='arriving')this.car.position.z=56-32*T.MathUtils.smoothstep(arrivalT,0,1);if(s.arrival==='present')this.car.position.z=24;this.car.position.y=this.groundHeight(this.car.position.x,this.car.position.z)-.03;
  if(playing){
  const target=s.dog==='walking'?this.camera.position:this.actors.get('mara')!.root.position;
- const follow=this.dogFollower.update(this.dog.position,this.dog.rotation.y,target,dt,this.barriers,s.doors,false);
+ const follow=this.dogFollower.update(this.dog.position,this.dog.rotation.y,target,dt,solid,s.doors,false);
  this.dog.position.x=follow.position.x;this.dog.position.z=follow.position.z;this.dog.rotation.y=follow.heading;
- this.dog.position.y=(Math.abs(this.dog.position.x)<21&&this.dog.position.z>-16&&this.dog.position.z<12)?.08:-.03;
+ this.dog.position.y=this.groundHeight(this.dog.position.x,this.dog.position.z);
  if(this.dogMotion)animateDog(this.dogMotion,follow.distance,dt);
  }
+ if(this.clockPendulum)this.clockPendulum.rotation.z=Math.sin(this.clock*2.7)*.085;
  this.gesture=Math.max(0,this.gesture-dt*2);if(!this.held){this.hands.visible=this.gesture>0;this.hands.position.y=this.gesture*.16+(playing&&this.lastMove?Math.sin(this.clock*7)*.008:0);}
  if(menu){this.camera.position.set(17+Math.sin(this.clock*.016)*1.2,4.4,46);this.camera.lookAt(0,6.1,2);this.hands.visible=false;this.clock+=dt;}
  this.composer.render(dt);
