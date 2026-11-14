@@ -34,8 +34,11 @@ function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
   const pleat=frontOnly?0:Math.cos(a*12)*(.002+row*.004);
   const x=Math.sin(a)*(r.x+pleat),z=Math.cos(a)*(r.z+pleat)+(frontOnly?.012:0);
   positions.push(x,r.y,z);uvs.push(t,row/(rings.length-1));
-  const thigh=x>=0?left:right,follow=frontOnly?0:Math.max(0,(row-1)/(rings.length-2))*.19;
-  skinIndices.push(pelvis,thigh,0,0);skinWeights.push(1-follow,follow,0,0);
+  const follow=frontOnly?0:Math.max(0,(row-1)/(rings.length-2))*.19;
+  // Blend both thighs near the front and back seams. A hard left/right choice
+  // splits coincident seam vertices as soon as either leg moves.
+  const leftWeight=T.MathUtils.smoothstep(x,-.12,.12);
+  skinIndices.push(pelvis,left,right,0);skinWeights.push(1-follow,follow*leftWeight,follow*(1-leftWeight),0);
  }
  for(let row=0;row<rings.length-1;row++)for(let i=0;i<segments;i++){
   const a=row*(segments+1)+i,b=a+segments+1;

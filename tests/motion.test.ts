@@ -1,6 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import * as T from 'three';
 import {createCharacterMotion,animateCharacter} from '../src/characters';
+import {dressCharacter} from '../src/appearance';
 import {rigDog,animateDog,DogFollower} from '../src/dog';
 import {EstateRoutines} from '../src/routines';
 import {clearSegment} from '../src/navigation';
@@ -50,6 +51,39 @@ describe('NPC animation stability',()=>{
    }
   }
   expect(checked).toBeGreaterThan(30);
+ });
+ it('keeps knees inside the leg silhouette through a full walking cycle',async()=>{
+  for(const name of ['harper','jordan','sam','maya']){
+   const {actor,motion,frame}=await character(name);
+   for(let i=0;i<240;i++){
+    actor.position.z+=.9/60;frame(true,null,false,.9);actor.updateMatrixWorld(true);
+    for(const side of ['l','r']){
+     const hip=actor.worldToLocal(motion.bones.get('thigh_'+side)!.getWorldPosition(new T.Vector3()));
+     const knee=actor.worldToLocal(motion.bones.get('calf_'+side)!.getWorldPosition(new T.Vector3()));
+     expect(Math.abs(knee.x-hip.x)).toBeLessThan(.1);
+    }
+   }
+  }
+ });
+ it('keeps the 1942 skirt seam joined while the thighs move',async()=>{
+  for(const [id,name] of [['june','harper'],['ada','maya']] as const){
+   const gltf=await loadModel(name),actor=new T.Group();actor.add(gltf.scene);
+   const motion=createCharacterMotion(gltf.scene,gltf.animations,new T.Group());
+   dressCharacter(id,gltf.scene);
+   const skirt=gltf.scene.getObjectByName('1942 tailored skirt') as T.SkinnedMesh;
+   expect(skirt).toBeInstanceOf(T.SkinnedMesh);
+   const positions=skirt.geometry.getAttribute('position');
+   const estate={characterMotion:new Map([[id,motion]]),actors:new Map([[id,{root:actor}]]),groundHeight:()=>0} as unknown as Estate;
+   for(let i=0;i<120;i++){
+    actor.position.z+=.9/60;animateCharacter(estate,id,true,1/60,false,null,0,.9);actor.updateMatrixWorld(true);
+    for(let row=0;row<4;row++){
+     const first=row*49,last=first+48;
+     const a=skirt.applyBoneTransform(first,new T.Vector3().fromBufferAttribute(positions,first)).applyMatrix4(skirt.matrixWorld);
+     const b=skirt.applyBoneTransform(last,new T.Vector3().fromBufferAttribute(positions,last)).applyMatrix4(skirt.matrixWorld);
+     expect(a.distanceTo(b)).toBeLessThan(.001);
+    }
+   }
+  }
  });
  it('turns before starting to walk in a different direction',()=>{
   const r=new EstateRoutines().update('june',{x:2.6,z:3},.1,[],{},false,undefined,Math.PI);

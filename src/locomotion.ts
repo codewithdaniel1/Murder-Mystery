@@ -12,12 +12,11 @@ export function plantFoot(bones:Map<string,T.Bone>,actor:T.Object3D,side:'l'|'r'
  const toTarget=target.clone().sub(h),distance=T.MathUtils.clamp(toTarget.length(),Math.abs(a-b)+.0001,a+b-.0001);
  if(distance<.0001)return;
  const direction=toTarget.normalize();target.copy(h).addScaledVector(direction,distance);
- const kneeOffset=k.clone().sub(h);
- const bend=kneeOffset.addScaledVector(direction,-kneeOffset.dot(direction));
- if(bend.lengthSq()<1e-7){
-  bend.set(0,0,1).transformDirection(actor.matrixWorld);
-  bend.addScaledVector(direction,-bend.dot(direction));
- }
+ // A fixed forward pole keeps the knee from flipping sideways when the leg
+ // approaches full extension. The idle knee offset is unstable at that point.
+ const bend=new T.Vector3(0,0,1).transformDirection(actor.matrixWorld);
+ bend.addScaledVector(direction,-bend.dot(direction));
+ if(bend.lengthSq()<1e-7)bend.set(0,1,0).transformDirection(actor.matrixWorld).addScaledVector(direction,-bend.dot(direction));
  bend.normalize();
  const along=(a*a-b*b+distance*distance)/(2*distance),height=Math.sqrt(Math.max(0,a*a-along*along));
  const nextKnee=h.clone().addScaledVector(direction,along).addScaledVector(bend,height);
