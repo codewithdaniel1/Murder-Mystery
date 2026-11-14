@@ -19,7 +19,7 @@ interface Actor {isWalking?:boolean;activity?:Activity|null;activityLabel?:strin
 const rnd=(()=>{let s=4217;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}})();
 export class Estate {
  scene=new T.Scene();camera=new T.PerspectiveCamera(65,innerWidth/innerHeight,.06,220);renderer:T.WebGLRenderer;
- surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;angle:number;open:number}>();
+ surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
  ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
  composer:EffectComposer;ao:GTAOPass;sun:T.DirectionalLight; mats:Record<string,T.MeshStandardMaterial>={}; pointer=new T.Vector2(0,0);lastMove=false;inspectRotation=0;ready:Promise<void>;quality='Auto';
  constructor(container:HTMLElement){
@@ -44,7 +44,17 @@ export class Estate {
  sphere(rad:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,sx=1,sy=1,sz=1){const m=new T.Mesh(new T.SphereGeometry(rad,24,18),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;parent.add(m);return m;}
  floor(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material){this.surfaces.push({x,z,w,d,y:y+h/2});return this.box(w,h,d,x,y,z,mat,this.scene,false)}
  groundHeight(x:number,z:number){let y=-.08;for(const f of this.surfaces)if(Math.abs(x-f.x)<=f.w/2&&Math.abs(z-f.z)<=f.d/2)y=Math.max(y,f.y);return y}
- collisionBarriers(s:GameState){const list=[...this.barriers];if(s.arrival==='arriving'||s.arrival==='present')list.push({x:4,z:s.arrival==='present'?24:this.car.position.z,w:2.45,d:5.25});return list}
+ collisionBarriers(s:GameState){
+  const list=[...this.barriers];
+  // Open doors stop blocking the doorway, but their swung leaves remain solid.
+  for(const[id,d]of this.doors)if(s.doors[id]){
+   d.pivot.updateWorldMatrix(true,false);
+   const center=new T.Vector3(1.55,0,0).applyMatrix4(d.pivot.matrixWorld);
+   const yaw=d.frame.rotation.y+d.pivot.rotation.y,leafWidth=3.1,leafDepth=.34;
+   list.push({x:center.x,z:center.z,w:Math.abs(Math.cos(yaw))*leafWidth+Math.abs(Math.sin(yaw))*leafDepth,d:Math.abs(Math.sin(yaw))*leafWidth+Math.abs(Math.cos(yaw))*leafDepth});
+  }
+  if(s.arrival==='arriving'||s.arrival==='present')list.push({x:4,z:s.arrival==='present'?24:this.car.position.z,w:2.45,d:5.25});return list;
+ }
  advanceArrival(progress:number,dt:number,s:GameState){const next=Math.min(1,progress+dt/15),from=56-32*T.MathUtils.smoothstep(progress,0,1),to=56-32*T.MathUtils.smoothstep(next,0,1);const people=[this.camera.position,...[...this.actors.values()].filter(a=>a.root.visible).map(a=>a.root.position),this.dog.position];if(people.some(p=>Math.abs(p.x-4)<1.65&&p.z>to-3.1&&p.z<from+3.1))return progress;return next}
  barrier(x:number,z:number,w:number,d:number,door?:string){this.barriers.push({x,z,w,d,door});}
  wall(w:number,h:number,d:number,x:number,y:number,z:number,mat=this.mats.stone){const m=this.box(w,h,d,x,y,z,mat);this.walls.push(m);if(y-h/2<1.85)this.barrier(x,z,w,d);return m;}
@@ -79,7 +89,7 @@ export class Estate {
    this.sphere(.06,2.78,1.48,side*.27,gold,door,.85,1,.85);
    this.cyl(.018,.018,.1,2.78,1.25,side*.19,gold,door,10).rotation.x=Math.PI/2;
   }
-  pivot.add(door);this.scene.add(pivot);this.target(door,'door:'+id,id==='front'?'Entrance doors':id==='rear'?'Garden door':id==='study'?'Study door':'Library door','Open / close');this.doors.set(id,{pivot:door,angle:open?-Math.PI/2:0,open:open?1:0});door.rotation.y=open?-Math.PI/2:0;
+  pivot.add(door);this.scene.add(pivot);this.target(door,'door:'+id,id==='front'?'Entrance doors':id==='rear'?'Garden door':id==='study'?'Study door':'Library door','Open / close');this.doors.set(id,{pivot:door,frame:pivot,angle:open?-Math.PI/2:0,open:open?1:0});door.rotation.y=open?-Math.PI/2:0;
   const along=Math.abs(Math.sin(rotation))>.5;this.barrier(x+(along?0:1.55),z+(along?-1.55:0),along?.28:3.1,along?3.1:.28,id);
  }
  lamp(x:number,y:number,z:number){this.cyl(.17,.24,.08,x,y,z,this.mats.gold);this.cyl(.13,.13,.045,x,y+.07,z,this.mats.dark);this.cyl(.025,.04,.55,x,y+.3,z,this.mats.gold);const shade=this.mat(0xe5c28a);shade.emissive=new T.Color(0xd19444);shade.emissiveIntensity=.6;this.cyl(.22,.4,.43,x,y+.72,z,shade);this.cyl(.4,.4,.035,x,y+.51,z,this.mats.gold);this.cyl(.22,.22,.035,x,y+.94,z,this.mats.gold);this.sphere(.045,x,y+.99,z,this.mats.gold);const l=new T.PointLight(0xffcf87,35,9,2);l.position.set(x,y+.65,z);this.scene.add(l);}
