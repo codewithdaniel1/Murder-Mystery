@@ -39,4 +39,26 @@ export function dressCharacter(id:PersonId,model:T.Object3D){
   if(!cloche){const visor=add(new T.SphereGeometry(1,24,12),cloth,0,hatY-.004,.108);visor.scale.set(.096,.008,.065);add(new T.SphereGeometry(.013,12,8),metal,0,hatY+.032,.124)}
   const ribbon=add(new T.CylinderGeometry(.12,.121,.025,40,1,true),new T.MeshStandardMaterial({color:0x302c26,roughness:.8}),0,hatY+.016,0);ribbon.scale.z=1.05;
  }
+ // Small, bone-attached tailoring details move with each character's torso.
+ const chest=model.getObjectByName('spine_03');if(!chest)return;
+ const chestPosition=chest.getWorldPosition(new T.Vector3()),chestAnchor=new T.Group();
+ chestAnchor.quaternion.copy(chest.getWorldQuaternion(new T.Quaternion()).invert().multiply(model.parent!.getWorldQuaternion(new T.Quaternion())));
+ const chestScale=chest.getWorldScale(new T.Vector3());chestAnchor.scale.set(1/chestScale.x,1/chestScale.y,1/chestScale.z);chest.add(chestAnchor);
+ const suitBounds=new T.Box3();model.traverse(o=>{if(o instanceof T.Mesh&&/suit|fabric|shirt|top/i.test(o.name+' '+(Array.isArray(o.material)?o.material.map(m=>m.name).join(' '):o.material.name)))suitBounds.union(new T.Box3().setFromObject(o))});
+ const front=suitBounds.isEmpty()?.13:T.MathUtils.clamp(suitBounds.max.z-chestPosition.z+.006,.1,.22);
+ const darkCloth=new T.MeshStandardMaterial({color:0x28312d,roughness:.92}),paleCloth=new T.MeshStandardMaterial({color:0xd9d0b9,roughness:.94});
+ const detail=(geometry:T.BufferGeometry,material:T.Material,x:number,y:number,z:number)=>{const m=new T.Mesh(geometry,material);m.position.set(x,y,z);m.castShadow=true;chestAnchor.add(m);return m};
+ for(const y of[-.025,-.11,-.195])detail(new T.SphereGeometry(.009,10,8),metal,0,y,front);
+ if(id==='rook'||id==='jonah'){
+  detail(new T.BoxGeometry(.032,.21,.012),id==='rook'?darkCloth:paleCloth,0,-.025,front+.008);
+  detail(new T.BoxGeometry(.045,.025,.012),metal,-.105,.025,front+.006);
+ }else if(id==='june'){
+  for(const side of[-1,1]){const collar=detail(new T.BoxGeometry(.09,.025,.012),paleCloth,side*.055,.095,front);collar.rotation.z=side*.28;}
+ }else if(id==='mara'){
+  const scarf=detail(new T.TorusGeometry(.1,.014,8,32),new T.MeshStandardMaterial({color:0x624632,roughness:.9}),0,.115,front-.025);scarf.rotation.x=Math.PI/2;
+ }else if(id==='ada'||id==='beatrice'){
+  detail(new T.SphereGeometry(id==='beatrice'?.027:.018,12,10),metal,-.105,.045,front+.01);
+ }else if(id==='tomas'){
+  for(const side of[-1,1]){const strap=detail(new T.BoxGeometry(.025,.27,.014),darkCloth,side*.105,-.06,front);strap.rotation.z=side*.08;}
+ }
 }
