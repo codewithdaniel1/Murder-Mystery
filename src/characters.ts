@@ -6,11 +6,13 @@ import type {Activity} from './routines';
 import type {PersonId} from './state';
 import {rigDog} from './dog';
 import {CAST,dressCharacter} from './appearance';
+import {plantFoot} from './locomotion';
 function updateRig(root:T.Object3D){root.updateWorldMatrix(true,false);root.updateMatrixWorld(true)}
+const WALK_STANCE=.60,WALK_STRIDE=.52;
 export interface CharacterMotion {
  mixer:T.AnimationMixer;idle:T.AnimationAction;root:T.Object3D;
  bones:Map<string,T.Bone>;basePose:Map<string,T.Quaternion>;basePositions:Map<string,T.Vector3>;book:T.Group;
- soleSamples:{mesh:T.SkinnedMesh;point:T.Vector3;index:number}[];baseY:number;groundOffset:number|null;walkWeight:number;stridePhase:number;activityWeights:Record<Activity,number>;
+ soleSamples:{mesh:T.SkinnedMesh;point:T.Vector3;index:number}[];footRest:Map<'l'|'r',T.Vector3>;baseY:number;groundOffset:number|null;walkWeight:number;stridePhase:number;activityWeights:Record<Activity,number>;
 }
 export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],book:T.Group):CharacterMotion{
  const mixer=new T.AnimationMixer(model),idle=mixer.clipAction(clips.find(c=>c.name==='Idle_Standing')!);
@@ -20,13 +22,15 @@ export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],b
  const basePositions=new Map<string,T.Vector3>();for(const name of['foot_l','foot_r'])if(bones.has(name))basePositions.set(name,bones.get(name)!.position.clone());
  const soleSamples:CharacterMotion['soleSamples']=[];
  updateRig(model);
+ const actor=model.parent??model,footRest=new Map<'l'|'r',T.Vector3>();
+ for(const side of ['l','r'] as const){const foot=bones.get('foot_'+side);if(foot)footRest.set(side,actor.worldToLocal(foot.getWorldPosition(new T.Vector3())))}
  model.traverse(o=>{if(!(o instanceof T.SkinnedMesh)||!/shoe/i.test(o.name+' '+(Array.isArray(o.material)?o.material.map(m=>m.name).join(' '):o.material.name)))return;
  const points:{index:number;point:T.Vector3;y:number}[]=[];const pos=o.geometry.getAttribute('position');
  for(let i=0;i<pos.count;i++){const point=new T.Vector3().fromBufferAttribute(pos,i),posed=o.applyBoneTransform(i,point.clone()).applyMatrix4(o.matrixWorld);points.push({index:i,point,y:posed.y})}
  points.sort((a,b)=>a.y-b.y);const low=points.filter(p=>p.y<points[0].y+.035);
  const step=Math.max(1,Math.floor(low.length/96));for(let i=0;i<low.length;i+=step)soleSamples.push({mesh:o,index:low[i].index,point:low[i].point});
  });
- return {mixer,idle,root:model,bones,basePose,basePositions,book,soleSamples,baseY:model.position.y,groundOffset:null,walkWeight:0,stridePhase:0,activityWeights:{read:0,tidy:0,garden:0,car:0,look:0}};
+ return {mixer,idle,root:model,bones,basePose,basePositions,book,soleSamples,footRest,baseY:model.position.y,groundOffset:null,walkWeight:0,stridePhase:0,activityWeights:{read:0,tidy:0,garden:0,car:0,look:0}};
 }
 export async function loadCharacters(e:Estate){
  const loader=new GLTFLoader();
@@ -57,7 +61,7 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  // the legs and twisting the arms; the idle clip supplies a stable base pose.
  const travelSpeed=moving?Math.max(0,speed):0;
  a.walkWeight=T.MathUtils.damp(a.walkWeight,T.MathUtils.smoothstep(travelSpeed,.08,.72),7,dt);
- a.stridePhase=(a.stridePhase+travelSpeed*dt/.98*Math.PI*2)%(Math.PI*2);
+ a.stridePhase=(a.stridePhase+travelSpeed*dt/(WALK_STRIDE/WALK_STANCE)*Math.PI*2)%(Math.PI*2);
  a.mixer.update(dt);
  for(const [name,q]of a.basePose)q.copy(a.bones.get(name)!.quaternion);
  for(const [name,p]of a.basePositions)p.copy(a.bones.get(name)!.position);
@@ -66,14 +70,24 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  const actor=e.actors.get(id)!.root;
  const right=new T.Vector3(1,0,0).applyQuaternion(actor.quaternion),up=new T.Vector3(0,1,0);
  const turn=(name:string,axis:T.Vector3,angle:number)=>{const bone=a.bones.get(name);if(!bone?.parent||Math.abs(angle)<1e-6)return;const parent=bone.parent.getWorldQuaternion(new T.Quaternion()),localAxis=axis.clone().applyQuaternion(parent.invert());bone.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(localAxis,angle));bone.updateMatrixWorld(true)};
- const left=Math.sin(a.stridePhase),rightStep=-left,stride=.19*a.walkWeight;
- for(const [side,step]of [['l',left],['r',rightStep]] as const){
-  const thigh=-step*stride,knee=Math.max(0,step)*.16*a.walkWeight;
-  turn('thigh_'+side,right,thigh);turn('calf_'+side,right,knee);turn('foot_'+side,right,-thigh-knee*.7);
+ const left=Math.sin(a.stridePhase);
+ // The stance foot travels backwards as the actor travels forwards; the
+ // returning foot lifts off the floor instead of skating through it.
+ for(const side of ['l','r'] as const){
+  const rest=a.footRest.get(side);if(!rest)continue;
+  const phase=((a.stridePhase/(Math.PI*2)+(side==='r'?.5:0))%1+1)%1;
+  const planted=phase<WALK_STANCE,u=planted?phase/WALK_STANCE:(phase-WALK_STANCE)/(1-WALK_STANCE);
+  const foreAft=planted?.5-u:-.5+(1-Math.cos(Math.PI*u))*.5;
+  const lift=planted?0:Math.sin(Math.PI*u)*.085;
+  const target=rest.clone();
+  target.x=T.MathUtils.lerp(rest.x,side==='l'?.115:-.115,a.walkWeight);
+  target.z+=foreAft*WALK_STRIDE*a.walkWeight;
+  target.y+=lift*a.walkWeight;
+  plantFoot(a.bones,actor,side,target);
  }
- turn('upperarm_l',right,left*.1*a.walkWeight);turn('upperarm_r',right,-left*.1*a.walkWeight);
- turn('lowerarm_l',right,-.05*a.walkWeight);turn('lowerarm_r',right,-.05*a.walkWeight);
- turn('spine_01',up,left*.025*a.walkWeight);
+ turn('upperarm_l',right,left*.19*a.walkWeight);turn('upperarm_r',right,-left*.19*a.walkWeight);
+ turn('lowerarm_l',right,-.11*a.walkWeight);turn('lowerarm_r',right,-.11*a.walkWeight);
+ turn('spine_01',up,left*.035*a.walkWeight);
  const pelvis=a.bones.get('pelvis');if(pelvis)pelvis.position.y+=Math.cos(a.stridePhase*2)*.004*a.walkWeight;
  const read=a.activityWeights.read,work=a.activityWeights.tidy+a.activityWeights.car+a.activityWeights.garden;
  turn('upperarm_l',right,-.4*read);turn('upperarm_r',right,-.4*read);

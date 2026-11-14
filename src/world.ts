@@ -10,6 +10,7 @@ import type {DogMotion} from './dog';
 import type {CharacterMotion} from './characters';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {EstateRoutines} from './routines';
+import {FountainWater} from './fountain';
 import {clearAt,clearSegment,resolveOverlap} from './navigation';
 import type {Activity} from './routines';
 import type { GameState,PersonId,Pose } from './state';
@@ -20,7 +21,7 @@ const rnd=(()=>{let s=4217;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294
 export class Estate {
  scene=new T.Scene();camera=new T.PerspectiveCamera(65,innerWidth/innerHeight,.06,220);renderer:T.WebGLRenderer;
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
- ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
+ ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;fountainWater?:FountainWater;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
  composer:EffectComposer;ao:GTAOPass;sun:T.DirectionalLight; mats:Record<string,T.MeshStandardMaterial>={}; pointer=new T.Vector2(0,0);lastMove=false;inspectRotation=0;ready:Promise<void>;quality='Auto';
  constructor(container:HTMLElement){
  this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));this.renderer.setSize(innerWidth,innerHeight);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.95;container.appendChild(this.renderer.domElement);
@@ -142,8 +143,17 @@ export class Estate {
  this.table(14,-13.5,2.2,.8);const plinth=new T.Group();plinth.position.set(14,1.04,-13.5);this.box(.75,.1,.6,0,0,0,this.mats.black,plinth);this.scene.add(plinth);this.target(plinth,'display','An empty bronze-falcon display');
  }
  garden(){const stone=this.mats.trim,gravel=this.mats.gravel;this.floor(5,.04,20,0,-.02,-25,gravel);this.floor(31,.04,3,13,-.01,-23,gravel);this.floor(3,.04,13,25,-.01,-29,gravel);this.floor(29,.04,3,12,-.01,-35,gravel);
- // Fountain and water.
- this.cyl(3.15,3.2,.35,0,.1,-30,stone);this.cyl(2.9,2.9,.1,0,.32,-30,this.mat(0x446f6a,.23,.25));this.cyl(.55,.75,1.35,0,.8,-30,stone);this.cyl(1.2,.8,.23,0,1.55,-30,stone);this.sphere(.25,0,1.9,-30,this.mats.gold);this.barrier(0,-30,6.2,6.2);this.target(this.scene.children[this.scene.children.length-1],'fountain','The garden fountain','Visit');
+ // Two shallow basins, with water surfaces and continuous animated spill.
+ this.cyl(3.15,3.2,.35,0,.1,-30,stone);
+ this.cyl(2.8,2.8,.03,0,.291,-30,this.mat(0x315c60,.25,.12));
+ const lowerLip=new T.Mesh(new T.TorusGeometry(2.98,.18,10,64),stone);
+ lowerLip.rotation.x=Math.PI/2;lowerLip.position.set(0,.33,-30);lowerLip.castShadow=true;lowerLip.receiveShadow=true;this.scene.add(lowerLip);
+ this.cyl(.55,.75,1.35,0,.8,-30,stone);this.cyl(1.2,.8,.23,0,1.55,-30,stone);
+ const upperLip=new T.Mesh(new T.TorusGeometry(1.1,.105,10,48),stone);
+ upperLip.rotation.x=Math.PI/2;upperLip.position.set(0,1.65,-30);upperLip.castShadow=true;upperLip.receiveShadow=true;this.scene.add(upperLip);
+ const finial=this.sphere(.25,0,1.9,-30,this.mats.gold);
+ this.barrier(0,-30,6.2,6.2);this.target(finial,'fountain','The garden fountain','Visit');
+ this.fountainWater=new FountainWater(this.scene);
  for(const x of[-12,12]){this.barrier(x,-29,1.1,10);}for(let i=0;i<6;i++){const x=-16+i*6;this.floor(4,.32,2,x,.1,-40,this.mats.stone);this.barrier(x,-40,4,2);}
  const flowers=new T.InstancedMesh(new T.SphereGeometry(.07,5,4),this.mat(0xddbd98),480),stems=new T.InstancedMesh(new T.CylinderGeometry(.018,.025,.45,4),this.mats.leaf,480);const m=new T.Matrix4();for(let i=0;i<480;i++){const x=-18+rnd()*36,z=-39.2-rnd()*1.5,y=.4+rnd()*.4;m.makeTranslation(x,y,z);flowers.setMatrixAt(i,m);m.makeTranslation(x,y-.2,z);stems.setMatrixAt(i,m);}this.scene.add(flowers,stems);
  for(const x of[-7,7]){this.barrier(x,-36,2.8,.9);this.box(2.6,.12,.65,x,.55,-36,this.mats.wood);this.box(2.68,.035,.72,x,.63,-36,this.mats.panel);this.box(2.6,.6,.12,x,.95,-36.3,this.mats.wood);for(let i=0;i<7;i++)this.box(.055,.43,.045,x-.78+i*.26,.96,-36.22,this.mats.panel);for(const a of[-1,1]){this.box(.1,.6,.55,x+a,.22,-36,this.mats.dark);this.box(.17,.09,.66,x+a,.59,-36,this.mats.panel);for(const z of[-.24,.24])this.box(.15,.09,.13,x+a,.08,-36+z,this.mats.gold);}this.box(2.35,.3,.12,x,.28,-35.72,this.mats.panel);}
@@ -203,6 +213,7 @@ export class Estate {
  if(this.dogMotion)animateDog(this.dogMotion,follow.distance,dt);
  }
  if(this.clockPendulum)this.clockPendulum.rotation.z=Math.sin(this.clock*2.7)*.085;
+ this.fountainWater?.update(dt,this.camera.position);
  this.gesture=Math.max(0,this.gesture-dt*2);if(!this.held){this.hands.visible=this.gesture>0;this.hands.position.y=this.gesture*.16+(playing&&this.lastMove?Math.sin(this.clock*7)*.008:0);}
  if(menu){this.camera.position.set(17+Math.sin(this.clock*.016)*1.2,4.4,46);this.camera.lookAt(0,6.1,2);this.hands.visible=false;this.clock+=dt;}
  this.composer.render(dt);

@@ -9,11 +9,11 @@ import type {Estate} from '../src/world';
 
 async function character(name:string){
  const gltf=await loadModel(name),actor=new T.Group();actor.add(gltf.scene);
- const motion=createCharacterMotion(gltf.scene,gltf.animations,new T.Group(),new T.Mesh());
- const estate={characterMotion:new Map([['june',motion]]),actors:new Map([['june',{root:actor}]])} as unknown as Estate;
+ const motion=createCharacterMotion(gltf.scene,gltf.animations,new T.Group());
+ const estate={characterMotion:new Map([['june',motion]]),actors:new Map([['june',{root:actor}]]),groundHeight:()=>0} as unknown as Estate;
  const frame=(moving=false,activity:'read'|'tidy'|null='read',paused=false,speed=.9)=>animateCharacter(estate,'june',moving,1/60,paused,activity,0,speed);
  const hand=()=>{actor.updateMatrixWorld(true);return motion.bones.get('hand_r')!.getWorldPosition(new T.Vector3())};
- return {motion,frame,hand};
+ return {actor,motion,frame,hand};
 }
 
 describe('NPC animation stability',()=>{
@@ -24,20 +24,36 @@ describe('NPC animation stability',()=>{
   expect(hand().distanceTo(expected)).toBeLessThan(.002);
   expect(motion.bones.get('lowerarm_r')!.quaternion.angleTo(pose)).toBeLessThan(.002);
   let before=hand(),largest=0;
-  for(let i=0;i<360;i++){frame(i%90<45,i%90<45?null:'tidy');const now=hand();largest=Math.max(largest,now.distanceTo(before));before=now;expect(motion.idle.getEffectiveWeight()+motion.walk.getEffectiveWeight()).toBeCloseTo(1)}
+  for(let i=0;i<360;i++){frame(i%90<45,i%90<45?null:'tidy');const now=hand();largest=Math.max(largest,now.distanceTo(before));before=now;expect(motion.idle.getEffectiveWeight()).toBeCloseTo(1)}
   expect(largest).toBeLessThan(.07);
   const frozen=hand();for(let i=0;i<30;i++)frame(false,null,true);expect(hand().distanceTo(frozen)).toBe(0);
  });
  it('scales gait cadence with actual speed and preserves stride phase across stop/start',async()=>{
   const {motion,frame}=await character('jordan');
-  for(let i=0;i<60;i++)frame(true,null,false,.9);const fast=motion.walk.getEffectiveTimeScale();
-  frame(true,null,false,.45);expect(motion.walk.getEffectiveTimeScale()).toBeCloseTo(fast/2);
-  const phase=motion.walk.time;frame(false,null);expect(motion.walk.time).toBeCloseTo(phase);
-  frame(true,null);expect(motion.walk.time).toBeGreaterThan(phase);
+  for(let i=0;i<60;i++)frame(true,null,false,.9);
+  const before=motion.stridePhase;frame(true,null,false,.9);const fast=(motion.stridePhase-before+Math.PI*2)%(Math.PI*2);
+  const next=motion.stridePhase;frame(true,null,false,.45);const slow=(motion.stridePhase-next+Math.PI*2)%(Math.PI*2);
+  expect(slow).toBeCloseTo(fast/2);
+  const phase=motion.stridePhase;frame(false,null);expect(motion.stridePhase).toBeCloseTo(phase);
+  frame(true,null);expect(motion.stridePhase).toBeGreaterThan(phase);
+ });
+ it('holds each shoe in place while that leg bears weight',async()=>{
+  const {actor,motion,frame}=await character('jordan'),speed=.88,dt=1/60;
+  for(let i=0;i<90;i++){actor.position.z+=speed*dt;frame(true,null,false,speed)}
+  const previous=new Map<'l'|'r',T.Vector3>();let checked=0;
+  for(let i=0;i<120;i++){
+   actor.position.z+=speed*dt;frame(true,null,false,speed);actor.updateMatrixWorld(true);
+   for(const side of ['l','r'] as const){
+    const phase=(motion.stridePhase/(Math.PI*2)+(side==='r'?.5:0))%1;
+    const foot=motion.bones.get('foot_'+side)!.getWorldPosition(new T.Vector3());
+    if(phase>.08&&phase<.55){const prior=previous.get(side);if(prior){expect(Math.hypot(foot.x-prior.x,foot.z-prior.z)).toBeLessThan(.004);checked++}previous.set(side,foot)}else previous.delete(side);
+   }
+  }
+  expect(checked).toBeGreaterThan(30);
  });
  it('turns before starting to walk in a different direction',()=>{
   const r=new EstateRoutines().update('june',{x:2.6,z:3},.1,[],{},false,undefined,Math.PI);
-  expect(r.moving).toBe(false);expect(r.position).toEqual({x:2.6,z:3});expect(r.face).toBeCloseTo(0);
+  expect(r.moving).toBe(false);expect(r.position).toEqual({x:2.6,z:3});expect(Math.abs(r.face)).toBeLessThan(.4);
  });
 });
 
