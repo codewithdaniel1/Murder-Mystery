@@ -44,7 +44,9 @@ export function landscape(e:Estate){
  for(let i=0;i<18000;i++){const shade=seeded()<.5?'#60513f':'#b1a083';earthContext.globalAlpha=.035+seeded()*.075;earthContext.fillStyle=shade;const r=.4+seeded()*1.6;earthContext.beginPath();earthContext.ellipse(seeded()*512,seeded()*512,r,r*(.4+seeded()),seeded()*Math.PI,0,Math.PI*2);earthContext.fill();}
  earthContext.globalAlpha=1;const earthTexture=new T.CanvasTexture(earthCanvas);earthTexture.wrapS=earthTexture.wrapT=T.RepeatWrapping;earthTexture.colorSpace=T.SRGBColorSpace;earthTexture.anisotropy=Math.min(4,e.renderer.capabilities.getMaxAnisotropy());
  const drive=new T.MeshStandardMaterial({map:earthTexture,color:0xe4d9c5,roughness:.98});
- e.floor(8,.025,75,0,-.055,47,drive);e.floor(48,.025,8,0,-.05,17,drive);
+ // Stop the approach at the outside face of the mansion. The previous road
+ // slab extended through the doorway and covered part of the interior floor.
+ e.floor(8,.025,72.15,0,-.055,48.425,drive);e.floor(48,.025,8,0,-.05,17,drive);
  for(const x of[-4.2,4.2])e.box(.19,.09,60,x,-.01,45,e.mats.trim);
  for(const z of[12.8,21.2])for(const x of[-14,14])e.box(19,.09,.18,x,-.01,z,e.mats.trim);
  // Fine iron boundary railings with stone gate piers.
@@ -62,9 +64,7 @@ export function landscape(e:Estate){
 export function castle(e:Estate){
  const {stone,trim,wood,plaster}=e.mats;
  const entranceOak=wood.clone();entranceOak.color.setHex(0xc3ac87);entranceOak.roughness=.72;
- // Keep the interior floor nearly flush with the approach. The thick slab
- // used to leave a chunky block-like lip across the entrance threshold.
- e.floor(42,.025,28,0,-.0675,-2,entranceOak);e.box(42,.25,28,0,4.9,-2,plaster);
+ e.floor(42,.15,28,0,0,-2,entranceOak);e.box(42,.25,28,0,4.9,-2,plaster);
  e.wall(19.2,1,.6,-11.4,.5,12);e.wall(19.2,1,.6,11.4,.5,12);e.wall(42,1,.65,0,4.35,12);e.wall(3.6,1.4,.65,0,4.1,12);
  const cuts=[-21,-18,-16,-12,-10,-1.8,1.8,10,12,16,18,21];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1],mid=(a+b)/2;if(Math.abs(mid)<1.81||[-17,-11,11,17].some(x=>Math.abs(mid-x)<.1))continue;e.wall(b-a,2.85,.6,mid,2.425,12);}
  for(const x of[-17,-11,11,17])windowDetail(e,x,2.45,12.12,2,2.7);
