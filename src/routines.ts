@@ -4,7 +4,7 @@ import type {Point,Obstacle} from './navigation';
 export type Activity='tidy'|'read'|'look'|'garden'|'car';
 export interface Stop extends Point {seconds:number;face:number;activity:Activity;label:string}
 export const ROUTINES:Record<PersonId,Stop[]>={
- june:[{x:2.6,z:6.7,seconds:8,face:.5,activity:'tidy',label:'Straightening the hall table'},{x:-3,z:-7.5,seconds:9,face:-2.5,activity:'tidy',label:'Dusting the mantel clock'},{x:3,z:3,seconds:6,face:2.5,activity:'look',label:'Checking the entrance hall'}],
+ june:[{x:2,z:6,seconds:8,face:0,activity:'look',label:'Waiting to greet the detective'},{x:-3,z:-7.5,seconds:9,face:-2.5,activity:'tidy',label:'Dusting the mantel clock'},{x:3,z:3,seconds:6,face:2.5,activity:'look',label:'Checking the entrance hall'}],
  rook:[{x:-14.2,z:1.5,seconds:10,face:Math.PI,activity:'read',label:'Reviewing the estate accounts'},{x:-16,z:10.3,seconds:6,face:0,activity:'look',label:'Looking out over the drive'},{x:-18,z:6.2,seconds:7,face:-1.6,activity:'read',label:'Consulting his notebook'}],
  mara:[{x:13,z:-7.8,seconds:8,face:Math.PI,activity:'read',label:'Browsing the library shelves'},{x:14.4,z:3,seconds:12,face:1.57,activity:'read',label:'Comparing archive references'},{x:10,z:5,seconds:6,face:0,activity:'look',label:'Taking a break from her research'}],
  ada:[{x:-9,z:-20,seconds:8,face:Math.PI,activity:'look',label:'Taking in the garden'},{x:-7,z:-33.9,seconds:9,face:0,activity:'read',label:'Reading beside the garden bench'},{x:-7,z:-23,seconds:6,face:1.5,activity:'look',label:'Watching the fountain'}],

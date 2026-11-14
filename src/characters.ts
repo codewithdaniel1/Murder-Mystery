@@ -6,7 +6,6 @@ import type {Activity} from './routines';
 import type {PersonId} from './state';
 import {rigDog} from './dog';
 import {CAST,dressCharacter} from './appearance';
-import {narrowStride} from './locomotion';
 function updateRig(root:T.Object3D){root.updateWorldMatrix(true,false);root.updateMatrixWorld(true)}
 export interface CharacterMotion {
  mixer:T.AnimationMixer;idle:T.AnimationAction;walk:T.AnimationAction;root:T.Object3D;
@@ -21,7 +20,7 @@ export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],b
  // idle blend reduces the wide, exaggerated stride of these interim character clips.
  walk.play();let min=Infinity,max=-Infinity;const foot=bones.get('foot_l'),v=new T.Vector3();
  for(let i=0;i<60;i++){mixer.setTime(walk.getClip().duration*i/60);updateRig(model);if(foot){model.worldToLocal(foot.getWorldPosition(v));min=Math.min(min,v.z);max=Math.max(max,v.z)}}
- const strideSpeed=Number.isFinite(max-min)?2*(max-min)*model.scale.y*.82/walk.getClip().duration:.7;
+ const strideSpeed=Number.isFinite(max-min)?2*(max-min)*model.scale.y*1/walk.getClip().duration:.7;
  mixer.stopAllAction();idle.reset().play();walk.reset().play().setEffectiveWeight(0);mixer.update(0);
  const basePose=new Map<string,T.Quaternion>();for(const [name,bone]of bones)basePose.set(name,bone.quaternion.clone());
  const basePositions=new Map<string,T.Vector3>();for(const name of['foot_l','foot_r'])if(bones.has(name))basePositions.set(name,bones.get(name)!.position.clone());
@@ -59,7 +58,7 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  a.root.position.y=a.baseY;
  for(const [name,q]of a.basePose)a.bones.get(name)!.quaternion.copy(q);
  for(const [name,p]of a.basePositions)a.bones.get(name)!.position.copy(p);
- a.walkWeight=T.MathUtils.damp(a.walkWeight,moving?.82:0,12,dt);
+ a.walkWeight=T.MathUtils.damp(a.walkWeight,moving?.98:0,12,dt);
  a.walk.enabled=a.idle.enabled=true;a.walk.setEffectiveWeight(a.walkWeight);a.idle.setEffectiveWeight(1-a.walkWeight);
  a.walk.setEffectiveTimeScale(moving?Math.max(0,speed)/a.strideSpeed:0);
  a.mixer.update(dt);
@@ -67,7 +66,7 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  for(const [name,p]of a.basePositions)p.copy(a.bones.get(name)!.position);
  for(const key of Object.keys(a.activityWeights) as Activity[])a.activityWeights[key]=T.MathUtils.damp(a.activityWeights[key],!moving&&activity===key?1:0,8,dt);
  a.book.visible=false;
- updateRig(a.root);narrowStride(a.bones,e.actors.get(id)!.root,a.walkWeight/.82);updateRig(a.root);
+ updateRig(a.root);
  if(a.soleSamples.length&&typeof e.groundHeight==='function'){
   let clearance=Infinity;const point=new T.Vector3();
   for(const sample of a.soleSamples){sample.mesh.applyBoneTransform(sample.index,point.copy(sample.point)).applyMatrix4(sample.mesh.matrixWorld);clearance=Math.min(clearance,point.y-e.groundHeight(point.x,point.z))}
@@ -76,7 +75,6 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  const actor=e.actors.get(id)!.root;
  const right=new T.Vector3(1,0,0).applyQuaternion(actor.quaternion),up=new T.Vector3(0,1,0);
  const turn=(name:string,axis:T.Vector3,angle:number)=>{const bone=a.bones.get(name);if(!bone?.parent||Math.abs(angle)<1e-6)return;const parent=bone.parent.getWorldQuaternion(new T.Quaternion()),localAxis=axis.clone().applyQuaternion(parent.invert());bone.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(localAxis,angle));bone.updateMatrixWorld(true)};
- turn('upperarm_l',right,.12*a.walkWeight);turn('upperarm_r',right,.12*a.walkWeight);
  const read=a.activityWeights.read,work=a.activityWeights.tidy+a.activityWeights.car+a.activityWeights.garden;
  turn('upperarm_l',right,-.4*read);turn('upperarm_r',right,-.4*read);
  turn('lowerarm_l',right,-.9*read);turn('lowerarm_r',right,-.9*read);turn('head',right,.15*read);

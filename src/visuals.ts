@@ -37,8 +37,14 @@ function windowDetail(e:Estate,x:number,y:number,z:number,w=1.8,h=2.4,solid=fals
 }
 export function landscape(e:Estate){
  e.box(220,.2,220,0,-.18,0,e.mats.grass,e.scene,false);
- // Gravel drive, pale stone edging and an arrival court.
- e.floor(8,.025,75,0,-.055,47,e.mats.gravel);e.floor(48,.025,8,0,-.05,17,e.mats.gravel);
+ // A compacted-earth approach keeps the entrance court from reading as a bed
+ // of coarse stone. Fine, low-contrast grain breaks up the surface at a distance.
+ const earthCanvas=document.createElement('canvas');earthCanvas.width=earthCanvas.height=512;
+ const earthContext=earthCanvas.getContext('2d')!;earthContext.fillStyle='#87775e';earthContext.fillRect(0,0,512,512);
+ for(let i=0;i<18000;i++){const shade=seeded()<.5?'#60513f':'#b1a083';earthContext.globalAlpha=.035+seeded()*.075;earthContext.fillStyle=shade;const r=.4+seeded()*1.6;earthContext.beginPath();earthContext.ellipse(seeded()*512,seeded()*512,r,r*(.4+seeded()),seeded()*Math.PI,0,Math.PI*2);earthContext.fill();}
+ earthContext.globalAlpha=1;const earthTexture=new T.CanvasTexture(earthCanvas);earthTexture.wrapS=earthTexture.wrapT=T.RepeatWrapping;earthTexture.colorSpace=T.SRGBColorSpace;earthTexture.anisotropy=Math.min(4,e.renderer.capabilities.getMaxAnisotropy());
+ const drive=new T.MeshStandardMaterial({map:earthTexture,color:0xe4d9c5,roughness:.98});
+ e.floor(8,.025,75,0,-.055,47,drive);e.floor(48,.025,8,0,-.05,17,drive);
  for(const x of[-4.2,4.2])e.box(.19,.09,60,x,-.01,45,e.mats.trim);
  for(const z of[12.8,21.2])for(const x of[-14,14])e.box(19,.09,.18,x,-.01,z,e.mats.trim);
  // Fine iron boundary railings with stone gate piers.
