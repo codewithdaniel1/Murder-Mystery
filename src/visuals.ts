@@ -90,13 +90,13 @@ export function castle(e:Estate){
  for(const x of[-2.7,2.7]){e.box(.7,.24,.7,x,.15,14.2,trim);e.cyl(.22,.27,3.25,x,1.9,14.2,trim,e.scene,24);for(const y of[.48,3.48])e.cyl(.34,.34,.18,x,y,14.2,trim,e.scene,24);e.barrier(x,14.2,.55,.55);}
  arch(e,0,1.7,14.1,2.35,.36,trim);e.box(6.2,.35,3.25,0,4.18,13.1,trim);mould(e,6.35,.12,3.4,0,4.4,13.1);
  for(const x of[-2.9,2.9])e.box(.3,1,.3,x,4.98,14.55,trim);e.box(6,.15,.22,0,5.45,14.55,trim);for(let x=-2.5;x<2.6;x+=.45){e.cyl(.055,.08,.8,x,4.98,14.55,trim,e.scene,12);e.sphere(.09,x,5.05,14.55,trim);}
- e.sign('BRAMBLEWICK',0,3.5,12.46,2.7);
+
  // Chimney stacks, roof dormers and guttering.
  for(const x of[-13,13]){e.box(1.8,4,1.2,x,12,-3,stone);mould(e,2,.1,1.4,x,14,-3);for(const dx of[-.48,.48])e.cyl(.2,.22,.65,x+dx,14.45,-3,e.mat(0x6e4935),e.scene,16);}
  for(const x of[-13,-6,6,13]){e.box(1.85,1.6,.7,x,10,8.3,stone);windowDetail(e,x,10,8.72,1.1,1.25,true);roof(e,x,10.8,8.25,2.2,1.8,.85);}
  for(const z of[-16.7,12.7])e.cyl(.065,.065,42,0,8.6,z,e.mats.dark,e.scene,12).rotation.z=Math.PI/2;
  for(const x of[-18.8,18.8])e.cyl(.055,.055,8.5,x,4.25,12.52,e.mats.dark,e.scene,10);
- e.sign('THE STUDY',-7.2,3.35,4.5,1.3,Math.PI/2);e.sign('THE LIBRARY',7.2,3.35,4.5,1.3,-Math.PI/2);
+
 }
 function tube(e:Estate,points:T.Vector3[],r:number,mat:T.Material,parent:T.Object3D){return mesh(e,new T.TubeGeometry(new T.CatmullRomCurve3(points),20,r,7,false),mat,0,0,0,parent);}
 export function interiorDetail(e:Estate){
