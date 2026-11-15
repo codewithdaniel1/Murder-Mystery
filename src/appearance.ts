@@ -85,6 +85,28 @@ function addPeriodClothing(model:T.Object3D,style:Costume){
  if(style.apron)attach(skirtGeometry(outfit,style.model,true),0xd4cbb5,'1942 housekeeper apron');
 }
 
+function trimJuneSuit(model:T.Object3D){
+ let suit:T.SkinnedMesh|undefined;
+ model.getObjectByName('male_elegantsuit01')?.traverse(o=>{if(!suit&&o instanceof T.SkinnedMesh)suit=o});
+ if(!suit)return;
+ const geometry=suit.geometry.clone(),source=geometry.getIndex(),positions=geometry.getAttribute('position');
+ if(!source)return;
+ const kept:number[]=[],lower:number[]=[];
+ for(let i=0;i<source.count;i+=3){
+  const a=source.getX(i),b=source.getX(i+1),c=source.getX(i+2);
+  const ys=[positions.getY(a),positions.getY(b),positions.getY(c)];
+  // Separate the upper jacket from the lower legwear, leaving the coat tails
+  // and trouser thighs hidden behind the new skirt and apron.
+  if(Math.min(...ys)>.82)kept.push(a,b,c);
+  if(Math.min(...ys)<.52)lower.push(a,b,c);
+ }
+ const legs=geometry.clone();legs.setIndex(lower);legs.clearGroups();legs.computeBoundingSphere();
+ const legwear=new T.SkinnedMesh(legs,new T.MeshStandardMaterial({color:0x333936,roughness:1,side:T.DoubleSide}));
+ legwear.name='1942 housekeeper legwear';legwear.position.copy(suit.position);legwear.quaternion.copy(suit.quaternion);legwear.scale.copy(suit.scale);
+ suit.parent!.add(legwear);legwear.bind(suit.skeleton,suit.bindMatrix.clone());legwear.castShadow=true;legwear.receiveShadow=true;
+ geometry.setIndex(kept);geometry.clearGroups();suit.geometry=geometry;
+}
+
 function addFittedBlouse(model:T.Object3D,color:number){
  let body:T.SkinnedMesh|undefined;
  model.traverse(o=>{if(!body&&o instanceof T.SkinnedMesh&&/anatomical_body/i.test(o.name))body=o});
@@ -159,6 +181,7 @@ export function dressCharacter(id:PersonId,model:T.Object3D){
  }
  });
  addPeriodClothing(model,style);
+ if(id==='june')trimJuneSuit(model);
  if(id==='ada')addFittedBlouse(model,style.blouse??style.coat);
  if(id==='tomas')flattenGardenerShirt(model);
  const head=model.getObjectByName('head');if(!head)return;
@@ -170,7 +193,7 @@ export function dressCharacter(id:PersonId,model:T.Object3D){
  });
  const eyes=eyeBounds.isEmpty()?new T.Vector3(0,.04,.1):eyeBounds.getCenter(new T.Vector3()).sub(headPosition);
  if(!eyeBounds.isEmpty())eyes.z=eyeBounds.max.z-headPosition.z+.008;
- const hatY=crownY-headPosition.y-(style.hat==='housekeeper'?.08:.055);
+ const hatY=crownY-headPosition.y-(style.hat==='housekeeper'?.05:.055);
  const anchor=new T.Group();anchor.name='Fitted character accessories';
  anchor.quaternion.copy(head.getWorldQuaternion(new T.Quaternion()).invert().multiply(model.parent!.getWorldQuaternion(new T.Quaternion())));
  const worldScale=head.getWorldScale(new T.Vector3());anchor.scale.set(1/worldScale.x,1/worldScale.y,1/worldScale.z);head.add(anchor);
@@ -179,11 +202,12 @@ export function dressCharacter(id:PersonId,model:T.Object3D){
  if(style.glasses){for(const side of[-1,1]){add(new T.TorusGeometry(.028,.002,6,28),metal,eyes.x+side*.034,eyes.y,eyes.z);const arm=add(new T.CylinderGeometry(.002,.002,.09,6),metal,eyes.x+side*.063,eyes.y,eyes.z-.045);arm.rotation.x=Math.PI/2}const bridge=add(new T.CylinderGeometry(.002,.002,.014,6),metal,eyes.x,eyes.y+.002,eyes.z);bridge.rotation.z=Math.PI/2;}
  if(style.hat){const beret=style.hat==='beret',housekeeper=style.hat==='housekeeper';
   if(housekeeper){
-   // A close-fitting cloth crown and deep band replace the old flat disc.
-   const crown=add(new T.SphereGeometry(1,32,20,0,Math.PI*2,0,Math.PI/2),cloth,0,hatY+.02,-.005);
-   crown.scale.set(.108,.105,.115);
-   const band=add(new T.CylinderGeometry(.108,.11,.04,36,1,true),cloth,0,hatY,-.005);band.scale.z=1.06;
-   const seam=add(new T.TorusGeometry(.109,.004,6,36),new T.MeshStandardMaterial({color:0xb9ae99,roughness:1}),0,hatY-.018,-.005);seam.rotation.x=Math.PI/2;seam.scale.y=1.06;
+   // A small gathered cloth cap sits over the back of her hair. Its soft
+   // folds have no rigid brim or cylindrical helmet band.
+   const crown=add(new T.SphereGeometry(1,32,20,0,Math.PI*2,0,Math.PI/2),cloth,0,hatY,-.038);
+   crown.scale.set(.092,.073,.09);
+   for(const side of[-1,1]){const fold=add(new T.SphereGeometry(1,16,10),cloth,side*.048,hatY+.018,-.095);fold.scale.set(.037,.026,.029);}
+   const knot=add(new T.SphereGeometry(.024,12,8),cloth,0,hatY-.035,-.127);knot.scale.set(1,.65,.7);
   }else{
    const crown=add(new T.SphereGeometry(1,32,16,0,Math.PI*2,0,Math.PI/2),cloth,0,hatY,0);
    crown.scale.set(beret?.143:.116,beret?.065:.093,beret?.14:.125);
