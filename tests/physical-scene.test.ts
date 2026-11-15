@@ -6,11 +6,12 @@ import {normalized,landscape} from '../src/visuals';
 import {createCharacterMotion,animateCharacter} from '../src/characters';
 import {loadModel} from './model-fixture';
 import type {Estate} from '../src/world';
-import {resolveOverlap,clearAt} from '../src/navigation';
+import {resolveOverlap,clearAt,clearSegment} from '../src/navigation';
 
 describe('walkable surfaces and physical obstacles',()=>{
  it('uses the actual floor, path and greenhouse slab elevations',()=>{const e=furnishedEstate();landscape(e);expect(e.groundHeight(0,0)).toBe(.075);expect(e.groundHeight(26,-29)).toBe(.075);expect(e.groundHeight(0,-23)).toBe(.01);expect(e.groundHeight(-30,30)).toBe(-.08);expect(e.groundHeight(-16,-40)).toBeCloseTo(.26)});
  it('keeps the library service doorway free of shelves',()=>{const e=furnishedEstate();e.scene.updateMatrixWorld(true);const hits=new T.Raycaster(new T.Vector3(9.2,1.7,-8),new T.Vector3(0,0,-1),0,3).intersectObjects(e.scene.children,true);expect(hits).toEqual([]);expect(e.barriers.some(b=>Math.abs(9.2-b.x)<b.w/2&&Math.abs(-9.4-b.z)<b.d/2)).toBe(false)});
+ it('has walkable front and back greenhouse entrances with solid side glazing',()=>{const e=furnishedEstate();expect(clearSegment({x:26,z:-23.5},{x:26,z:-34.5},e.barriers,{},.26)).toBe(true);for(const z of[-25,-33])expect(clearSegment({x:22,z:z-1},{x:22,z:z+1},e.barriers,{},.26)).toBe(false);e.scene.updateMatrixWorld(true);const hits=new T.Raycaster(new T.Vector3(26,1.7,-34),new T.Vector3(0,0,1),0,10).intersectObjects(e.scene.children,true);expect(hits).toEqual([])});
  it('blocks movement through a parked car even with a large movement request',()=>{const e=furnishedEstate(),s=freshState();s.arrival='present';e.camera.position.set(4,1.65,19);e.move(0,10,s);expect(e.camera.position.z).toBeLessThan(21.13);e.camera.position.set(7,1.65,24);e.move(-8,0,s);expect(e.camera.position.x).toBeGreaterThan(5.47)});
  it('stops the arriving car before reaching someone, then resumes when clear',()=>{const e=furnishedEstate(),s=freshState();e.dog=new T.Group();e.dog.position.set(13,0,1);e.camera.position.set(4,1.65,45);let progress=0;for(let i=0;i<900;i++)progress=e.advanceArrival(progress,1/60,s);const z=56-32*T.MathUtils.smoothstep(progress,0,1);expect(z).toBeGreaterThan(48);expect(progress).toBeLessThan(1);e.camera.position.x=9;for(let i=0;i<900;i++)progress=e.advanceArrival(progress,1/60,s);expect(progress).toBe(1)});
  it('lets an old save escape a newly solid car or closed door',()=>{const barriers=[{x:4,z:24,w:2.45,d:5.25}];const p=resolveOverlap({x:4,z:24},barriers,{});expect(clearAt(p,barriers,{},.26)).toBe(true);expect(Math.hypot(p.x-4,p.z-24)).toBeLessThan(1.6)});

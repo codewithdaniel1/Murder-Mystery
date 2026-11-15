@@ -116,7 +116,7 @@ The bell mechanism is a small, visible service alcove off the passage, not a sep
 | Front drive | Car arrival and driver | Stone gateposts and gravel turnaround |
 | Garden / greenhouse | Dog favor and concealed evidence | Circular path, fountain, distinctive glass roof |
 
-The greenhouse is a small endpoint within the garden area. The office is a small room off the passage. A separate service exit links the passage directly to the greenhouse side of the garden, outside the kitchen's sightline; include this shortcut in the detailed floor plan even though the simplified diagram omits it. Treat these as compact spaces, not invitations to add full extra wings.
+The greenhouse is a small pass-through space on the garden loop, with aligned front and rear entrances. The office is a small room off the passage. A separate service exit links the passage directly to the greenhouse side of the garden, outside the kitchen's sightline; include this shortcut in the detailed floor plan even though the simplified diagram omits it. Treat these as compact spaces, not invitations to add full extra wings.
 
 Navigation rules:
 
@@ -216,7 +216,7 @@ Optional details: June's broken vase, Tomas's plant hobby, a note about Elias's 
 
 - The study, common rooms, garden path, and bell alcove are accessible from the opening.
 - Rook's small office can be inspected by asking him; his desire to appear helpful makes this possible without a favor. Beatrice can authorize access later if the player has antagonized him.
-- The greenhouse begins latched. Tomas provides access if asked about the garden; Beatrice provides a second permission route after arrival. Pip can reveal the hiding location from outside a low open vent, but recovering the object uses a door and normal interaction.
+- Both greenhouse entrances are open for exploration. Tomas or Beatrice can authorize disturbing the potting tray. Pip's garden walk can lead the player to the greenhouse, but it does not block other investigation routes.
 - Every essential physical clue persists. Neither rain nor a scheduled event destroys the only copy.
 - The falcon can be found by following Pip, investigating a visible disturbed potting tray, or asking Tomas about disturbance. The dog route is rewarding but not mandatory.
 - The ledger can be understood through Mara or an in-world reference accessible after Beatrice's arrival. The reference puzzle requires no real-world language knowledge.
