@@ -22,7 +22,7 @@ function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
  const rings=frontOnly?[
   {y:top-.015,x:.19,z:.155},{y:top-.17,x:.238,z:.195},{y:bottom+.045,x:.305,z:.246}
  ]:[
-  {y:top,x:maya?.18:.19,z:maya?.15:.15},{y:top-.12,x:.225,z:.175},{y:top-.29,x:.263,z:.205},{y:bottom,x:.305,z:.237}
+  {y:top,x:maya?.16:.19,z:maya?.135:.15},{y:top-.12,x:maya?.19:.225,z:maya?.18:.175},{y:top-.29,x:maya?.255:.263,z:maya?.255:.205},{y:bottom,x:maya?.32:.305,z:maya?.35:.237}
  ];
  const segments=frontOnly?20:48,start=frontOnly?-1.04:0,end=frontOnly?1.04:Math.PI*2;
  const positions:number[]=[],uvs:number[]=[],indices:number[]=[],skinIndices:number[]=[],skinWeights:number[]=[];
@@ -53,7 +53,7 @@ function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
 
 function fittedWaistband(outfit:T.SkinnedMesh){
  const pelvis=outfit.skeleton.bones.findIndex(b=>b.name==='pelvis');
- const rings=[{y:1.03,x:.18,z:.14,center:.03},{y:.91,x:.205,z:.16,center:.025}];
+ const rings=[{y:1.03,x:.16,z:.135,center:.03},{y:.91,x:.19,z:.18,center:.025}];
  const positions:number[]=[],indices:number[]=[],skinIndices:number[]=[],skinWeights:number[]=[];
  for(const ring of rings)for(let i=0;i<=48;i++){
   const a=i/48*Math.PI*2;
@@ -102,8 +102,9 @@ function addFittedBlouseSleeves(model:T.Object3D,color:number){
   const y=(positions.getY(a)+positions.getY(b)+positions.getY(c))/3;
   const arm=(influence(a,armBones)+influence(b,armBones)+influence(c,armBones))/3;
   const hand=(influence(a,handBones)+influence(b,handBones)+influence(c,handBones))/3;
-  const shoulder=y>1.2&&y<1.5&&Math.abs(x)>.04&&Math.abs(x)<.36;
-  if(shoulder||(Math.abs(x)>.08&&y>.9&&y<1.63&&arm>.27&&hand<.3))sleeveFaces.push(a,b,c);
+  // The body mesh also contains the face and neck; position alone must not
+  // turn those triangles into blouse fabric.
+  if(Math.abs(x)>.08&&y>.9&&y<1.63&&arm>.27&&Math.min(influence(a,armBones),influence(b,armBones),influence(c,armBones))>.12&&hand<.3)sleeveFaces.push(a,b,c);
  }
  geometry.setIndex(sleeveFaces);
  const material=new T.MeshStandardMaterial({color,roughness:.98,metalness:0,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});

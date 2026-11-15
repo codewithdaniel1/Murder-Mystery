@@ -59,9 +59,9 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
  // Advance the gait by distance travelled, so a blocked character cannot
  // keep cycling its feet. The imported walk animation was visibly crossing
  // the legs and twisting the arms; the idle clip supplies a stable base pose.
- const travelSpeed=moving?Math.max(0,speed):0;
+ const travelSpeed=moving?Math.max(0,speed):0,strideScale=CAST[id].skirt===undefined?1:.74;
  a.walkWeight=T.MathUtils.damp(a.walkWeight,T.MathUtils.smoothstep(travelSpeed,.08,.72),7,dt);
- a.stridePhase=(a.stridePhase+travelSpeed*dt/(WALK_STRIDE/WALK_STANCE)*Math.PI*2)%(Math.PI*2);
+ a.stridePhase=(a.stridePhase+travelSpeed*dt/(WALK_STRIDE*strideScale/WALK_STANCE)*Math.PI*2)%(Math.PI*2);
  a.mixer.update(dt);
  for(const [name,q]of a.basePose)q.copy(a.bones.get(name)!.quaternion);
  for(const [name,p]of a.basePositions)p.copy(a.bones.get(name)!.position);
@@ -81,7 +81,7 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
   const lift=planted?0:Math.sin(Math.PI*u)*.085;
   const target=rest.clone();
   target.x=T.MathUtils.lerp(rest.x,side==='l'?.115:-.115,a.walkWeight);
-  target.z+=foreAft*WALK_STRIDE*a.walkWeight;
+  target.z+=foreAft*WALK_STRIDE*strideScale*a.walkWeight;
   target.y+=lift*a.walkWeight;
   plantFoot(a.bones,actor,side,target);
  }
