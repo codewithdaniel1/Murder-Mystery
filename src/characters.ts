@@ -44,7 +44,7 @@ export async function loadCharacters(e:Estate){
  model.traverse(o=>{if(!(o instanceof T.Mesh))return;o.castShadow=true;o.receiveShadow=true;
  const list=Array.isArray(o.material)?o.material:[o.material];const copies=list.map(mat=>{const m=mat.clone() as T.MeshStandardMaterial;if(m.map)m.map.anisotropy=Math.min(4,e.renderer.capabilities.getMaxAnisotropy());m.envMapIntensity=.65;return m});o.material=Array.isArray(o.material)?copies:copies[0];});
  a.root.clear();a.root.add(model);a.root.position.y=.08;
- const book=new T.Group();e.box(.29,.035,.37,0,0,0,e.mats.red,book);e.box(.265,.018,.34,0,.025,0,e.mats.paper,book);book.visible=false;a.root.add(book);
+ const book=new T.Group();e.box(.54,.035,.37,0,0,0,e.mats.red,book);e.box(.51,.018,.34,0,.025,0,e.mats.paper,book);book.visible=false;a.root.add(book);
  e.characterMotion.set(id,createCharacterMotion(model,source.animations,book));dressCharacter(id,model);
  }
  e.dogMotion=rigDog(dog.scene);e.dog.clear();e.dog.add(e.dogMotion.root);
@@ -103,5 +103,16 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
   a.root.position.y+=a.groundOffset;updateRig(a.root);
  }
  const l=a.bones.get('hand_l'),r=a.bones.get('hand_r');
- if(read>.5&&l&&r){const left=actor.worldToLocal(l.getWorldPosition(new T.Vector3())),rightHand=actor.worldToLocal(r.getWorldPosition(new T.Vector3()));a.book.position.copy(left).add(rightHand).multiplyScalar(.5);a.book.rotation.set(-.18,0,Math.atan2(left.y-rightHand.y,left.x-rightHand.x));a.book.visible=true;}
+ const li=a.bones.get('index_01_l'),ri=a.bones.get('index_01_r');
+ if(read>.8&&!moving&&l&&r&&li&&ri){
+  const left=actor.worldToLocal(l.getWorldPosition(new T.Vector3())),rightHand=actor.worldToLocal(r.getWorldPosition(new T.Vector3()));
+  const leftFinger=actor.worldToLocal(li.getWorldPosition(new T.Vector3())),rightFinger=actor.worldToLocal(ri.getWorldPosition(new T.Vector3()));
+  const palm=left.clone().add(rightHand).multiplyScalar(.5),fingers=leftFinger.clone().add(rightFinger).multiplyScalar(.5);
+  // The cover spans both index fingers. Keep its upper page in their grip,
+  // with the tilt following the small drop from palm to fingertips.
+  a.book.position.set(fingers.x,palm.y-.035,palm.z+.055);
+  a.book.rotation.set(T.MathUtils.clamp(Math.atan2(palm.y-fingers.y,fingers.z-palm.z),-.25,.25),0,Math.atan2(leftFinger.y-rightFinger.y,leftFinger.x-rightFinger.x));
+  a.book.scale.x=T.MathUtils.clamp(Math.abs(leftFinger.x-rightFinger.x)/.54,.8,1.2);
+  a.book.visible=true;
+ }
 }

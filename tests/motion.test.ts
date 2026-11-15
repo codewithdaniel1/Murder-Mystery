@@ -107,6 +107,28 @@ describe('NPC animation stability',()=>{
    }
   }
  });
+ it('keeps reading documents in both hands and puts them away before walking',async()=>{
+  for(const [id,name] of [['rook','jordan'],['mara','harper'],['ada','maya'],['beatrice','harper']] as const){
+   const gltf=await loadModel(name),actor=new T.Group();actor.add(gltf.scene);
+   const book=new T.Group();actor.add(book);
+   const motion=createCharacterMotion(gltf.scene,gltf.animations,book);
+   const estate={characterMotion:new Map([[id,motion]]),actors:new Map([[id,{root:actor}]]),groundHeight:()=>0} as unknown as Estate;
+   for(let i=0;i<90;i++)animateCharacter(estate,id,false,1/60,false,'read',i/60);
+   expect(book.visible).toBe(true);
+   actor.updateMatrixWorld(true);
+   for(const side of ['l','r']){
+    const finger=motion.bones.get('index_01_'+side)!.getWorldPosition(new T.Vector3());
+    const grip=book.worldToLocal(finger);
+    expect(Math.abs(Math.abs(grip.x)-.27)).toBeLessThan(.02);
+    expect(grip.y).toBeGreaterThan(.015);
+    expect(grip.y).toBeLessThan(.05);
+    expect(grip.z).toBeGreaterThan(-.05);
+    expect(grip.z).toBeLessThan(.16);
+   }
+   animateCharacter(estate,id,true,1/60,false,null,2,.9);
+   expect(book.visible).toBe(false);
+  }
+ });
  it('turns before starting to walk in a different direction',()=>{
   const r=new EstateRoutines().update('june',{x:2.6,z:3},.1,[],{},false,undefined,Math.PI);
   expect(r.moving).toBe(false);expect(r.position).toEqual({x:2.6,z:3});expect(Math.abs(r.face)).toBeLessThan(.4);
