@@ -11,6 +11,7 @@ import type {CharacterMotion} from './characters';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {EstateRoutines} from './routines';
 import {FountainWater} from './fountain';
+import {inStair,onUpperDeck,STAIR,stairHeight,UPPER_FLOOR} from './upstairs';
 import {clearAt,clearSegment,resolveOverlap} from './navigation';
 import type {Activity} from './routines';
 import type { GameState,PersonId,Pose } from './state';
@@ -21,6 +22,7 @@ const rnd=(()=>{let s=4217;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294
 export class Estate {
  scene=new T.Scene();camera=new T.PerspectiveCamera(65,innerWidth/innerHeight,.06,220);renderer:T.WebGLRenderer;
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
+ upperBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;fountainWater?:FountainWater;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
  composer:EffectComposer;ao:GTAOPass;sun:T.DirectionalLight; mats:Record<string,T.MeshStandardMaterial>={}; pointer=new T.Vector2(0,0);lastMove=false;inspectRotation=0;ready:Promise<void>;quality='Auto';
  constructor(container:HTMLElement){
@@ -175,31 +177,52 @@ export class Estate {
  present(id:string){this.clearHeld();const g=new T.Group();if(id==='fragment'){this.cyl(.02,.08,.18,0,0,0,this.mats.gold,g).rotation.z=.6;}else if(id==='falcon'){this.falcon(g);g.scale.setScalar(.5);}else if(id==='lining'){this.box(.22,.26,.02,0,0,0,this.mat(0x73506d),g);}else{const data:Record<string,[string,string[]]>={note:['E. VALE',['Compare the original invoice.','We must speak tonight.']],ledger:['ESTATE ACCOUNTS',['£60  /  £180  /  £120','vel aran si']],bell:['REPAIR NOTICE',['Manual rope removed.','Automatic chime operating.']],display:['BRONZE FALCON',['Presented to Edmund Rook']],lexicon:['AVELLIC REGISTER',['vel aran si','received personally','by the steward']]};const [title,lines]=data[id]??['CASE NOTES',['Bramblewick Estate']];this.paper(title,lines,0,0,0,id==='ledger'||id==='lexicon',g);g.rotation.x=.9;g.scale.setScalar(.65);}g.position.set(-.24,-.2,-.72);this.camera.add(g);this.held=g;this.hands.visible=true;this.hands.position.y=.06;}
  clearHeld(){if(this.held){this.camera.remove(this.held);this.held.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.held=null;}this.hands.position.y=0;}
  resetDog(walking:boolean,doors:Record<string,boolean>){
- this.dogFollower.reset();const target=walking?this.camera.position:this.actors.get('mara')!.root.position;
- for(const radius of[1.4,.8,.4,0]){let placed=false;for(let i=0;i<8;i++){const p={x:target.x+Math.sin(i*Math.PI/4)*radius,z:target.z+Math.cos(i*Math.PI/4)*radius};if(clearAt(p,this.barriers,doors,.22)){this.dog.position.set(p.x,.08,p.z);placed=true;break}}if(placed)break}
+ this.dogFollower.reset();const target=walking&&(this.playerElevation??0)<1.2?this.camera.position:this.actors.get('mara')!.root.position;
+ for(const radius of[1.4,.8,.4,0]){let placed=false;for(let i=0;i<8;i++){const p={x:target.x+Math.sin(i*Math.PI/4)*radius,z:target.z+Math.cos(i*Math.PI/4)*radius};if(!inStair(p.x,p.z)&&clearAt(p,this.barriers,doors,.22)){this.dog.position.set(p.x,.08,p.z);placed=true;break}}if(placed)break}
  if(this.dogMotion){this.dogMotion.weight=0;this.dogMotion.phase=0;animateDog(this.dogMotion,0,1/60)}
  }
- pose():Pose{return {x:this.camera.position.x,z:this.camera.position.z,yaw:this.camera.rotation.y,pitch:this.camera.rotation.x};}
- setPose(p:Pose){this.camera.rotation.order='YXZ';this.camera.position.set(p.x,this.groundHeight(p.x,p.z)+1.65,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,'YXZ');}
+ private playerSurface(x:number,z:number,from:number){
+  if(inStair(x,z))return stairHeight(z);
+  if(from>UPPER_FLOOR-.25&&onUpperDeck(x,z))return UPPER_FLOOR;
+  return this.groundHeight(x,z);
+ }
+ pose():Pose{return {x:this.camera.position.x,z:this.camera.position.z,yaw:this.camera.rotation.y,pitch:this.camera.rotation.x,elevation:this.playerElevation};}
+ setPose(p:Pose){
+  const saved=p.elevation;
+  // Old saves may have been made where the stairs now stand.
+  const x=saved===undefined&&inStair(p.x,p.z)?STAIR.x+STAIR.width/2+.4:p.x;
+  const ground=this.groundHeight(x,p.z);
+  this.playerElevation=saved===undefined?ground:this.playerSurface(x,p.z,saved);
+  this.camera.rotation.order='YXZ';this.camera.position.set(x,this.playerElevation+1.65,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,'YXZ');
+ }
  move(dx:number,dz:number,s:GameState){
- const start=this.camera.position.clone(),barriers=this.collisionBarriers(s);
- for(const a of this.actors.values())if(a.root.visible)barriers.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
- let p=resolveOverlap(start,barriers,s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
- for(let i=0;i<steps;i++){const px={x:p.x+dx/steps,z:p.z};if(Math.abs(px.x)<52&&clearSegment(p,px,barriers,s.doors,.26))p=px;const pz={x:p.x,z:p.z+dz/steps};if(pz.z<53&&pz.z>-49&&clearSegment(p,pz,barriers,s.doors,.26))p=pz;}
+ const start=this.camera.position.clone(),ground=[...this.collisionBarriers(s),...(this.stairBarriers??[])];
+ for(const a of this.actors.values())if(a.root.visible)ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
+ let elevation=this.playerElevation??this.groundHeight(start.x,start.z);
+ const barriers=()=>elevation>UPPER_FLOOR-.25?(this.upperBarriers??[]):ground;
+ let p=resolveOverlap(start,barriers(),s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
+ const advance=(x:number,z:number)=>{
+  if(Math.abs(x)>=52||z>=53||z<=-49||!clearSegment(p,{x,z},barriers(),s.doors,.26))return;
+  const y=this.playerSurface(x,z,elevation);
+  if(Math.abs(y-elevation)>.32)return;
+  p={x,z};elevation=y;
+ };
+ for(let i=0;i<steps;i++){advance(p.x+dx/steps,p.z);advance(p.x,p.z+dz/steps);}
+ this.playerElevation=elevation;
  this.lastMove=Math.hypot(p.x-start.x,p.z-start.z)>.0001;this.camera.position.x=p.x;this.camera.position.z=p.z;
- this.camera.position.y=T.MathUtils.lerp(this.camera.position.y,this.groundHeight(p.x,p.z)+1.65,.35);
+ this.camera.position.y=T.MathUtils.lerp(this.camera.position.y,elevation+1.65,.35);
  }
 
  targetAt():Target|null{this.ray.setFromCamera(this.pointer,this.camera);let best:Target|null=null,near=3.25;for(const t of this.targets){if(!t.root.visible||!t.root.parent?.visible)continue;const hit=this.ray.intersectObject(t.root,true)[0];if(hit&&hit.distance<near){const occluder=this.ray.intersectObjects([...this.walls,...[...this.doors.values()].map(d=>d.pivot)],true)[0];if(occluder&&occluder.distance<hit.distance-.08)continue;near=hit.distance;best={...t,distance:near};}}return best;}
   setQuality(q:string){this.quality=q;const cap=q==='Low'?.85:q==='High'?1.8:q==='Medium'?1.25:Math.min(devicePixelRatio,1.25);this.renderer.setPixelRatio(Math.min(devicePixelRatio,cap));this.renderer.shadowMap.enabled=q!=='Low';this.ao.enabled=q!=='Low';this.renderer.setSize(innerWidth,innerHeight);this.composer.setPixelRatio(this.renderer.getPixelRatio());this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));}
  update(dt:number,s:GameState,playing:boolean,talking:PersonId|null,arrivalT:number,menu=false){if(playing||talking)this.clock+=dt;
  for(const[id,d]of this.doors){const goal=s.doors[id]?-Math.PI/2:0;d.angle=T.MathUtils.damp(d.angle,goal,10,dt);d.pivot.rotation.y=d.angle;}
- const solid=this.collisionBarriers(s);
+ const solid=[...this.collisionBarriers(s),{x:STAIR.x,z:(STAIR.top+STAIR.bottom)/2,w:STAIR.width,d:STAIR.bottom-STAIR.top}];
  for(const[id,a]of this.actors){
  if((id==='beatrice'||id==='jonah')&&s.arrival!=='present'){a.root.visible=false;continue;}a.root.visible=true;
  const before=a.root.position.clone();
  const nearby=[...this.actors.values()].filter(other=>other.id!==id&&other.root.visible&&other.root.position.distanceTo(a.root.position)<4).map(other=>({x:other.root.position.x,z:other.root.position.z,w:.48,d:.48}));
- const result=this.routines.update(id,a.root.position,dt,[...solid,...nearby],s.doors,!playing||id===talking,this.camera.position,a.root.rotation.y);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
+ const result=this.routines.update(id,a.root.position,dt,[...solid,...nearby],s.doors,!playing||id===talking,(this.playerElevation??0)<1.2?this.camera.position:undefined,a.root.rotation.y);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
  a.root.position.y=this.groundHeight(a.root.position.x,a.root.position.z);a.isWalking=result.moving;a.activity=id===talking?null:result.activity;a.activityLabel=result.label;
  const targetAngle=id===talking?Math.atan2(this.camera.position.x-a.root.position.x,this.camera.position.z-a.root.position.z):result.face;
  if(playing||id===talking){const delta=Math.atan2(Math.sin(targetAngle-a.root.rotation.y),Math.cos(targetAngle-a.root.rotation.y));a.root.rotation.y+=delta*Math.min(1,dt*3.4);}
@@ -208,7 +231,7 @@ export class Estate {
 
  this.car.visible=s.arrival!=='absent'&&s.arrival!=='queued';if(s.arrival==='arriving')this.car.position.z=56-32*T.MathUtils.smoothstep(arrivalT,0,1);if(s.arrival==='present')this.car.position.z=24;this.car.position.y=this.groundHeight(this.car.position.x,this.car.position.z)-.03;
  if(playing){
- const target=s.dog==='walking'?this.camera.position:this.actors.get('mara')!.root.position;
+ const target=s.dog==='walking'?((this.playerElevation??0)>1.2?this.dog.position:this.camera.position):this.actors.get('mara')!.root.position;
  const follow=this.dogFollower.update(this.dog.position,this.dog.rotation.y,target,dt,solid,s.doors,false);
  this.dog.position.x=follow.position.x;this.dog.position.z=follow.position.z;this.dog.rotation.y=follow.heading;
  this.dog.position.y=this.groundHeight(this.dog.position.x,this.dog.position.z);

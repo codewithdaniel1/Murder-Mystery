@@ -7,8 +7,31 @@ import {createCharacterMotion,animateCharacter} from '../src/characters';
 import {loadModel} from './model-fixture';
 import type {Estate} from '../src/world';
 import {resolveOverlap,clearAt,clearSegment} from '../src/navigation';
+import {STAIR,UPPER_FLOOR} from '../src/upstairs';
+import {decodeSave,encodeSave} from '../src/state';
 
 describe('walkable surfaces and physical obstacles',()=>{
+ it('connects both storeys through the stair and restores upstairs saves',()=>{
+  const e=furnishedEstate(),s=freshState();
+  e.setPose({x:STAIR.x,z:STAIR.bottom+.5,yaw:0,pitch:0});
+  e.move(0,-2,s);expect(e.pose().elevation).toBeGreaterThan(.8);
+  e.move(0,-8,s);expect(e.pose().elevation).toBe(UPPER_FLOOR);
+  expect(e.groundHeight(STAIR.x,-7)).toBeCloseTo(.075);
+  const saved=decodeSave(encodeSave(s,e.pose()))!;
+  e.setPose(s.pose);e.setPose(saved.pose);expect(e.camera.position.y).toBeCloseTo(UPPER_FLOOR+1.65);
+  e.move(0,10,s);expect(e.pose().elevation).toBeCloseTo(.075);
+ });
+ it('opens all four upstairs rooms and keeps the window walls and stair railing solid',()=>{
+  const e=furnishedEstate(),s=freshState();
+  for(const x of [-1,1])for(const z of [-9.2,6.3]){
+   e.setPose({x:0,z,yaw:0,pitch:0,elevation:UPPER_FLOOR});
+   e.move(x*8,0,s);expect(e.pose().x*x).toBeGreaterThan(7.5);
+  }
+  e.setPose({x:0,z:1,yaw:0,pitch:0,elevation:UPPER_FLOOR});
+  e.move(-5,0,s);expect(e.pose().x).toBeGreaterThan(-2.55);
+  e.setPose({x:0,z:10,yaw:0,pitch:0,elevation:UPPER_FLOOR});
+  e.move(0,5,s);expect(e.pose().z).toBeLessThan(11.7);
+ });
  it('uses the actual floor, path and greenhouse slab elevations',()=>{const e=furnishedEstate();landscape(e);expect(e.groundHeight(0,0)).toBe(.075);expect(e.groundHeight(26,-29)).toBe(.075);expect(e.groundHeight(0,-23)).toBe(.01);expect(e.groundHeight(-30,30)).toBe(-.08);expect(e.groundHeight(-16,-40)).toBeCloseTo(.26)});
  it('raises the fountain planting beds without lifting the crossing paths',()=>{const e=furnishedEstate();landscape(e);for(const x of[-12,12])expect(e.groundHeight(x,-29)).toBeCloseTo(.13);expect(e.groundHeight(12,-23)).toBeCloseTo(.01);expect(e.groundHeight(12,-35)).toBeCloseTo(.01);expect(e.groundHeight(-12,-35)).toBeCloseTo(-.08)});
  it('keeps the library service doorway free of shelves',()=>{const e=furnishedEstate();e.scene.updateMatrixWorld(true);const hits=new T.Raycaster(new T.Vector3(9.2,1.7,-8),new T.Vector3(0,0,-1),0,3).intersectObjects(e.scene.children,true);expect(hits).toEqual([]);expect(e.barriers.some(b=>Math.abs(9.2-b.x)<b.w/2&&Math.abs(-9.4-b.z)<b.d/2)).toBe(false)});

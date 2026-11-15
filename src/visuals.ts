@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {buildUpstairs,STAIR} from './upstairs';
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -26,13 +27,13 @@ function roof(e:Estate,x:number,y:number,z:number,w:number,d:number,h:number){
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pts,3));g.setIndex([0,3,2,0,2,1,4,5,2,4,2,3,0,4,3,1,2,5]);const uv=[0,0,w/2,0,w/2-1.5,h/2,1.5,h/2,0,0,w/2,0];g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.computeVertexNormals();const m=mesh(e,g,e.mats.slate,x,y,z);m.material=e.mats.slate.clone();(m.material as T.MeshStandardMaterial).side=T.DoubleSide;
  e.box(w-5,.16,.2,x,y+h,z,e.mats.dark);
 }
-function windowDetail(e:Estate,x:number,y:number,z:number,w=1.8,h=2.4,solid=false,parent:T.Object3D=e.scene){
+function windowDetail(e:Estate,x:number,y:number,z:number,w=1.8,h=2.4,solid:boolean|null=false,parent:T.Object3D=e.scene){
  const trim=e.mats.trim,dark=e.mats.dark;const box=(a:number,b:number,c:number,xx:number,yy:number,zz:number,mat:T.Material)=>e.box(a,b,c,xx,yy,zz,mat,parent);
  if(solid)box(w,h,.055,x,y,z-.04,e.mat(0x172b2b,.25,.15));
  for(const side of[-1,1]){box(.19,h+.28,.3,x+side*(w/2+.09),y,z,trim);box(.055,h,.09,x+side*(w/2-.03),y,z+.08,dark);}
  box(w+.55,.14,.55,x,y-h/2-.07,z+.06,trim);box(w+.4,.18,.35,x,y+h/2+.08,z,trim);
  box(.065,h,.08,x,y,z+.08,dark);for(const off of[-h/6,h/6])box(w,.045,.08,x,y+off,z+.08,dark);
- if(!solid)box(w,h,.03,x,y,z,e.mats.glass);
+ if(solid===false)box(w,h,.03,x,y,z,e.mats.glass);
  for(const side of[-1,1])box(.045,h,.07,x+side*w/4,y,z+.085,dark);
 }
 export function landscape(e:Estate){
@@ -67,7 +68,7 @@ export function landscape(e:Estate){
 export function castle(e:Estate){
  const {stone,trim,wood,plaster}=e.mats;
  const entranceOak=wood.clone();entranceOak.color.setHex(0xc3ac87);entranceOak.roughness=.72;
- e.floor(42,.15,28,0,0,-2,entranceOak);e.box(42,.25,28,0,4.9,-2,plaster);
+ e.floor(42,.15,28,0,0,-2,entranceOak);
  e.wall(19.2,1,.6,-11.4,.5,12);e.wall(19.2,1,.6,11.4,.5,12);e.wall(42,1,.65,0,4.35,12);e.wall(3.6,1.4,.65,0,4.1,12);
  const cuts=[-21,-18,-16,-12,-10,-1.8,1.8,10,12,16,18,21];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1],mid=(a+b)/2;if(Math.abs(mid)<1.81||[-17,-11,11,17].some(x=>Math.abs(mid-x)<.1))continue;e.wall(b-a,2.85,.6,mid,2.425,12);}
  for(const x of[-17,-11,11,17])windowDetail(e,x,2.45,12.12,2,2.7);
@@ -79,9 +80,22 @@ export function castle(e:Estate){
  e.addDoor('front',-1.55,12,0,true);e.addDoor('rear',-1.55,-16,0,true);
  for(const z of[12,-16]){for(const x of[-1.675,1.675])e.wall(.25,3.4,.72,x,1.7,z,trim);e.wall(3.6,.18,.72,0,3.32,z,trim);}
 
- // A second storey restores manor-house proportions. It is architectural scenery.
- e.box(42,3.6,28,0,6.8,-2,stone);roof(e,0,8.72,-2,43.2,29.2,4.8);
- for(const z of[12.4,-16.4]){for(const y of[.23,4.72,8.52])mould(e,42,.09,.22,0,y,z);for(const x of[-17,-11,-5,0,5,11,17]){const group=new T.Group();group.position.set(x,6.65,z);if(z<0)group.rotation.y=Math.PI;e.scene.add(group);windowDetail(e,0,0,.02,1.45,2.15,true,group);}}
+ buildUpstairs(e);roof(e,0,8.72,-2,43.2,29.2,4.8);
+ const bays=[-17,-11,-5,0,5,11,17],glass=e.mat(0xbacbd1,.2);
+ glass.transparent=true;glass.opacity=.29;glass.depthWrite=false;glass.side=T.DoubleSide;
+ for(const z of [12,-16]){
+  e.wall(42,.525,.6,0,5.3125,z,stone);e.wall(42,.995,.6,0,8.2225,z,stone);
+  let edge=-21;
+  for(const x of bays){
+   const next=x-.725;e.wall(next-edge,2.15,.6,(edge+next)/2,6.65,z,stone);edge=x+.725;
+   const group=new T.Group();group.position.set(x,6.65,z+Math.sign(z)*.4);
+   if(z<0)group.rotation.y=Math.PI;e.scene.add(group);
+   windowDetail(e,0,0,.02,1.45,2.15,null,group);
+   const pane=e.box(1.45,2.15,.035,x,6.65,z,glass,e.scene,false);e.walls.push(pane);
+  }
+  e.wall(21-edge,2.15,.6,(21+edge)/2,6.65,z,stone);
+  for(const y of [.23,4.72,8.52])mould(e,42,.09,.22,0,y,z+Math.sign(z)*.4);
+ }
  // Stone quoins alternate at the corners, rather than oversized battlements.
  for(const x of[-20.9,20.9])for(const z of[-16.1,12.1])for(let i=0;i<18;i++)e.box(i%2?.7:1.1,.38,i%2?1.1:.7,x,.25+i*.46,z,trim);
  for(const x of[-21,21])for(const z of[-16,12]){
@@ -112,7 +126,13 @@ export function interiorDetail(e:Estate){
  }
  // Side walls get plaster above panelling; conceal unfinished masonry indoors.
  for(const x of[-20.66,20.66])e.box(.04,3.1,27,x,3.05,-2,plaster);
- for(const x of[-14,0,14])for(let z=-7;z<=10;z+=5.5){e.box(13.6,.14,.15,x,4.69,z,paint);for(const dx of[-4.5,0,4.5])e.box(.13,.14,5.5,x+dx,4.69,z-2.75,paint);}
+ for(const x of[-14,0,14])for(let z=-7;z<=10;z+=5.5){
+  if(x===0&&z>STAIR.top&&z<STAIR.bottom){
+   const left=STAIR.x-STAIR.width/2,right=STAIR.x+STAIR.width/2;
+   for(const [a,b] of [[-6.8,left],[right,6.8]])e.box(b-a,.14,.15,(a+b)/2,4.69,z,paint);
+  }else e.box(13.6,.14,.15,x,4.69,z,paint);
+  for(const dx of[-4.5,0,4.5])if(!(x===0&&dx===-4.5&&z>STAIR.top&&z-5.5<STAIR.bottom))e.box(.13,.14,5.5,x+dx,4.69,z-2.75,paint);
+ }
  for(const z of[0,8]){
  const g=new T.Group();g.position.set(0,3.8,z);e.scene.add(g);e.cyl(.025,.025,1,0,.55,0,e.mats.gold,g,12);e.sphere(.11,0,0,0,e.mats.gold,g);
  for(let i=0;i<6;i++){const a=i*Math.PI/3,dx=Math.cos(a),dz=Math.sin(a);tube(e,[new T.Vector3(0,0,0),new T.Vector3(dx*.4,-.25,dz*.4),new T.Vector3(dx*.7,-.1,dz*.7),new T.Vector3(dx*.7,.12,dz*.7)],.018,e.mats.gold,g);e.cyl(.065,.065,.25,dx*.7,.23,dz*.7,e.mats.cream,g,12);const glow=new T.MeshStandardMaterial({color:0xffe3ac,emissive:0xffbd6e,emissiveIntensity:2});e.sphere(.045,dx*.7,.38,dz*.7,glow,g,.7,1.5,.7);}
