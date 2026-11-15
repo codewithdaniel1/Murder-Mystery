@@ -53,7 +53,7 @@ function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
 
 function fittedWaistband(outfit:T.SkinnedMesh){
  const pelvis=outfit.skeleton.bones.findIndex(b=>b.name==='pelvis');
- const rings=[{y:1.03,x:.16,z:.135,center:.03},{y:.91,x:.19,z:.18,center:.025}];
+ const rings=[{y:1.015,x:.16,z:.135,center:.03},{y:.955,x:.19,z:.18,center:.025}];
  const positions:number[]=[],indices:number[]=[],skinIndices:number[]=[],skinWeights:number[]=[];
  for(const ring of rings)for(let i=0;i<=48;i++){
   const a=i/48*Math.PI*2;
@@ -85,33 +85,40 @@ function addPeriodClothing(model:T.Object3D,style:Costume){
  if(style.apron)attach(skirtGeometry(outfit,style.model,true),0xd4cbb5,'1942 housekeeper apron');
 }
 
-function addFittedBlouseSleeves(model:T.Object3D,color:number){
+function addFittedBlouse(model:T.Object3D,color:number){
  let body:T.SkinnedMesh|undefined;
  model.traverse(o=>{if(!body&&o instanceof T.SkinnedMesh&&/anatomical_body/i.test(o.name))body=o});
  if(!body?.parent)return;
  const geometry=body.geometry.clone(),positions=geometry.getAttribute('position');
  const joints=geometry.getAttribute('skinIndex'),weights=geometry.getAttribute('skinWeight');
  const armBones=new Set(body.skeleton.bones.map((bone,i)=>/^(clavicle|upperarm|lowerarm)/.test(bone.name)?i:-1).filter(i=>i>=0));
+ const torsoBones=new Set(body.skeleton.bones.map((bone,i)=>/^(pelvis|spine_)/.test(bone.name)?i:-1).filter(i=>i>=0));
+ const headBones=new Set(body.skeleton.bones.map((bone,i)=>/^(head|neck_)/.test(bone.name)?i:-1).filter(i=>i>=0));
  const handBones=new Set(body.skeleton.bones.map((bone,i)=>/^(hand|finger|thumb)/.test(bone.name)?i:-1).filter(i=>i>=0));
  const influence=(index:number,bones:Set<number>)=>{let total=0;for(let k=0;k<4;k++)if(bones.has(joints.getComponent(index,k)))total+=weights.getComponent(index,k);return total};
  const original=geometry.getIndex();if(!original)return;
- const sleeveFaces:number[]=[];
+ const blouseFaces:number[]=[];
  for(let i=0;i<original.count;i+=3){
   const a=original.getX(i),b=original.getX(i+1),c=original.getX(i+2);
   const x=(positions.getX(a)+positions.getX(b)+positions.getX(c))/3;
   const y=(positions.getY(a)+positions.getY(b)+positions.getY(c))/3;
   const arm=(influence(a,armBones)+influence(b,armBones)+influence(c,armBones))/3;
+  const torso=(influence(a,torsoBones)+influence(b,torsoBones)+influence(c,torsoBones))/3;
+  const head=(influence(a,headBones)+influence(b,headBones)+influence(c,headBones))/3;
   const hand=(influence(a,handBones)+influence(b,handBones)+influence(c,handBones))/3;
-  // The body mesh also contains the face and neck; position alone must not
-  // turn those triangles into blouse fabric.
-  if(Math.abs(x)>.08&&y>.9&&y<1.63&&arm>.27&&Math.min(influence(a,armBones),influence(b,armBones),influence(c,armBones))>.12&&hand<.3)sleeveFaces.push(a,b,c);
+  // Cover the chest and shoulder as well as the arms. Head and neck weights
+  // keep the blouse off the face even at the open collar.
+  const chest=y>1.02&&y<1.53&&Math.abs(x)<.32&&torso>.3;
+  const shoulder=y>1.25&&y<1.68&&Math.abs(x)>.08&&Math.abs(x)<.4;
+  const sleeve=Math.abs(x)>.08&&y>.9&&y<1.63&&arm>.27&&Math.min(influence(a,armBones),influence(b,armBones),influence(c,armBones))>.12;
+  if((((chest||sleeve)&&head<.1)||(shoulder&&head<.9))&&hand<.3)blouseFaces.push(a,b,c);
  }
- geometry.setIndex(sleeveFaces);
+ geometry.setIndex(blouseFaces);geometry.clearGroups();
  const material=new T.MeshStandardMaterial({color,roughness:.98,metalness:0,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
- const sleeves=new T.SkinnedMesh(geometry,material);sleeves.name='1942 fitted blouse sleeves';
- sleeves.position.copy(body.position);sleeves.quaternion.copy(body.quaternion);sleeves.scale.copy(body.scale);
- body.parent.add(sleeves);sleeves.bind(body.skeleton,body.bindMatrix.clone());
- sleeves.castShadow=true;sleeves.receiveShadow=true;
+ const blouse=new T.SkinnedMesh(geometry,material);blouse.name='1942 fitted blouse';
+ blouse.position.copy(body.position);blouse.quaternion.copy(body.quaternion);blouse.scale.copy(body.scale);
+ body.parent.add(blouse);blouse.bind(body.skeleton,body.bindMatrix.clone());
+ blouse.castShadow=true;blouse.receiveShadow=true;
 }
 
 function flattenGardenerShirt(model:T.Object3D){
@@ -152,7 +159,7 @@ export function dressCharacter(id:PersonId,model:T.Object3D){
  }
  });
  addPeriodClothing(model,style);
- if(id==='ada')addFittedBlouseSleeves(model,style.blouse??style.coat);
+ if(id==='ada')addFittedBlouse(model,style.blouse??style.coat);
  if(id==='tomas')flattenGardenerShirt(model);
  const head=model.getObjectByName('head');if(!head)return;
  model.updateWorldMatrix(true,false);model.updateMatrixWorld(true);
