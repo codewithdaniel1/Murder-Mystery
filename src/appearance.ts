@@ -18,11 +18,19 @@ export const CAST:Record<PersonId,Costume>={
 // Built in the source mesh's bind-pose coordinates, using its existing bones.
 // The hem follows the pelvis closely so moving legs remain behind the fabric.
 function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
- const maya=modelName==='maya',top=maya?1.01:.89,bottom=maya?.32:.34;
+ const maya=modelName==='maya',top=maya?.99:.89,bottom=maya?.53:.34;
  const rings=frontOnly?[
   {y:top-.015,x:.18,z:.155},{y:top-.17,x:.21,z:.19},{y:bottom+.045,x:.3,z:.375}
+ ]:maya?[
+  {y:top,x:.165,z:.15},
+  {y:top-.075,x:.185,z:.17},
+  {y:top-.15,x:.205,z:.195},
+  {y:top-.22,x:.218,z:.205},
+  {y:top-.29,x:.22,z:.205},
+  {y:bottom+.07,x:.215,z:.2},
+  {y:bottom,x:.21,z:.198}
  ]:[
-  {y:top,x:maya?.19:.18,z:maya?.21:.145},{y:top-.12,x:maya?.2:.2,z:maya?.22:.17},{y:top-.29,x:maya?.23:.24,z:maya?.26:.23},{y:bottom,x:maya?.33:.34,z:maya?.38:.36}
+  {y:top,x:.18,z:.145},{y:top-.12,x:.2,z:.17},{y:top-.29,x:.24,z:.23},{y:bottom,x:.34,z:.36}
  ];
  const segments=frontOnly?20:48,start=frontOnly?-1.04:0,end=frontOnly?1.04:Math.PI*2;
  const positions:number[]=[],uvs:number[]=[],indices:number[]=[],skinIndices:number[]=[],skinWeights:number[]=[];
@@ -31,10 +39,10 @@ function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
  const right=outfit.skeleton.bones.findIndex(b=>b.name==='thigh_r');
  for(let row=0;row<rings.length;row++)for(let i=0;i<=segments;i++){
   const t=i/segments,a=start+(end-start)*t,r=rings[row];
-  const pleat=frontOnly?0:Math.cos(a*12)*(.002+row*.004);
+  const pleat=frontOnly?0:maya?Math.cos(a*8)*(.001+row*.001):Math.cos(a*12)*(.002+row*.004);
   const x=Math.sin(a)*(r.x+pleat),z=Math.cos(a)*(r.z+pleat)+(frontOnly?.012:0);
   positions.push(x,r.y,z);uvs.push(t,row/(rings.length-1));
-  const follow=frontOnly?0:Math.max(0,(row-1)/(rings.length-2))*.05;
+  const follow=frontOnly?0:Math.max(0,(row-1)/(rings.length-2))*(maya?.025:.05);
   // Blend both thighs near the front and back seams. A hard left/right choice
   // splits coincident seam vertices as soon as either leg moves.
   const leftWeight=T.MathUtils.smoothstep(x,-.12,.12);
@@ -51,19 +59,19 @@ function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
  g.setIndex(indices);g.computeVertexNormals();return g;
 }
 
-function fittedWaistband(outfit:T.SkinnedMesh){
- const pelvis=outfit.skeleton.bones.findIndex(b=>b.name==='pelvis');
- const rings=[{y:1.015,x:.18,z:.18,center:.025},{y:.985,x:.19,z:.19,center:.025}];
- const positions:number[]=[],indices:number[]=[],skinIndices:number[]=[],skinWeights:number[]=[];
- for(const ring of rings)for(let i=0;i<=48;i++){
-  const a=i/48*Math.PI*2;
-  positions.push(Math.sin(a)*ring.x,ring.y,Math.cos(a)*ring.z+ring.center);
-  skinIndices.push(pelvis,0,0,0);skinWeights.push(1,0,0,0);
+let adaSkirtFabric:T.DataTexture|undefined;
+function tailoredWool(){
+ if(adaSkirtFabric)return adaSkirtFabric;
+ const size=256,data=new Uint8Array(size*size*4);
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+  const n=((x*73856093)^(y*19349663))>>>0;
+  const thread=((x+y)%4===0?2:0),seam=[64,128,192].some(s=>Math.abs(x-s)<=1)?18:0;
+  const shade=246+(n%9)-4-thread-seam,p=(y*size+x)*4;
+  data[p]=data[p+1]=data[p+2]=shade;data[p+3]=255;
  }
- for(let i=0;i<48;i++){const b=i+49;indices.push(i,b,i+1,i+1,b,b+1)}
- const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));
- g.setAttribute('skinIndex',new T.Uint16BufferAttribute(skinIndices,4));g.setAttribute('skinWeight',new T.Float32BufferAttribute(skinWeights,4));
- g.setIndex(indices);g.computeVertexNormals();return g;
+ const texture=new T.DataTexture(data,size,size,T.RGBAFormat);texture.colorSpace=T.SRGBColorSpace;
+ texture.magFilter=T.LinearFilter;texture.minFilter=T.LinearMipmapLinearFilter;texture.generateMipmaps=true;
+ texture.needsUpdate=true;adaSkirtFabric=texture;return texture;
 }
 
 function addPeriodClothing(model:T.Object3D,style:Costume){
@@ -75,13 +83,13 @@ function addPeriodClothing(model:T.Object3D,style:Costume){
  const outfit=source;
  const attach=(geometry:T.BufferGeometry,color:number,name:string)=>{
   const material=new T.MeshStandardMaterial({color,roughness:.98,metalness:0,side:T.DoubleSide});
+  if(style.model==='maya'&&name==='1942 tailored skirt')material.map=tailoredWool();
   const mesh=new T.SkinnedMesh(geometry,material);mesh.name=name;
   mesh.position.copy(outfit.position);mesh.quaternion.copy(outfit.quaternion);mesh.scale.copy(outfit.scale);
   outfit.parent!.add(mesh);mesh.bind(outfit.skeleton,outfit.bindMatrix.clone());
   mesh.castShadow=true;mesh.receiveShadow=true;
  };
  attach(skirtGeometry(outfit,style.model),style.skirt,'1942 tailored skirt');
- if(style.model==='maya')attach(fittedWaistband(outfit),style.skirt,'1942 high waistband');
  if(style.apron)attach(skirtGeometry(outfit,style.model,true),0xd4cbb5,'1942 housekeeper apron');
 }
 
@@ -114,10 +122,15 @@ function trimAdaTrousers(model:T.Object3D){
  if(!source)return;
  const kept:number[]=[];
  for(let i=0;i<source.count;i+=3){const a=source.getX(i),b=source.getX(i+1),c=source.getX(i+2);
-  if(Math.min(positions.getY(a),positions.getY(b),positions.getY(c))<.39)kept.push(a,b,c);
+  if(Math.min(positions.getY(a),positions.getY(b),positions.getY(c))<.55)kept.push(a,b,c);
  }
+ for(let i=0;i<positions.count;i++){
+  const x=positions.getX(i),z=positions.getZ(i),legCenter=x<0?-.11:.11;
+  positions.setX(i,legCenter+(x-legCenter)*.78);positions.setZ(i,z*.78);
+ }
+ positions.needsUpdate=true;geometry.computeVertexNormals();geometry.computeBoundingSphere();
  geometry.setIndex(kept);geometry.clearGroups();trousers.geometry=geometry;
- trousers.material=new T.MeshStandardMaterial({color:0x343d45,roughness:1,side:T.DoubleSide});
+ trousers.material=new T.MeshStandardMaterial({color:0x20252c,roughness:1,side:T.DoubleSide});
 }
 
 function addFittedBlouse(model:T.Object3D,color:number){
