@@ -85,6 +85,28 @@ describe('NPC animation stability',()=>{
    }
   }
  });
+ it('keeps every dress hem below both knees through a walking cycle',async()=>{
+  for(const [id,name] of [['ada','maya'],['june','harper'],['mara','harper'],['beatrice','harper']] as const){
+   const gltf=await loadModel(name),actor=new T.Group();actor.add(gltf.scene);
+   const motion=createCharacterMotion(gltf.scene,gltf.animations,new T.Group());
+   dressCharacter(id,gltf.scene);
+   const skirt=gltf.scene.getObjectByName('1942 tailored skirt') as T.SkinnedMesh;
+   const positions=skirt.geometry.getAttribute('position');
+   const estate={characterMotion:new Map([[id,motion]]),actors:new Map([[id,{root:actor}]]),groundHeight:()=>0} as unknown as Estate;
+   for(let frame=0;frame<120;frame++){
+    actor.position.z+=.9/60;animateCharacter(estate,id,true,1/60,false,null,frame/60,.9);
+    if(frame%6!==0)continue;
+    actor.updateMatrixWorld(true);
+    const knees=['l','r'].map(side=>motion.bones.get('calf_'+side)!.getWorldPosition(new T.Vector3()).y);
+    let highestHem=-Infinity;
+    for(let i=positions.count-50;i<positions.count-1;i++){
+     const point=skirt.applyBoneTransform(i,new T.Vector3().fromBufferAttribute(positions,i)).applyMatrix4(skirt.matrixWorld);
+     highestHem=Math.max(highestHem,point.y);
+    }
+    expect(highestHem).toBeLessThan(Math.min(...knees)-.035);
+   }
+  }
+ });
  it('turns before starting to walk in a different direction',()=>{
   const r=new EstateRoutines().update('june',{x:2.6,z:3},.1,[],{},false,undefined,Math.PI);
   expect(r.moving).toBe(false);expect(r.position).toEqual({x:2.6,z:3});expect(Math.abs(r.face)).toBeLessThan(.4);

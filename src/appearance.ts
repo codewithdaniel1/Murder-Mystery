@@ -29,7 +29,8 @@ function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
   {y:.84,x:.2,z:.18,back:.16},
   {y:.76,x:.22,z:.205,back:.19},
   {y:.6,x:.215,z:.2,back:.195},
-  {y:.53,x:.21,z:.198,back:.198}
+  {y:.44,x:.215,z:.205,back:.2},
+  {y:.34,x:.225,z:.215,back:.21}
  ]:[
   {y:.95,x:.08,z:.055},
   {y:.89,x:.16,z:.14},
@@ -148,7 +149,7 @@ function trimAdaTrousers(model:T.Object3D){
  if(!source)return;
  const kept:number[]=[];
  for(let i=0;i<source.count;i+=3){const a=source.getX(i),b=source.getX(i+1),c=source.getX(i+2);
-  if(Math.max(positions.getY(a),positions.getY(b),positions.getY(c))<.52)kept.push(a,b,c);
+  if(Math.max(positions.getY(a),positions.getY(b),positions.getY(c))<.32)kept.push(a,b,c);
  }
  for(let i=0;i<positions.count;i++){
   const x=positions.getX(i),z=positions.getZ(i),legCenter=x<0?-.11:.11;
