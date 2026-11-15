@@ -1,12 +1,12 @@
 import * as T from 'three';
 import type {PersonId} from './state';
-type Hat = 'beret'|'cap'|'headscarf';
+type Hat = 'beret'|'cap'|'housekeeper';
 type Costume = {model:string;coat:number;hair:number;hat?:Hat;glasses?:boolean;skirt?:number;blouse?:number;trousers?:number;apron?:boolean};
 
 // Bramblewick is set in 1942. The shared source figures have contemporary
 // garments, so these costumes add a period silhouette to their existing rigs.
 export const CAST:Record<PersonId,Costume>={
- june:{model:'harper',coat:0x596458,hair:0x9a9485,hat:'headscarf',skirt:0x434c43,apron:true},
+ june:{model:'harper',coat:0x596458,hair:0x9a9485,hat:'housekeeper',skirt:0x434c43,apron:true},
  mara:{model:'harper',coat:0x786b59,hair:0x554438,glasses:true,skirt:0x635a4e},
  ada:{model:'maya',coat:0x506574,hair:0x30241d,blouse:0xc5bca5,skirt:0x435463},
  beatrice:{model:'harper',coat:0x684d56,hair:0x483b35,hat:'beret',skirt:0x5b4149},
@@ -163,18 +163,25 @@ export function dressCharacter(id:PersonId,model:T.Object3D){
  });
  const eyes=eyeBounds.isEmpty()?new T.Vector3(0,.04,.1):eyeBounds.getCenter(new T.Vector3()).sub(headPosition);
  if(!eyeBounds.isEmpty())eyes.z=eyeBounds.max.z-headPosition.z+.008;
- const hatY=crownY-headPosition.y-.055;
+ const hatY=crownY-headPosition.y-(style.hat==='housekeeper'?.08:.055);
  const anchor=new T.Group();anchor.name='Fitted character accessories';
  anchor.quaternion.copy(head.getWorldQuaternion(new T.Quaternion()).invert().multiply(model.parent!.getWorldQuaternion(new T.Quaternion())));
  const worldScale=head.getWorldScale(new T.Vector3());anchor.scale.set(1/worldScale.x,1/worldScale.y,1/worldScale.z);head.add(anchor);
- const metal=new T.MeshStandardMaterial({color:0x8d7951,metalness:.75,roughness:.35}),cloth=new T.MeshStandardMaterial({color:style.hat==='headscarf'?0xd4cbb5:style.coat,roughness:.98});
+ const metal=new T.MeshStandardMaterial({color:0x8d7951,metalness:.75,roughness:.35}),cloth=new T.MeshStandardMaterial({color:style.hat==='housekeeper'?0xd4cbb5:style.coat,roughness:.98});
  const add=(geometry:T.BufferGeometry,material:T.Material,x:number,y:number,z:number)=>{const m=new T.Mesh(geometry,material);m.position.set(x,y,z);m.castShadow=true;anchor.add(m);return m};
  if(style.glasses){for(const side of[-1,1]){add(new T.TorusGeometry(.028,.002,6,28),metal,eyes.x+side*.034,eyes.y,eyes.z);const arm=add(new T.CylinderGeometry(.002,.002,.09,6),metal,eyes.x+side*.063,eyes.y,eyes.z-.045);arm.rotation.x=Math.PI/2}const bridge=add(new T.CylinderGeometry(.002,.002,.014,6),metal,eyes.x,eyes.y+.002,eyes.z);bridge.rotation.z=Math.PI/2;}
- if(style.hat){const beret=style.hat==='beret',scarf=style.hat==='headscarf';
-  const crown=add(new T.SphereGeometry(1,32,16,0,Math.PI*2,0,Math.PI/2),cloth,0,hatY,0);
-  crown.scale.set(beret?.143:scarf?.126:.116,beret?.065:scarf?.06:.093,beret?.14:.125);
-  if(!scarf){const brim=add(new T.CylinderGeometry(beret?.145:.12,beret?.15:.123,.012,40),cloth,0,hatY-.002,.005);brim.scale.z=beret?1.03:1.1;}
-  if(style.hat==='cap'){const visor=add(new T.SphereGeometry(1,24,12),cloth,0,hatY-.004,.108);visor.scale.set(.096,.008,.065);add(new T.SphereGeometry(.013,12,8),metal,0,hatY+.032,.124)}
-  if(scarf){const knot=add(new T.SphereGeometry(.024,12,8),cloth,0,hatY-.055,-.115);knot.scale.set(1,.6,.7);}
+ if(style.hat){const beret=style.hat==='beret',housekeeper=style.hat==='housekeeper';
+  if(housekeeper){
+   // A close-fitting cloth crown and deep band replace the old flat disc.
+   const crown=add(new T.SphereGeometry(1,32,20,0,Math.PI*2,0,Math.PI/2),cloth,0,hatY+.02,-.005);
+   crown.scale.set(.108,.105,.115);
+   const band=add(new T.CylinderGeometry(.108,.11,.04,36,1,true),cloth,0,hatY,-.005);band.scale.z=1.06;
+   const seam=add(new T.TorusGeometry(.109,.004,6,36),new T.MeshStandardMaterial({color:0xb9ae99,roughness:1}),0,hatY-.018,-.005);seam.rotation.x=Math.PI/2;seam.scale.y=1.06;
+  }else{
+   const crown=add(new T.SphereGeometry(1,32,16,0,Math.PI*2,0,Math.PI/2),cloth,0,hatY,0);
+   crown.scale.set(beret?.143:.116,beret?.065:.093,beret?.14:.125);
+   const brim=add(new T.CylinderGeometry(beret?.145:.12,beret?.15:.123,.012,40),cloth,0,hatY-.002,.005);brim.scale.z=beret?1.03:1.1;
+   if(style.hat==='cap'){const visor=add(new T.SphereGeometry(1,24,12),cloth,0,hatY-.004,.108);visor.scale.set(.096,.008,.065);add(new T.SphereGeometry(.013,12,8),metal,0,hatY+.032,.124)}
+  }
  }
 }
