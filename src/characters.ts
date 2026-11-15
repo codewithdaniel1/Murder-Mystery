@@ -5,7 +5,7 @@ import type {Estate} from './world';
 import type {Activity} from './routines';
 import type {PersonId} from './state';
 import {rigDog} from './dog';
-import {CAST,dressCharacter} from './appearance';
+import {CAST,dressCharacter,updateAdaLegCover} from './appearance';
 import {plantFoot} from './locomotion';
 function updateRig(root:T.Object3D){root.updateWorldMatrix(true,false);root.updateMatrixWorld(true)}
 const WALK_STANCE=.60,WALK_STRIDE=.52;
@@ -102,6 +102,7 @@ export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,p
   a.groundOffset=a.groundOffset===null?correction:T.MathUtils.damp(a.groundOffset,correction,20,dt);
   a.root.position.y+=a.groundOffset;updateRig(a.root);
  }
+ if(id==='ada')updateAdaLegCover(a.root);
  const l=a.bones.get('hand_l'),r=a.bones.get('hand_r');
  const li=a.bones.get('index_01_l'),ri=a.bones.get('index_01_r');
  if(read>.8&&!moving&&l&&r&&li&&ri){

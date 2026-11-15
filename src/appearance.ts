@@ -149,7 +149,9 @@ function trimAdaTrousers(model:T.Object3D){
  if(!source)return;
  const kept:number[]=[];
  for(let i=0;i<source.count;i+=3){const a=source.getX(i),b=source.getX(i+1),c=source.getX(i+2);
-  if(Math.max(positions.getY(a),positions.getY(b),positions.getY(c))<.32)kept.push(a,b,c);
+  // Leave a little mesh behind the hem so the moving clip can keep the
+  // stockings connected even when the shin angles away from the skirt.
+  if(Math.max(positions.getY(a),positions.getY(b),positions.getY(c))<.40)kept.push(a,b,c);
  }
  for(let i=0;i<positions.count;i++){
   const x=positions.getX(i),z=positions.getZ(i),legCenter=x<0?-.11:.11;
@@ -157,7 +159,27 @@ function trimAdaTrousers(model:T.Object3D){
  }
  positions.needsUpdate=true;geometry.computeVertexNormals();geometry.computeBoundingSphere();
  geometry.setIndex(kept);geometry.clearGroups();trousers.geometry=geometry;
- trousers.material=new T.MeshStandardMaterial({color:0x20252c,roughness:1,side:T.DoubleSide});
+ trousers.material=new T.MeshStandardMaterial({color:0x20252c,roughness:1,side:T.DoubleSide,
+  clippingPlanes:[new T.Plane(new T.Vector3(0,-1,0),.32)],clipShadows:true});
+}
+
+const adaHemPoint=new T.Vector3();
+export function updateAdaLegCover(model:T.Object3D){
+ const skirt=model.getObjectByName('1942 tailored skirt');
+ const trousers=model.getObjectByName('female_casualsuit01_2');
+ if(!(skirt instanceof T.SkinnedMesh)||!(trousers instanceof T.SkinnedMesh)||
+    !(trousers.material instanceof T.MeshStandardMaterial))return;
+ const plane=trousers.material.clippingPlanes?.[0];
+ if(!plane)return;
+ const positions=skirt.geometry.getAttribute('position');
+ let hem=Infinity;
+ // The final ring is the hem; the final vertex after it caps the waist.
+ for(let i=positions.count-50;i<positions.count-1;i++){
+  skirt.applyBoneTransform(i,adaHemPoint.fromBufferAttribute(positions,i)).applyMatrix4(skirt.matrixWorld);
+  hem=Math.min(hem,adaHemPoint.y);
+ }
+ // Clip posed leg geometry above the hem, with a small overlap at the seam.
+ plane.constant=hem+.012;
 }
 
 function addFittedBlouse(model:T.Object3D,color:number){
