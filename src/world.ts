@@ -47,16 +47,16 @@ export class Estate {
  sphere(rad:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,sx=1,sy=1,sz=1){const m=new T.Mesh(new T.SphereGeometry(rad,24,18),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;parent.add(m);return m;}
  floor(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material){this.surfaces.push({x,z,w,d,y:y+h/2});return this.box(w,h,d,x,y,z,mat,this.scene,false)}
  groundHeight(x:number,z:number){let y=-.08;for(const f of this.surfaces)if(Math.abs(x-f.x)<=f.w/2&&Math.abs(z-f.z)<=f.d/2)y=Math.max(y,f.y);return y}
- collisionBarriers(s:GameState){
-  const list=[...this.barriers];
+ collisionBarriers(s:GameState,upper=false){
+  const list=[...(upper?this.upperBarriers:this.barriers)];
   // Open doors stop blocking the doorway, but their swung leaves remain solid.
-  for(const[id,d]of this.doors)if(s.doors[id]){
+  for(const[id,d]of this.doors)if(s.doors[id]&&(d.frame.position.y>=UPPER_FLOOR)===upper){
    d.pivot.updateWorldMatrix(true,false);
    const center=new T.Vector3(1.55,0,0).applyMatrix4(d.pivot.matrixWorld);
-   const yaw=d.frame.rotation.y+d.pivot.rotation.y,leafWidth=3.1,leafDepth=.34;
+   const yaw=d.frame.rotation.y+d.pivot.rotation.y,leafWidth=3.1*d.pivot.scale.x,leafDepth=.34;
    list.push({x:center.x,z:center.z,w:Math.abs(Math.cos(yaw))*leafWidth+Math.abs(Math.sin(yaw))*leafDepth,d:Math.abs(Math.sin(yaw))*leafWidth+Math.abs(Math.cos(yaw))*leafDepth});
   }
-  if(s.arrival==='arriving'||s.arrival==='present')list.push({x:4,z:s.arrival==='present'?24:this.car.position.z,w:2.45,d:5.25});return list;
+  if(!upper&&(s.arrival==='arriving'||s.arrival==='present'))list.push({x:4,z:s.arrival==='present'?24:this.car.position.z,w:2.45,d:5.25});return list;
  }
  advanceArrival(progress:number,dt:number,s:GameState){const next=Math.min(1,progress+dt/15),from=56-32*T.MathUtils.smoothstep(progress,0,1),to=56-32*T.MathUtils.smoothstep(next,0,1);const people=[this.camera.position,...[...this.actors.values()].filter(a=>a.root.visible).map(a=>a.root.position),this.dog.position];if(people.some(p=>Math.abs(p.x-4)<1.65&&p.z>to-3.1&&p.z<from+3.1))return progress;return next}
  barrier(x:number,z:number,w:number,d:number,door?:string){this.barriers.push({x,z,w,d,door});}
@@ -65,8 +65,8 @@ export class Estate {
  sign(text:string,x:number,y:number,z:number,width=1.6,rotation=0,parent:T.Object3D=this.scene){const c=document.createElement('canvas');c.width=512;c.height=160;const ctx=c.getContext('2d')!;ctx.fillStyle='#243b32';ctx.fillRect(0,0,512,160);ctx.strokeStyle='#b9a673';ctx.lineWidth=4;ctx.strokeRect(10,10,492,140);ctx.fillStyle='#eadfbc';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='28px Georgia';ctx.fillText(text,256,81);const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;const m=new T.Mesh(new T.PlaneGeometry(width,width*.3125),new T.MeshStandardMaterial({map:tex,roughness:.8}));m.position.set(x,y,z);m.rotation.y=rotation;parent.add(m);return m;}
  landscape(){landscape(this)}
  castle(){castle(this)}
- addDoor(id:string,x:number,z:number,rotation:number,open=false){
-  const pivot=new T.Group();pivot.position.set(x,.12,z);pivot.rotation.y=rotation;
+ addDoor(id:string,x:number,z:number,rotation:number,open=false,base=.12,width=3.1,height=3.15){
+  const pivot=new T.Group();pivot.position.set(x,base,z);pivot.rotation.y=rotation;
   const door=new T.Group(),wood=this.mats.panel,trim=this.mats.wood,gold=this.mats.gold;
   this.box(3.1,3.15,.16,1.55,1.58,0,this.mats.dark,door);
   // Matching raised, four-panel joinery on both faces of the moving leaf.
@@ -92,8 +92,11 @@ export class Estate {
    this.sphere(.06,2.78,1.48,side*.27,gold,door,.85,1,.85);
    this.cyl(.018,.018,.1,2.78,1.25,side*.19,gold,door,10).rotation.x=Math.PI/2;
   }
-  pivot.add(door);this.scene.add(pivot);this.target(door,'door:'+id,id==='front'?'Entrance doors':id==='rear'?'Garden door':id==='study'?'Study door':'Library door','Open / close');this.doors.set(id,{pivot:door,frame:pivot,angle:open?-Math.PI/2:0,open:open?1:0});door.rotation.y=open?-Math.PI/2:0;
-  const along=Math.abs(Math.sin(rotation))>.5;this.barrier(x+(along?0:1.55),z+(along?-1.55:0),along?.28:3.1,along?3.1:.28,id);
+  door.scale.set(width/3.1,height/3.15,1);
+  pivot.add(door);this.scene.add(pivot);this.target(door,'door:'+id,id==='front'?'Entrance doors':id==='rear'?'Garden door':id==='study'?'Study door':id==='balcony'?'Balcony door':'Library door','Open / close');this.doors.set(id,{pivot:door,frame:pivot,angle:open?-Math.PI/2:0,open:open?1:0});door.rotation.y=open?-Math.PI/2:0;
+  const along=Math.abs(Math.sin(rotation))>.5;
+  const blocker={x:x+Math.cos(rotation)*width/2,z:z-Math.sin(rotation)*width/2,w:along?.28:width,d:along?width:.28,door:id};
+  (base>=UPPER_FLOOR?this.upperBarriers:this.barriers).push(blocker);
  }
  lamp(x:number,y:number,z:number){this.cyl(.17,.24,.08,x,y,z,this.mats.gold);this.cyl(.13,.13,.045,x,y+.07,z,this.mats.dark);this.cyl(.025,.04,.55,x,y+.3,z,this.mats.gold);const shade=this.mat(0xe5c28a);shade.emissive=new T.Color(0xd19444);shade.emissiveIntensity=.6;this.cyl(.22,.4,.43,x,y+.72,z,shade);this.cyl(.4,.4,.035,x,y+.51,z,this.mats.gold);this.cyl(.22,.22,.035,x,y+.94,z,this.mats.gold);this.sphere(.045,x,y+.99,z,this.mats.gold);const l=new T.PointLight(0xffcf87,35,9,2);l.position.set(x,y+.65,z);this.scene.add(l);}
  table(x:number,z:number,w=2,d=1,h=.92){
@@ -199,7 +202,8 @@ export class Estate {
  const start=this.camera.position.clone(),ground=[...this.collisionBarriers(s),...(this.stairBarriers??[])];
  for(const a of this.actors.values())if(a.root.visible)ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
  let elevation=this.playerElevation??this.groundHeight(start.x,start.z);
- const barriers=()=>elevation>UPPER_FLOOR-.25?(this.upperBarriers??[]):ground;
+ const upper=this.collisionBarriers(s,true);
+ const barriers=()=>elevation>UPPER_FLOOR-.25?upper:ground;
  let p=resolveOverlap(start,barriers(),s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
  const advance=(x:number,z:number)=>{
   if(Math.abs(x)>=52||z>=53||z<=-49||!clearSegment(p,{x,z},barriers(),s.doors,.26))return;

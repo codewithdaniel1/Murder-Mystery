@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {buildUpstairs,STAIR} from './upstairs';
+import {BALCONY,buildUpstairs,STAIR,UPPER_FLOOR} from './upstairs';
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -84,10 +84,19 @@ export function castle(e:Estate){
  const bays=[-17,-11,-5,0,5,11,17],glass=e.mat(0xbacbd1,.2);
  glass.transparent=true;glass.opacity=.29;glass.depthWrite=false;glass.side=T.DoubleSide;
  for(const z of [12,-16]){
-  e.wall(42,.525,.6,0,5.3125,z,stone);e.wall(42,.995,.6,0,8.2225,z,stone);
+  if(z>0){
+   const wing=(42-BALCONY.doorWidth)/2;
+   for(const side of [-1,1])e.wall(wing,.525,.6,side*(BALCONY.doorWidth+wing)/2,5.3125,z,stone);
+  }else e.wall(42,.525,.6,0,5.3125,z,stone);
+  e.wall(42,.995,.6,0,8.2225,z,stone);
   let edge=-21;
   for(const x of bays){
-   const next=x-.725;e.wall(next-edge,2.15,.6,(edge+next)/2,6.65,z,stone);edge=x+.725;
+   const balconyDoor=z>0&&x===0,half=balconyDoor?BALCONY.doorWidth/2:.725;
+   const next=x-half;e.wall(next-edge,2.15,.6,(edge+next)/2,6.65,z,stone);edge=x+half;
+   if(balconyDoor){
+    e.addDoor('balcony',half,z,Math.PI,false,UPPER_FLOOR,BALCONY.doorWidth,2.66);
+    continue;
+   }
    const group=new T.Group();group.position.set(x,6.65,z+Math.sign(z)*.4);
    if(z<0)group.rotation.y=Math.PI;e.scene.add(group);
    windowDetail(e,0,0,.02,1.45,2.15,null,group);
@@ -108,7 +117,18 @@ export function castle(e:Estate){
  // Projecting portico, arched entrance and a small stone balcony.
  for(const x of[-2.7,2.7]){e.box(.7,.24,.7,x,.15,14.2,trim);e.cyl(.22,.27,3.25,x,1.9,14.2,trim,e.scene,24);for(const y of[.48,3.48])e.cyl(.34,.34,.18,x,y,14.2,trim,e.scene,24);e.barrier(x,14.2,.55,.55);}
  arch(e,0,1.7,14.1,2.35,.36,trim);e.box(6.2,.35,3.25,0,4.18,13.1,trim);mould(e,6.35,.12,3.4,0,4.4,13.1);
- for(const x of[-2.9,2.9])e.box(.3,1,.3,x,4.98,14.55,trim);e.box(6,.15,.22,0,5.45,14.55,trim);for(let x=-2.5;x<2.6;x+=.45){e.cyl(.055,.08,.8,x,4.98,14.55,trim,e.scene,12);e.sphere(.09,x,5.05,14.55,trim);}
+ const depth=BALCONY.front+.15-12,center=12+depth/2;
+ e.walls.push(e.box(6.2,.6,depth,0,UPPER_FLOOR-.3,center,trim));
+ const railY=UPPER_FLOOR+.93;
+ for(const x of [-BALCONY.halfWidth,BALCONY.halfWidth]){
+  e.box(.3,1.04,.3,x,UPPER_FLOOR+.52,BALCONY.front,trim);
+  e.box(.22,.15,depth,x,railY,center,trim);
+  for(let z=12.5;z<BALCONY.front-.15;z+=.42)e.cyl(.055,.08,.88,x,UPPER_FLOOR+.44,z,trim,e.scene,12);
+  e.upperBarriers.push({x,z:center,w:.22,d:depth});
+ }
+ e.box(6,.15,.22,0,railY,BALCONY.front,trim);
+ for(let x=-2.5;x<2.6;x+=.45)e.cyl(.055,.08,.88,x,UPPER_FLOOR+.44,BALCONY.front,trim,e.scene,12);
+ e.upperBarriers.push({x:0,z:BALCONY.front,w:6,d:.22});
 
  // Chimney stacks, roof dormers and guttering.
  for(const x of[-13,13]){e.box(1.8,4,1.2,x,12,-3,stone);mould(e,2,.1,1.4,x,14,-3);for(const dx of[-.48,.48])e.cyl(.2,.22,.65,x+dx,14.45,-3,e.mat(0x6e4935),e.scene,16);}

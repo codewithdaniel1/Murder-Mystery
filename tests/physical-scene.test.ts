@@ -32,6 +32,19 @@ describe('walkable surfaces and physical obstacles',()=>{
   e.setPose({x:0,z:10,yaw:0,pitch:0,elevation:UPPER_FLOOR});
   e.move(0,5,s);expect(e.pose().z).toBeLessThan(11.7);
  });
+ it('opens onto a walkable balcony with solid railings and a restorable save',()=>{
+  const e=furnishedEstate(),s=freshState();
+  e.setPose({x:0,z:10,yaw:0,pitch:0,elevation:UPPER_FLOOR});
+  e.move(0,4,s);expect(e.pose().z).toBeLessThan(12);
+  s.doors.balcony=true;
+  e.doors.get('balcony')!.pivot.rotation.y=-Math.PI/2;
+  e.move(0,8,s);expect(e.pose().z).toBeGreaterThan(14);
+  expect(e.pose().z).toBeLessThan(14.55);
+  e.move(6,0,s);expect(e.pose().x).toBeLessThan(2.9);
+  e.setPose(decodeSave(encodeSave(s,e.pose()))!.pose);
+  expect(e.camera.position.y).toBeCloseTo(UPPER_FLOOR+1.65);
+  e.move(-e.pose().x,0,s);e.move(0,-4,s);expect(e.pose().z).toBeLessThan(11);
+ });
  it('uses the actual floor, path and greenhouse slab elevations',()=>{const e=furnishedEstate();landscape(e);expect(e.groundHeight(0,0)).toBe(.075);expect(e.groundHeight(26,-29)).toBe(.075);expect(e.groundHeight(0,-23)).toBe(.01);expect(e.groundHeight(-30,30)).toBe(-.08);expect(e.groundHeight(-16,-40)).toBeCloseTo(.26)});
  it('raises the fountain planting beds without lifting the crossing paths',()=>{const e=furnishedEstate();landscape(e);for(const x of[-12,12])expect(e.groundHeight(x,-29)).toBeCloseTo(.13);expect(e.groundHeight(12,-23)).toBeCloseTo(.01);expect(e.groundHeight(12,-35)).toBeCloseTo(.01);expect(e.groundHeight(-12,-35)).toBeCloseTo(-.08)});
  it('keeps the library service doorway free of shelves',()=>{const e=furnishedEstate();e.scene.updateMatrixWorld(true);const hits=new T.Raycaster(new T.Vector3(9.2,1.7,-8),new T.Vector3(0,0,-1),0,3).intersectObjects(e.scene.children,true);expect(hits).toEqual([]);expect(e.barriers.some(b=>Math.abs(9.2-b.x)<b.w/2&&Math.abs(-9.4-b.z)<b.d/2)).toBe(false)});

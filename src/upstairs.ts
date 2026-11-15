@@ -2,6 +2,7 @@ import * as T from 'three';
 import type {Estate} from './world';
 
 export const UPPER_FLOOR=5.05;
+export const BALCONY={halfWidth:2.9,front:14.55,doorWidth:1.8};
 export const STAIR={x:-3.8,width:2.5,bottom:3.4,top:-5,base:.075};
 export const stairHeight=(z:number)=>STAIR.base+(UPPER_FLOOR-STAIR.base)*
  T.MathUtils.clamp((STAIR.bottom-z)/(STAIR.bottom-STAIR.top),0,1);
@@ -9,7 +10,8 @@ export function inStair(x:number,z:number){
  return Math.abs(x-STAIR.x)<STAIR.width/2&&z>STAIR.top&&z<STAIR.bottom;
 }
 export function onUpperDeck(x:number,z:number){
- return Math.abs(x)<20.7&&z>-15.7&&z<11.7&&!inStair(x,z);
+ return (Math.abs(x)<20.7&&z>-15.7&&z<11.7&&!inStair(x,z))||
+  (Math.abs(x)<BALCONY.halfWidth&&z>=11.7&&z<BALCONY.front);
 }
 
 export function buildUpstairs(e:Estate){
@@ -71,7 +73,9 @@ export function buildUpstairs(e:Estate){
  }
  for(const x of [-13.6,13.6])wall(14.2,.25,x,-2);
  e.box(42,.22,28,0,8.69,-2,plaster);
- for(const z of [-15.85,11.85])solid(42,.44,0,z);
+ solid(42,.44,0,-15.85);
+ const frontWing=(42-BALCONY.doorWidth)/2;
+ for(const side of [-1,1])solid(frontWing,.56,side*(BALCONY.doorWidth+frontWing)/2,12);
 
  const blue=e.mat(0x344d5b,.94),green=e.mat(0x3e554a,.95),linen=e.mat(0xd8cbb2,.97),rose=e.mat(0x743d41,.95);
  const item=(w:number,h:number,d:number,x:number,y:number,z:number,m:T.Material)=>e.box(w,h,d,x,UPPER_FLOOR+y,z,m);
