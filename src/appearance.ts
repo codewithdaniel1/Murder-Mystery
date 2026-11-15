@@ -18,19 +18,25 @@ export const CAST:Record<PersonId,Costume>={
 // Built in the source mesh's bind-pose coordinates, using its existing bones.
 // The hem follows the pelvis closely so moving legs remain behind the fabric.
 function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
- const maya=modelName==='maya',top=maya?.99:.89,bottom=maya?.53:.34;
+ const maya=modelName==='maya',top=maya?1.03:.95;
  const rings=frontOnly?[
-  {y:top-.015,x:.18,z:.155},{y:top-.17,x:.21,z:.19},{y:bottom+.045,x:.3,z:.375}
+  {y:.88,x:.15,z:.18},{y:.72,x:.19,z:.235},{y:.385,x:.265,z:.325}
  ]:maya?[
-  {y:top,x:.165,z:.15},
-  {y:top-.075,x:.185,z:.17},
-  {y:top-.15,x:.205,z:.195},
-  {y:top-.22,x:.218,z:.205},
-  {y:top-.29,x:.22,z:.205},
-  {y:bottom+.07,x:.215,z:.2},
-  {y:bottom,x:.21,z:.198}
+  {y:1.03,x:.09,z:.07,back:.045},
+  {y:1,x:.15,z:.12,back:.075},
+  {y:.95,x:.17,z:.15,back:.09},
+  {y:.9,x:.18,z:.17,back:.12},
+  {y:.84,x:.2,z:.18,back:.16},
+  {y:.76,x:.22,z:.205,back:.19},
+  {y:.6,x:.215,z:.2,back:.195},
+  {y:.53,x:.21,z:.198,back:.198}
  ]:[
-  {y:top,x:.18,z:.145},{y:top-.12,x:.2,z:.17},{y:top-.29,x:.24,z:.23},{y:bottom,x:.34,z:.36}
+  {y:.95,x:.08,z:.055},
+  {y:.89,x:.16,z:.14},
+  {y:.77,x:.19,z:.17},
+  {y:.65,x:.23,z:.22},
+  {y:.44,x:.27,z:.265},
+  {y:.34,x:.285,z:.285}
  ];
  const segments=frontOnly?20:48,start=frontOnly?-1.04:0,end=frontOnly?1.04:Math.PI*2;
  const positions:number[]=[],uvs:number[]=[],indices:number[]=[],skinIndices:number[]=[],skinWeights:number[]=[];
@@ -40,7 +46,8 @@ function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
  for(let row=0;row<rings.length;row++)for(let i=0;i<=segments;i++){
   const t=i/segments,a=start+(end-start)*t,r=rings[row];
   const pleat=frontOnly?0:maya?Math.cos(a*8)*(.001+row*.001):Math.cos(a*12)*(.002+row*.004);
-  const x=Math.sin(a)*(r.x+pleat),z=Math.cos(a)*(r.z+pleat)+(frontOnly?.012:0);
+  const depth=Math.cos(a)<0&&'back' in r?r.back:r.z;
+  const x=Math.sin(a)*(r.x+pleat),z=Math.cos(a)*(depth+pleat)+(frontOnly?.012:0);
   positions.push(x,r.y,z);uvs.push(t,row/(rings.length-1));
   const follow=frontOnly?0:Math.max(0,(row-1)/(rings.length-2))*(maya?.025:.05);
   // Blend both thighs near the front and back seams. A hard left/right choice
@@ -51,6 +58,12 @@ function skirtGeometry(outfit:T.SkinnedMesh,modelName:string,frontOnly=false){
  for(let row=0;row<rings.length-1;row++)for(let i=0;i<segments;i++){
   const a=row*(segments+1)+i,b=a+segments+1;
   indices.push(a,b,a+1,a+1,b,b+1);
+ }
+ if(!frontOnly){
+  const center=positions.length/3;
+  positions.push(0,top+.005,0);uvs.push(.5,0);
+  skinIndices.push(pelvis,0,0,0);skinWeights.push(1,0,0,0);
+  for(let i=0;i<segments;i++)indices.push(center,i,i+1);
  }
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));
  g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));
@@ -106,13 +119,26 @@ function trimSkirtedHarperSuit(model:T.Object3D){
   // Separate the upper jacket from the lower legwear, leaving the coat tails
   // and trouser thighs hidden behind the new skirt and apron.
   if(Math.min(...ys)>.82)kept.push(a,b,c);
-  if(Math.min(...ys)<.52)lower.push(a,b,c);
+  if(Math.max(...ys)<.32)lower.push(a,b,c);
  }
  const legs=geometry.clone();legs.setIndex(lower);legs.clearGroups();legs.computeBoundingSphere();
  const legwear=new T.SkinnedMesh(legs,new T.MeshStandardMaterial({color:0x333936,roughness:1,side:T.DoubleSide}));
  legwear.name='1942 skirt legwear';legwear.position.copy(suit.position);legwear.quaternion.copy(suit.quaternion);legwear.scale.copy(suit.scale);
  suit.parent!.add(legwear);legwear.bind(suit.skeleton,suit.bindMatrix.clone());legwear.castShadow=true;legwear.receiveShadow=true;
  geometry.setIndex(kept);geometry.clearGroups();suit.geometry=geometry;
+}
+
+function hideSkirtedHarperThighs(model:T.Object3D){
+ let body:T.SkinnedMesh|undefined;
+ model.traverse(o=>{if(!body&&o instanceof T.SkinnedMesh&&/anatomical_body/i.test(o.name))body=o});
+ if(!body)return;
+ const geometry=body.geometry.clone(),source=geometry.getIndex(),positions=geometry.getAttribute('position');
+ if(!source)return;
+ const kept:number[]=[];
+ for(let i=0;i<source.count;i+=3){const a=source.getX(i),b=source.getX(i+1),c=source.getX(i+2);
+  if(Math.min(positions.getY(a),positions.getY(b),positions.getY(c))>.78)kept.push(a,b,c);
+ }
+ geometry.setIndex(kept);geometry.clearGroups();geometry.computeBoundingSphere();body.geometry=geometry;
 }
 
 function trimAdaTrousers(model:T.Object3D){
@@ -122,7 +148,7 @@ function trimAdaTrousers(model:T.Object3D){
  if(!source)return;
  const kept:number[]=[];
  for(let i=0;i<source.count;i+=3){const a=source.getX(i),b=source.getX(i+1),c=source.getX(i+2);
-  if(Math.min(positions.getY(a),positions.getY(b),positions.getY(c))<.55)kept.push(a,b,c);
+  if(Math.max(positions.getY(a),positions.getY(b),positions.getY(c))<.52)kept.push(a,b,c);
  }
  for(let i=0;i<positions.count;i++){
   const x=positions.getX(i),z=positions.getZ(i),legCenter=x<0?-.11:.11;
@@ -156,14 +182,71 @@ function addFittedBlouse(model:T.Object3D,color:number){
   const hand=(influence(a,handBones)+influence(b,handBones)+influence(c,handBones))/3;
   // Assign fabric on the original skinned surface: no duplicate mesh can
   // drift away from the shoulder or leave skin visible at the seams.
-  const chest=y>.94&&y<1.57&&torso>.12&&head<.5;
-  const shoulder=y>1.2&&y<1.67&&Math.abs(x)>.1&&head<.85;
-  const sleeve=y>.7&&arm>.12&&hand<.45&&head<.6;
-  (hand<.45&&(chest||shoulder||sleeve)?blouseFaces:skinFaces).push(a,b,c);
+  const chest=y>.88&&y<1.44&&(torso>.08||arm>.08);
+  const shoulder=y>=1.4&&y<1.55&&Math.abs(x)>.09&&head<.9;
+  const sleeve=y>.7&&arm>.08&&hand<.55&&head<.7;
+  (hand<.55&&(chest||shoulder||sleeve)?blouseFaces:skinFaces).push(a,b,c);
  }
  geometry.setIndex([...skinFaces,...blouseFaces]);geometry.clearGroups();geometry.addGroup(0,skinFaces.length,0);geometry.addGroup(skinFaces.length,blouseFaces.length,1);
  body.geometry=geometry;const skin=Array.isArray(body.material)?body.material[0]:body.material;
- body.material=[skin,new T.MeshStandardMaterial({color,roughness:.98,metalness:0,side:T.DoubleSide})];
+ body.material=[skin,new T.MeshStandardMaterial({color,roughness:.98,metalness:0,emissive:color,emissiveIntensity:.14,side:T.DoubleSide})];
+}
+
+function closeAdaShoulders(model:T.Object3D,color:number){
+ const original=model.getObjectByName('female_casualsuit01_1');
+ if(!(original instanceof T.SkinnedMesh)||!original.parent)return;
+ const source=original.geometry.getIndex(),vertices=original.geometry.getAttribute('position');
+ const joints=original.geometry.getAttribute('skinIndex'),weights=original.geometry.getAttribute('skinWeight');
+ if(!source)return;
+ // The source shirt has four open boundary loops: hem, neck, and both armholes.
+ // Reuse its armhole edges and skin weights so the new fabric cannot detach.
+ const ids:number[]=[],representatives:number[]=[],welded=new Map<string,number>();
+ for(let i=0;i<vertices.count;i++){
+  const key=[vertices.getX(i),vertices.getY(i),vertices.getZ(i)].map(v=>Math.round(v*10000)).join(',');
+  let id=welded.get(key);if(id===undefined){id=representatives.length;welded.set(key,id);representatives.push(i)}ids.push(id);
+ }
+ const edges=new Map<string,{a:number;b:number;count:number}>();
+ const addEdge=(a:number,b:number)=>{if(a===b)return;const key=a<b?`${a},${b}`:`${b},${a}`;
+  const e=edges.get(key);if(e)e.count++;else edges.set(key,{a,b,count:1});
+ };
+ for(let i=0;i<source.count;i+=3){const a=ids[source.getX(i)],b=ids[source.getX(i+1)],c=ids[source.getX(i+2)];
+  addEdge(a,b);addEdge(b,c);addEdge(c,a);
+ }
+ const positions:number[]=[],indices:number[]=[],skinIndices:number[]=[],skinWeights:number[]=[];
+ const pushVertex=(i:number)=>{positions.push(vertices.getX(i),vertices.getY(i),vertices.getZ(i));
+  for(let k=0;k<4;k++){skinIndices.push(joints.getComponent(i,k));skinWeights.push(weights.getComponent(i,k))}
+ };
+ for(const side of [-1,1]){
+  const near=(id:number)=>{const i=representatives[id];return vertices.getX(i)*side>.08&&vertices.getY(i)>1.18};
+  const adjacent=new Map<number,number[]>();
+  for(const edge of edges.values())if(edge.count===1&&near(edge.a)&&near(edge.b)){
+   adjacent.set(edge.a,[...(adjacent.get(edge.a)??[]),edge.b]);
+   adjacent.set(edge.b,[...(adjacent.get(edge.b)??[]),edge.a]);
+  }
+  const start=adjacent.keys().next().value as number|undefined;if(start===undefined)continue;
+  const loop=[start];let previous=-1,current=start;
+  while(loop.length<=adjacent.size){const next=adjacent.get(current)?.find(id=>id!==previous);
+   if(next===undefined||next===start)break;loop.push(next);previous=current;current=next;
+  }
+  if(loop.length<16||loop.length!==adjacent.size)continue;
+  const first=positions.length/3,influences=new Map<number,number>();let cx=0,cy=0,cz=0;
+  for(const id of loop){const i=representatives[id];pushVertex(i);
+   cx+=vertices.getX(i);cy+=vertices.getY(i);cz+=vertices.getZ(i);
+   for(let k=0;k<4;k++){const bone=joints.getComponent(i,k);influences.set(bone,(influences.get(bone)??0)+weights.getComponent(i,k))}
+  }
+  const n=loop.length;positions.push(cx/n+side*.07,cy/n,cz/n);
+  const top=[...influences].sort((a,b)=>b[1]-a[1]).slice(0,4),total=top.reduce((sum,p)=>sum+p[1],0);
+  for(let k=0;k<4;k++){skinIndices.push(top[k]?.[0]??0);skinWeights.push(top[k]?top[k][1]/total:0)}
+  for(let i=0;i<n;i++)indices.push(first+n,first+i,first+(i+1)%n);
+ }
+ if(indices.length===0)return;
+ const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+ geometry.setAttribute('skinIndex',new T.Uint16BufferAttribute(skinIndices,4));
+ geometry.setAttribute('skinWeight',new T.Float32BufferAttribute(skinWeights,4));
+ geometry.setIndex(indices);geometry.computeVertexNormals();
+ const patches=new T.SkinnedMesh(geometry,new T.MeshStandardMaterial({color,roughness:.98,side:T.DoubleSide}));
+ patches.name='1942 closed blouse armholes';patches.position.copy(original.position);patches.quaternion.copy(original.quaternion);patches.scale.copy(original.scale);
+ original.parent.add(patches);patches.bind(original.skeleton,original.bindMatrix.clone());patches.castShadow=true;patches.receiveShadow=true;
 }
 
 function flattenGardenerShirt(model:T.Object3D){
@@ -204,9 +287,9 @@ export function dressCharacter(id:PersonId,model:T.Object3D){
  }
  });
  addPeriodClothing(model,style);
- if(style.model==='harper'&&style.skirt!==undefined)trimSkirtedHarperSuit(model);
+ if(style.model==='harper'&&style.skirt!==undefined){trimSkirtedHarperSuit(model);hideSkirtedHarperThighs(model)}
  if(id==='ada')trimAdaTrousers(model);
- if(id==='ada')addFittedBlouse(model,style.blouse??style.coat);
+ if(id==='ada'){addFittedBlouse(model,style.blouse??style.coat);closeAdaShoulders(model,style.blouse??style.coat)}
  if(id==='tomas')flattenGardenerShirt(model);
  const head=model.getObjectByName('head');if(!head)return;
  model.updateWorldMatrix(true,false);model.updateMatrixWorld(true);
