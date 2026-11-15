@@ -154,7 +154,7 @@ export class Estate {
  const finial=this.sphere(.25,0,1.9,-30,this.mats.gold);
  this.barrier(0,-30,6.2,6.2);this.target(finial,'fountain','The garden fountain','Visit');
  this.fountainWater=new FountainWater(this.scene);
- for(const x of[-12,12]){this.barrier(x,-29,1.1,10);}for(let i=0;i<6;i++){const x=-16+i*6;this.floor(4,.32,2,x,.1,-40,this.mats.stone);this.barrier(x,-40,4,2);}
+ for(const x of[-12,12]){this.barrier(x,-29,2.2,8.2);}for(let i=0;i<6;i++){const x=-16+i*6;this.floor(4,.32,2,x,.1,-40,this.mats.stone);this.barrier(x,-40,4,2);}
  const flowers=new T.InstancedMesh(new T.SphereGeometry(.07,5,4),this.mat(0xddbd98),480),stems=new T.InstancedMesh(new T.CylinderGeometry(.018,.025,.45,4),this.mats.leaf,480);const m=new T.Matrix4();for(let i=0;i<480;i++){const x=-18+rnd()*36,z=-39.2-rnd()*1.5,y=.4+rnd()*.4;m.makeTranslation(x,y,z);flowers.setMatrixAt(i,m);m.makeTranslation(x,y-.2,z);stems.setMatrixAt(i,m);}this.scene.add(flowers,stems);
  for(const x of[-7,7]){this.barrier(x,-36,2.8,.9);this.box(2.6,.12,.65,x,.55,-36,this.mats.wood);this.box(2.68,.035,.72,x,.63,-36,this.mats.panel);this.box(2.6,.6,.12,x,.95,-36.3,this.mats.wood);for(let i=0;i<7;i++)this.box(.055,.43,.045,x-.78+i*.26,.96,-36.22,this.mats.panel);for(const a of[-1,1]){this.box(.1,.6,.55,x+a,.22,-36,this.mats.dark);this.box(.17,.09,.66,x+a,.59,-36,this.mats.panel);for(const z of[-.24,.24])this.box(.15,.09,.13,x+a,.08,-36+z,this.mats.gold);}this.box(2.35,.3,.12,x,.28,-35.72,this.mats.panel);}
  // Matching front and rear greenhouse entries connect both garden paths.

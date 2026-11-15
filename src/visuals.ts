@@ -57,7 +57,10 @@ export function landscape(e:Estate){
  e.floor(17,.06,4,side*14,-.07,24,soil);
  for(const z of[21.9,26.1])e.box(17.2,.13,.12,side*14,-.015,z,e.mats.trim);
  for(const x of[side*14-8.6,side*14+8.6])e.box(.12,.13,4.3,x,-.015,24,e.mats.trim);
- e.floor(2,.05,12,side*12,-.065,-29.5,soil);
+ // Keep the fountain beds above the lawn while leaving both cross paths clear.
+ e.floor(2,.22,8.2,side*12,.02,-29,soil);
+ for(const x of[side*12-1.04,side*12+1.04])e.box(.12,.25,8.2,x,.04,-29,e.mats.trim);
+ for(const z of[-33.1,-24.9])e.box(2.2,.25,.12,side*12,.04,z,e.mats.trim);
  }
 
 }
@@ -134,7 +137,7 @@ export function staticBatch(e:Estate,source:T.Object3D,positions:[number,number,
  const inst=new T.InstancedMesh(geo,material,positions.length),matrix=new T.Matrix4(),q=new T.Quaternion();positions.forEach(([x,z,s,angle],i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),angle);matrix.compose(new T.Vector3(x,e.groundHeight(x,z)-.03,z),q,new T.Vector3(s,s,s));inst.setMatrixAt(i,matrix)});inst.name='Grounded planting';inst.castShadow=true;inst.receiveShadow=true;e.scene.add(inst);});}
 export async function sceneryAssets(e:Estate){const loader=new GLTFLoader();
  const load=async(name:string)=>{try{return (await loader.loadAsync(base+'models/'+name+'.glb')).scene}catch(err){console.warn('Scenery asset unavailable:',name,err);return null}};
- const shrub=await load('shrub');if(shrub){const positions:[number,number,number,number][]=[];for(const x of[-12,12])for(let z=-34;z<=-25;z+=1.15)positions.push([x,z,.65+seeded()*.2,seeded()*6.28]);for(const x of[-25.5,25.5])for(let z=-16;z<=12;z+=2.2)positions.push([x,z,1+seeded()*.4,seeded()*6.28]);for(const side of[-1,1])for(let i=0;i<35;i++)positions.push([side*(31+seeded()*25),-45+seeded()*100,1+seeded()*1.3,seeded()*6.28]);staticBatch(e,shrub,positions,1.35);}
+ const shrub=await load('shrub');if(shrub){const positions:[number,number,number,number][]=[];for(const x of[-12,12])for(let z=-32.6;z<=-25.5;z+=1.15)positions.push([x,z,.65+seeded()*.2,seeded()*6.28]);for(const x of[-25.5,25.5])for(let z=-16;z<=12;z+=2.2)positions.push([x,z,1+seeded()*.4,seeded()*6.28]);for(const side of[-1,1])for(let i=0;i<35;i++)positions.push([side*(31+seeded()*25),-45+seeded()*100,1+seeded()*1.3,seeded()*6.28]);staticBatch(e,shrub,positions,1.35);}
  const flower=await load('shrub-flowering');if(flower){const poses:[number,number,number,number][]=[];for(const side of[-1,1])for(let i=0;i<16;i++)poses.push([side*(7+seeded()*14),22+seeded()*4,.55+seeded()*.3,seeded()*6]);for(let x=-17;x<19;x+=2)poses.push([x,-40,.6,seeded()*6]);staticBatch(e,flower,poses,1.7);}
  const fern=await load('fern');if(fern){const poses:[number,number,number,number][]=[];for(let i=0;i<35;i++)poses.push([(i%2?1:-1)*(25+seeded()*9),-20+seeded()*60,.6+seeded()*.5,seeded()*6]);staticBatch(e,fern,poses,.55);}
  const tree=await load('garden-tree');if(tree){const poses:[number,number,number,number][]=[];
