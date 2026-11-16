@@ -6,7 +6,7 @@ const CEILING=-1.05;
 const tunnelHalf=1.65;
 export const BULKHEADS=[
  {id:'cellar-mansion',label:'Mansion cellar doors',x:-26.5,top:-10.5,bottom:-18,direction:-1,underpass:false},
- {id:'cellar-garden',label:'Lodge cellar doors',x:0,top:-65,bottom:-59,direction:1,underpass:false},
+ {id:'cellar-garden',label:'Lodge cellar doors',x:0,top:-74.5,bottom:-68.5,direction:1,underpass:false},
  {id:'cellar-hall',label:'Hall cellar doors',x:-.65,top:-5.7,bottom:-13.2,direction:-1,underpass:true}
 ] as const;
 export const LODGE_BULKHEAD=BULKHEADS[1];
@@ -200,7 +200,8 @@ export function buildCellar(e:Estate){
   e.sphere(.092,x,y-.12,z,bulb,e.scene,1,.68,1);
   const lamp=new T.PointLight(0xffc58a,power*.38,8,2);lamp.position.set(x,y-.38,z);e.scene.add(lamp);
  };
- for(const [x,z,power] of [[0,-5,65],[0,-14.3,100],[-7,-8,110],[7,-8,90],[-9.6,-18.5,110],[-7.45,-15.65,74],[7.6,-16.8,82],[0,-19,115],[0,-24,68],[0,-30,70],[0,-36,70],[0,-42,55],[0,-48,55],[0,-54,55],[0,-58,55],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
+ for(const [x,z,power] of [[0,-5,65],[0,-14.3,100],[-7,-8,110],[7,-8,90],[-9.6,-18.5,110],[-7.45,-15.65,74],[7.6,-16.8,82],[0,-19,115],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
+ for(let z=-24;z>tunnelEnd;z-=6)light(0,z,z>=-36?70:55);
  for(let z=-21;z>tunnelEnd+1;z-=4){
   for(const side of [-1,1])e.box(.16,3.7,.23,side*(tunnelHalf-.07),CELLAR_FLOOR+1.85,z,stone);
   e.box(3,.23,.23,0,CEILING-.11,z,stone);

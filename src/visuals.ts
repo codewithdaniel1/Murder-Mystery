@@ -113,12 +113,11 @@ export function buildGardenLodge(e:Estate){
   e.floor(Math.abs(x),.04,3,x/2,-.032,-52,gravel);
  }
  e.floor(5.35,.04,3,-5.175,-.032,-35,gravel);
- e.floor(3.4,.04,8.9,0,-.043,(back+loop+.1)/2,gravel);
- const hole=cellarGroundOpenings()[1];
- for(const [x0,x1,z0,z1] of [
-  [-halfWidth,hole.left,back,front],[hole.right,halfWidth,back,front],
-  [hole.left,hole.right,back,hole.near],[hole.left,hole.right,hole.far,front]
- ])e.floor(x1-x0,.16,z1-z0,(x0+x1)/2,-.005,(z0+z1)/2,wood);
+ const hatch=cellarGroundOpenings()[1],courtBack=hatch.near-.6,courtFront=hatch.far+.55;
+ for(const x of[-3.1,3.1])e.floor(1.65,.04,back-courtBack,x,-.043,(back+courtBack)/2,gravel);
+ e.floor(4.55,.04,back-courtFront,0,-.043,(back+courtFront)/2,gravel);
+ e.floor(4.55,.04,courtBack-loop-1.7,0,-.043,(courtBack+loop+1.7)/2,gravel);
+ e.floor(24,.16,depth,0,-.005,mid,wood);
  const h=4.1,opening=3,doorH=2.8;
  for(const [z,id,yaw] of [[front,'lodge-front',Math.PI],[back,'lodge-rear',0]] as const){
   for(const side of[-1,1]){

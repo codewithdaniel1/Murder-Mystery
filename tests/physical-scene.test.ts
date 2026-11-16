@@ -28,8 +28,12 @@ describe('walkable surfaces and physical obstacles',()=>{
    e.move(x,0,s);expect(e.pose().x).toBeCloseTo(x);
    e.move(-x,0,s);
   }
-  e.move(2.5,0,s);e.move(0,-6.5,s);e.move(-2.5,0,s);
-  e.move(0,-11.5,s);expect(e.pose().z).toBeCloseTo(-78);
+  e.move(0,-10.1,s);expect(e.pose().z).toBeCloseTo(-70.1);
+  for(const x of[-3.1,3.1]){
+   e.setPose({x:0,z:-70.1,yaw:0,pitch:0});
+   e.move(x,0,s);e.move(0,-5.6,s);e.move(-x,0,s);
+   e.move(0,-2.3,s);expect(e.pose().z).toBeCloseTo(-78);expect(e.pose().x).toBeCloseTo(0);
+  }
   const entry=BULKHEADS[1];
   s.doors[entry.id]=true;e.syncBulkheads(s);
   e.setPose({x:entry.x,z:entry.top-1,yaw:0,pitch:0});
@@ -65,7 +69,7 @@ describe('walkable surfaces and physical obstacles',()=>{
   expect(s.evidence).toEqual([]);
  });
  it('places staff on their assigned levels with unobstructed routes and local collision',()=>{
-  const e=furnishedEstate(),s=freshState();buildShed(e);buildCellar(e);e.yard=new Yard(e);
+  const e=furnishedEstate(),s=freshState();buildShed(e);buildGardenLodge(e);buildCellar(e);e.yard=new Yard(e);
   for(const w of e.yard.witnesses){
    const spec=WITNESSES[w.id],level=spec.level;
    const solid=level==='ground'?[...e.collisionBarriers(s),...e.stairBarriers]:

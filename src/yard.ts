@@ -40,7 +40,7 @@ export const WITNESSES={
  shaw:{name:'George Shaw',role:'Orchard gardener',initials:'GS',template:'tomas',level:'ground',coat:0x655843,hair:0x8a8178,
   route:[[5,-36.9],[5,-38.4],[1,-37.6]],question:'Have you seen anyone by the far garden?',
   first:'I’m picking dead stems out of the beds. There’s always more work after rain.',
-  reply:'I’ve seen birds and rabbits down this end. I haven’t seen anyone use the garden stairs.'},
+  reply:'I’ve seen birds and rabbits down this end. Ask the lodge keeper if you’re looking for the cellar stairs.'},
  pike:{name:'Walter Ames',role:'Wine steward',initials:'WA',template:'rook',level:'cellar',coat:0x625044,hair:0x685948,
   route:[[-8,-12.4],[-8,-9.1],[-6.1,-10.2]],question:'What are you counting?',
   first:'Bottles, Detective. I’m checking the racks against the cellar book before I lock up.',
@@ -61,6 +61,14 @@ export const WITNESSES={
   route:[[-6.6,36],[-6.6,41],[-5.2,39]],question:'Could anyone have heard the bell from here?',
   first:'I keep a tally of cars on the drive. Foot traffic is another matter, especially after the lamps come down for blackout.',
   reply:'Yes. I heard the half-hour chime from right here. I couldn’t see the tower or who was in it.'},
+ mercer:{name:'Agnes Mercer',role:'Lodge keeper',initials:'AM',template:'june',level:'ground',coat:0x655344,hair:0x514a43,
+  route:[[-4.7,-57.2],[-4.7,-64.1],[-5.65,-62]],question:'Where do the cellar stairs lead?',
+  first:'I’m airing the sitting room. It gets cold here before the main house does.',
+  reply:'Go out the back door and take the path around the hatch. The stairs at the far end lead back under the garden to the mansion cellar.'},
+ hayes:{name:'Albert Hayes',role:'Woodland groundskeeper',initials:'AH',template:'tomas',level:'ground',coat:0x5b6551,hair:0x69594b,
+  route:[[8,-72.5],[11,-75.2],[7.3,-75.6]],question:'Do you often work behind the lodge?',
+  first:'Most afternoons. I keep the paths clear and try to leave the rabbits some cover.',
+  reply:'I heard the hatch bang yesterday and thought someone was coming up. The wind had caught my empty barrow and tipped it against the stone.'},
  foster:{name:'Lucy Foster',role:'Attic maid',initials:'LF',template:'june',level:'attic',coat:0x69616d,hair:0x4c3b2e,
   route:[[9,-.8],[9,-5.55],[10.5,-5.4]],question:'What’s kept up here?',
   first:'Spare linen and old trunks, mostly. I’ve been airing out the little bedroom.',
@@ -72,7 +80,7 @@ const staffFloor=(e:Estate,level:StaffLevel,x:number,z:number)=>
  level==='ground'?e.groundHeight(x,z):level==='cellar'?CELLAR_FLOOR:level==='upper'?UPPER_FLOOR:ATTIC_FLOOR;
 type Witness={id:WitnessId;root:T.Group;index:number;wait:number;motion?:CharacterMotion;driver?:Parameters<typeof animateCharacter>[0]};
 type Rabbit={root:T.Group;head:T.Group;home:T.Vector2;phase:number;heading:number};
-type Bird={root:T.Group;wings:T.Group[];phase:number};
+type Bird={root:T.Group;wings:T.Group[];phase:number;x:number;z:number;height:number;radius:number};
 
 export function buildShed(e:Estate){
  const {x,z,width:w,depth:d}=SHED,wood=e.mats.wood,frame=e.mats.panel;
@@ -134,7 +142,7 @@ export class Yard {
    this.witnesses.push({id,root,index:1,wait:3});
    e.target(root,'witness:'+id,spec.name,'Speak to');
   }
-  for(const [x,z] of [[-17,-37],[-24,-37],[17,-37]]){
+  for(const [x,z] of [[-17,-37],[-24,-37],[17,-37],[-8,-75],[14,-75]]){
    const root=new T.Group(),head=new T.Group();root.name='Wild rabbit';
    const fur=e.mat(0x89745f,.98),dark=e.mat(0x302723,.97),pale=e.mat(0xc2b4a0,.98);
    e.sphere(.19,0,.18,-.07,fur,root,.81,.82,1.21);
@@ -151,7 +159,7 @@ export class Yard {
    root.add(head);root.position.set(x,e.groundHeight(x,z),z);e.scene.add(root);
    this.rabbits.push({root,head,home:new T.Vector2(x,z),phase:0,heading:.35+x*.2});
   }
-  for(let i=0;i<4;i++){
+  for(let i=0;i<6;i++){
    const root=new T.Group(),wings:T.Group[]=[];root.name='Garden bird';
    const feather=e.mat(i%2?0x4f514c:0x64675d,.96),wing=e.mat(0x353b35,.94);
    e.sphere(.105,0,0,0,feather,root,.65,.71,1.55);
@@ -162,8 +170,9 @@ export class Yard {
     const primary=e.sphere(.12,side*.114,0,-.031,wing,flap,1.34,.17,.64);
     primary.rotation.y=side*.29;root.add(flap);wings.push(flap);
    }
-   root.position.set(7+Math.cos(i*1.6)*(8+i*1.75),5.5+i*.34,-33+Math.sin(i*1.6)*(8+i*1.75)*.62);
-   e.scene.add(root);this.birds.push({root,wings,phase:i*1.6});
+   const phase=i*1.6,x=i<4?7:-5,z=i<4?-33:-74,height=i<4?5.5+i*.34:8.2+(i-4)*.48,radius=i<4?8+i*1.75:6+(i-4)*2;
+   root.position.set(x+Math.cos(phase)*radius,height,z+Math.sin(phase)*radius*.62);
+   e.scene.add(root);this.birds.push({root,wings,phase,x,z,height,radius});
   }
  }
  spec(id:WitnessId){return WITNESSES[id]}
@@ -228,8 +237,8 @@ export class Yard {
    r.head.rotation.x=activity?-.04:Math.sin(this.time*3+i)*.07;
   }
   for(const [i,b] of this.birds.entries()){
-   const t=this.time*.44+b.phase,r=8+i*1.75;
-   b.root.position.set(7+Math.cos(t)*r,5.5+i*.34+Math.sin(t*2)*.38,-33+Math.sin(t)*r*.62);
+   const t=this.time*.44+b.phase,r=b.radius;
+   b.root.position.set(b.x+Math.cos(t)*r,b.height+Math.sin(t*2)*.38,b.z+Math.sin(t)*r*.62);
    b.root.rotation.y=Math.atan2(-Math.sin(t),Math.cos(t)*.62);
    b.root.rotation.z=.24;
    for(const [j,wing] of b.wings.entries())wing.rotation.z=(j?1:-1)*Math.sin(this.time*18+i)*.66;
