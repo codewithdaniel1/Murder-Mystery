@@ -166,15 +166,26 @@ export class Estate {
  this.table(14,-13.5,2.2,.8);const plinth=new T.Group();plinth.position.set(14,1.04,-13.5);this.box(.75,.1,.6,0,0,0,this.mats.black,plinth);this.scene.add(plinth);this.target(plinth,'display','An empty bronze-falcon display');
  }
  garden(){const stone=this.mats.trim,gravel=this.mats.gravel;this.floor(5,.04,20,0,-.02,-25,gravel);this.floor(31,.04,3,13,-.01,-23,gravel);this.floor(3,.04,13,25,-.01,-29,gravel);this.floor(29,.04,3,12,-.01,-35,gravel);
- // Two shallow basins, with water surfaces and continuous animated spill.
+ // Carved coping surrounds the shallow catch basin. The darker stone just
+ // below it is the wet line, visible through the water.
  this.cyl(3.15,3.2,.35,0,.1,-30,stone);
- this.cyl(2.8,2.8,.03,0,.291,-30,this.mat(0x315c60,.25,.12));
- const lowerLip=new T.Mesh(new T.TorusGeometry(2.98,.18,10,64),stone);
- lowerLip.rotation.x=Math.PI/2;lowerLip.position.set(0,.33,-30);lowerLip.castShadow=true;lowerLip.receiveShadow=true;this.scene.add(lowerLip);
+ const basinStone=this.mats.stone.clone();basinStone.color.multiplyScalar(.51);basinStone.roughness=.8;
+ this.cyl(2.87,2.87,.03,0,.291,-30,basinStone);
+ const coping=new T.LatheGeometry([[2.853,.295],[3.16,.305],[3.184,.372],[3.155,.423],[3.101,.449],[2.943,.449],[2.896,.425],[2.861,.378],[2.853,.295]].map(([r,y])=>new T.Vector2(r,y)),72);
+ const uv=coping.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*12,uv.getY(i)*.45);
+ const lowerLip=new T.Mesh(coping,stone);
+ lowerLip.position.z=-30;lowerLip.castShadow=true;lowerLip.receiveShadow=true;this.scene.add(lowerLip);
  this.cyl(.55,.75,1.35,0,.8,-30,stone);this.cyl(1.2,.8,.23,0,1.55,-30,stone);
  const upperLip=new T.Mesh(new T.TorusGeometry(1.1,.105,10,48),stone);
  upperLip.rotation.x=Math.PI/2;upperLip.position.set(0,1.65,-30);upperLip.castShadow=true;upperLip.receiveShadow=true;this.scene.add(upperLip);
- const finial=this.sphere(.25,0,1.9,-30,this.mats.gold);
+ const bronze=this.mat(0x6f5740,.39,.59);
+ const finial=this.cyl(.1,.185,.44,0,1.94,-30,bronze,this.scene,24);
+ this.sphere(.106,0,2.17,-30,bronze,this.scene,1,.65,1);
+ for(let i=0;i<4;i++){
+  const a=Math.PI/4+i*Math.PI/2,dx=Math.cos(a),dz=Math.sin(a);
+  const spout=this.cyl(.025,.042,.15,dx*.177,2.058,-30+dz*.177,bronze,this.scene,12);
+  spout.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(dx,.22,dz).normalize());
+ }
  this.barrier(0,-30,6.2,6.2);this.target(finial,'fountain','The garden fountain','Visit');
  this.fountainWater=new FountainWater(this.scene);
  const fountainWet=this.mats.stone.clone();fountainWet.color.multiplyScalar(.58);fountainWet.roughness=.62;

@@ -1,114 +1,134 @@
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
-const LOWER_WATER_Y=.318;
-const UPPER_WATER_Y=1.735;
+export const FOUNTAIN_Z=-30;
+const LOWER=.328,UPPER=1.735;
+const TAU=Math.PI*2;
+const jetAngles=Array.from({length:4},(_,i)=>Math.PI/4+i*Math.PI/2);
+const fallAngles=Array.from({length:8},(_,i)=>i*Math.PI/4+.065*Math.sin(i*7));
+const polar=(r:number,y:number,a:number)=>new T.Vector3(Math.cos(a)*r,y,Math.sin(a)*r);
 
-function flowTexture(){
- const width=128,height=16,data=new Uint8Array(width*height*4);
- for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-  const crest=Math.pow(.5+.5*Math.sin(x*.29+Math.sin(y*.65)*.8),8);
-  const fine=.5+.5*Math.sin(x*.91+y*1.7);
-  const i=(y*width+x)*4;
-  data[i]=165+Math.round(70*crest);data[i+1]=210+Math.round(35*crest);
-  data[i+2]=218+Math.round(32*crest);data[i+3]=120+Math.round(90*crest+25*fine);
+function waterNormals(){
+ const n=64,data=new Uint8Array(n*n*4),normal=new T.Vector3();
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+  const u=x/n*TAU,v=y/n*TAU;
+  const a=Math.cos(3*u+2*v),b=Math.cos(u-4*v),c=Math.cos(6*u+5*v);
+  normal.set(.16*a+.11*b+.045*c,.11*a-.21*b+.048*c,1).normalize();
+  const i=(y*n+x)*4;
+  data.set([127.5*(normal.x+1),127.5*(normal.y+1),127.5*(normal.z+1),255],i);
  }
- const texture=new T.DataTexture(data,width,height,T.RGBAFormat);
- texture.colorSpace=T.SRGBColorSpace;texture.wrapS=T.RepeatWrapping;
- texture.wrapT=T.RepeatWrapping;texture.repeat.set(3,1);
- texture.magFilter=T.LinearFilter;texture.minFilter=T.LinearMipmapLinearFilter;
- texture.generateMipmaps=true;texture.needsUpdate=true;return texture;
+ const map=new T.DataTexture(data,n,n);map.wrapS=map.wrapT=T.RepeatWrapping;
+ map.magFilter=T.LinearFilter;map.minFilter=T.LinearMipmapLinearFilter;
+ map.generateMipmaps=true;map.repeat.set(2.3,2.3);map.needsUpdate=true;
+ return map;
 }
 
-function surfaceTexture(){
- const size=64,data=new Uint8Array(size*size*4);
- for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-  const band=Math.sin(x*.5+y*.29)+Math.sin(x*.18-y*.62);
-  const sheen=Math.max(0,band)*5;
-  const i=(y*size+x)*4;
-  data[i]=86+sheen;data[i+1]=129+sheen;data[i+2]=134+sheen;data[i+3]=255;
+function fallingRibbon(angle:number,index:number){
+ const pos:number[]=[],uv:number[]=[],indices:number[]=[];
+ for(let i=0;i<=18;i++){
+  const t=i/18,r=1.165+.48*t, y=UPPER-(UPPER-LOWER)*t*t;
+  const width=(.065+(index%3)*.019)*(1-.68*t);
+  for(let j=0;j<3;j++){
+   const a=angle+(j-1)*width+.008*Math.sin(t*8+index);
+   const v=polar(r+(j===1?.018:0),y,a);
+   pos.push(v.x,v.y,v.z);uv.push(t,j/2);
+  }
+  if(i)for(let j=0;j<2;j++){
+   const k=(i-1)*3+j;indices.push(k,k+3,k+1,k+1,k+3,k+4);
+  }
  }
- const texture=new T.DataTexture(data,size,size,T.RGBAFormat);
- texture.colorSpace=T.SRGBColorSpace;texture.wrapS=texture.wrapT=T.RepeatWrapping;
- texture.repeat.set(2,2);texture.magFilter=T.LinearFilter;
- texture.minFilter=T.LinearMipmapLinearFilter;texture.generateMipmaps=true;
- texture.needsUpdate=true;return texture;
+ const geo=new T.BufferGeometry();geo.setIndex(indices);
+ geo.setAttribute('position',new T.Float32BufferAttribute(pos,3));
+ geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+ geo.computeVertexNormals();return geo;
 }
 
-type Ripple={mesh:T.Mesh<T.RingGeometry,T.MeshBasicMaterial>;phase:number;upper:boolean};
-
-/** Light, animated water for the garden fountain; all parts share one parent. */
 export class FountainWater {
  group=new T.Group();
  private time=0;
- private flow=flowTexture();
- private surface=surfaceTexture();
- private ripples:Ripple[]=[];
- private paths:T.CubicBezierCurve3[]=[];
- private droplets:T.InstancedMesh;
+ private normals=waterNormals();
+ private flowTime={value:0};
+ private rings:T.InstancedMesh;
+ private ringAlpha:T.InstancedBufferAttribute;
+ private spray:T.InstancedMesh;
  private dummy=new T.Object3D();
  private point=new T.Vector3();
+ private impacts=[...jetAngles.map(a=>polar(.91,UPPER,a)),...fallAngles.map(a=>polar(1.645,LOWER,a))];
 
  constructor(parent:T.Object3D){
-  this.group.position.set(0,0,-30);parent.add(this.group);
-  const poolMaterial=new T.MeshPhysicalMaterial({map:this.surface,bumpMap:this.surface,bumpScale:.22,color:0x8eb5ad,
-   roughness:.2,clearcoat:.65,clearcoatRoughness:.16,envMapIntensity:1.1,transparent:true,opacity:.87,depthWrite:false,side:T.DoubleSide});
-  for(const [radius,y] of [[2.78,LOWER_WATER_Y],[1.08,UPPER_WATER_Y]]){
+  this.group.name='Fountain water';this.group.position.z=FOUNTAIN_Z;parent.add(this.group);
+  const poolMaterial=new T.MeshStandardMaterial({normalMap:this.normals,normalScale:new T.Vector2(.8,.8),
+   color:0x829891,roughness:.15,metalness:.13,envMapIntensity:1.55,transparent:true,opacity:.48,depthWrite:false});
+  for(const [radius,y] of [[2.84,LOWER],[1.15,UPPER]]){
    const pool=new T.Mesh(new T.CircleGeometry(radius,64),poolMaterial);
    pool.rotation.x=-Math.PI/2;pool.position.y=y;pool.receiveShadow=true;
    pool.renderOrder=1;this.group.add(pool);
   }
-  const streamMaterial=new T.MeshStandardMaterial({map:this.flow,color:0xb8e5e3,roughness:.12,metalness:.12,transparent:true,opacity:.78,depthWrite:false,side:T.DoubleSide,emissive:0x24464a,emissiveIntensity:.16});
-  const makeStream=(curve:T.CubicBezierCurve3,radius:number)=>{
-   const mesh=new T.Mesh(new T.TubeGeometry(curve,24,radius,7,false),streamMaterial);
-   mesh.renderOrder=2;this.group.add(mesh);this.paths.push(curve);
+  const clearWater=new T.MeshStandardMaterial({color:0xd3e1db,roughness:.14,metalness:.12,envMapIntensity:1.6,
+   transparent:true,opacity:.72,depthWrite:false,side:T.DoubleSide,emissive:0x45615c,emissiveIntensity:.17});
+  clearWater.forceSinglePass=true;
+  clearWater.onBeforeCompile=shader=>{
+   shader.uniforms.fountainTime=this.flowTime;
+   shader.vertexShader='varying vec2 vFountainUV;\n'+shader.vertexShader.replace('#include <uv_vertex>','#include <uv_vertex>\n vFountainUV=uv;');
+   shader.fragmentShader='uniform float fountainTime; varying vec2 vFountainUV;\n'+shader.fragmentShader.replace('#include <alphatest_fragment>',`
+    float streak=0.64+0.36*sin(56.0*vFountainUV.x-15.0*fountainTime+sin(vFountainUV.y*18.0));
+    float edge=0.6+0.4*sin(vFountainUV.y*3.14159);
+    diffuseColor.a*=streak*edge;
+    diffuseColor.rgb*=0.84+0.24*streak;
+    #include <alphatest_fragment>`);
   };
-  for(let i=0;i<8;i++){
-   const angle=i*Math.PI/4,c=Math.cos(angle),s=Math.sin(angle);
-   makeStream(new T.CubicBezierCurve3(
-    new T.Vector3(c*.16,2.14,s*.16),new T.Vector3(c*.37,2.46,s*.37),
-    new T.Vector3(c*.76,2.23,s*.76),new T.Vector3(c*.9,UPPER_WATER_Y+.008,s*.9)
-   ),.017);
-  }
-  for(let i=0;i<10;i++){
-   const angle=i*Math.PI/5,c=Math.cos(angle),s=Math.sin(angle);
-   makeStream(new T.CubicBezierCurve3(
-    new T.Vector3(c*1.2,1.76,s*1.2),new T.Vector3(c*1.28,1.53,s*1.28),
-    new T.Vector3(c*1.46,.58,s*1.46),new T.Vector3(c*1.59,LOWER_WATER_Y+.015,s*1.59)
-   ),.014+(i%4)*.005);
-  }
-  const ringGeometry=new T.RingGeometry(.075,.092,32);
-  for(let i=0;i<8;i++){
-   const a=i*Math.PI/4,ring=new T.Mesh(ringGeometry,new T.MeshBasicMaterial({color:0xc9e5df,transparent:true,opacity:.25,depthWrite:false,side:T.DoubleSide}));
-   ring.rotation.x=-Math.PI/2;ring.position.set(Math.cos(a)*.9,UPPER_WATER_Y+.012,Math.sin(a)*.9);
-   ring.renderOrder=3;this.group.add(ring);this.ripples.push({mesh:ring,phase:i/8,upper:true});
-  }
-  for(let i=0;i<10;i++){
-   const a=i*Math.PI/5,ring=new T.Mesh(ringGeometry,new T.MeshBasicMaterial({color:0xd3ece8,transparent:true,opacity:.28,depthWrite:false,side:T.DoubleSide}));
-   ring.rotation.x=-Math.PI/2;ring.position.set(Math.cos(a)*1.59,LOWER_WATER_Y+.012,Math.sin(a)*1.59);
-   ring.renderOrder=3;this.group.add(ring);this.ripples.push({mesh:ring,phase:i/10,upper:false});
-  }
-  this.droplets=new T.InstancedMesh(new T.SphereGeometry(.024,6,5),new T.MeshStandardMaterial({color:0xd6f0eb,roughness:.08,transparent:true,opacity:.7,depthWrite:false}),this.paths.length*3);
-  this.droplets.frustumCulled=false;this.droplets.renderOrder=4;this.group.add(this.droplets);
+  const pieces:T.BufferGeometry[]=jetAngles.map((a,i)=>{
+   const curve=new T.CubicBezierCurve3(polar(.246,2.075,a),polar(.47,2.34+i*.013,a),polar(.77,2.3,a),polar(.91,UPPER,a));
+   return new T.TubeGeometry(curve,20,.012+(i%2)*.002,6,false);
+  });
+  pieces.push(...fallAngles.map(fallingRibbon));
+  const streams=new T.Mesh(mergeGeometries(pieces)!,clearWater);
+  pieces.forEach(g=>g.dispose());streams.renderOrder=2;this.group.add(streams);
+
+  const rings=new T.RingGeometry(.88,1,24);
+  this.ringAlpha=new T.InstancedBufferAttribute(new Float32Array(this.impacts.length*2),1).setUsage(T.DynamicDrawUsage);
+  rings.setAttribute('rippleAlpha',this.ringAlpha);
+  const ringMat=new T.MeshBasicMaterial({color:0xd6e4db,transparent:true,depthWrite:false});
+  ringMat.onBeforeCompile=shader=>{
+   shader.vertexShader='attribute float rippleAlpha; varying float vRippleAlpha;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vRippleAlpha=rippleAlpha;');
+   shader.fragmentShader='varying float vRippleAlpha;\n'+shader.fragmentShader.replace('#include <alphatest_fragment>','#include <alphatest_fragment>\n diffuseColor.a*=vRippleAlpha;');
+  };
+  this.rings=new T.InstancedMesh(rings,ringMat,this.ringAlpha.count);
+  this.rings.frustumCulled=false;this.rings.renderOrder=3;this.group.add(this.rings);
+  this.spray=new T.InstancedMesh(new T.SphereGeometry(1,5,4),new T.MeshBasicMaterial({color:0xcddfd8,transparent:true,opacity:.6,depthWrite:false}),this.impacts.length*4);
+  this.spray.frustumCulled=false;this.spray.renderOrder=4;this.group.add(this.spray);
+  this.update(0,new T.Vector3(0,1,FOUNTAIN_Z));
  }
 
  update(dt:number,camera:T.Vector3){
-  const dx=camera.x,dz=camera.z+30;
-  this.group.visible=dx*dx+dz*dz<68*68;
-  if(!this.group.visible)return;
+  const distance=Math.hypot(camera.x,camera.z-FOUNTAIN_Z);
   this.time+=dt;
-  this.flow.offset.x=-(this.time*.24)%1;
-  this.surface.offset.set((this.time*.013)%1,-(this.time*.009)%1);
-  for(const {mesh,phase,upper} of this.ripples){
-   const age=(this.time*.85+phase)%1;
-   mesh.scale.setScalar(.75+age*(upper?2.3:3.6));
-   mesh.material.opacity=(1-age)*(upper?.28:.38);
+  this.group.visible=distance<68;if(!this.group.visible)return;
+  this.flowTime.value=this.time;
+  this.normals.offset.set((this.time*.023)%1,(-this.time*.017)%1);
+  this.rings.visible=this.spray.visible=distance<26;
+  if(!this.rings.visible)return;
+  const d=this.dummy;d.rotation.set(-Math.PI/2,0,0);
+  for(const [i,impact] of this.impacts.entries())for(let n=0;n<2;n++){
+   const age=(this.time*(i<4?1.4:.96)+i*.191+n*.5)%1;
+   d.position.copy(impact);d.position.y+=.008+n*.002;
+   d.scale.setScalar(.035+age*(i<4?.12:.32));d.updateMatrix();
+   const index=i*2+n;
+   this.rings.setMatrixAt(index,d.matrix);
+   this.ringAlpha.setX(index,(1-age)**2*(i<4?.41:.54));
   }
-  for(let i=0;i<this.paths.length;i++)for(let bead=0;bead<3;bead++){
-   const path=this.paths[i],u=(this.time*(i<8?1.06:.78)+bead/3+i*.071)%1;
-   path.getPoint(u,this.point);this.dummy.position.copy(this.point);
-   this.dummy.scale.setScalar(i<8?.62:.85+bead*.16);this.dummy.updateMatrix();
-   this.droplets.setMatrixAt(i*3+bead,this.dummy.matrix);
+  this.rings.instanceMatrix.needsUpdate=this.ringAlpha.needsUpdate=true;
+  d.rotation.set(0,0,0);
+  for(const [i,impact] of this.impacts.entries())for(let n=0;n<4;n++){
+   const phase=(this.time*(2.1+n*.13)+i*.283+n*.27)%1;
+   const angle=i*1.7+n*2.39;
+   const height=(.09+n*.023)*(i<4?.65:1);
+   this.point.copy(impact);
+   this.point.x+=Math.cos(angle)*phase*.18;this.point.z+=Math.sin(angle)*phase*.18;
+   this.point.y+=4*height*phase*(1-phase);
+   d.position.copy(this.point);d.scale.setScalar((.008+n*.0015)*(1-.65*phase));d.updateMatrix();
+   this.spray.setMatrixAt(i*4+n,d.matrix);
   }
-  this.droplets.instanceMatrix.needsUpdate=true;
+  this.spray.instanceMatrix.needsUpdate=true;
  }
 }
