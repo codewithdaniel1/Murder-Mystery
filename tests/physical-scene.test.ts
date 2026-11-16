@@ -36,21 +36,17 @@ describe('walkable surfaces and physical obstacles',()=>{
   e.setPose({x:0,z:-25,elevation:CELLAR_FLOOR,yaw:0,pitch:0});
   expect(visibleLights()).toEqual(before);
  });
- it('keeps every cellar lamp lit at a fixed location regardless of the player position',()=>{
+ it('keeps fixed illumination at all cellar entrances and workrooms without scene lights',()=>{
   const e=furnishedEstate();buildCellar(e);
-  const fixtures=()=>e.scene.getObjectByName('Cellar lighting')!.children.map(object=>{
-   const lamp=object as T.PointLight;return {position:lamp.position.toArray(),intensity:lamp.intensity,visible:lamp.visible};
-  });
-  const before=fixtures();expect(before.length).toBeGreaterThan(4);
-  expect(before.every(lamp=>lamp.visible&&lamp.intensity>0)).toBe(true);
+  const texture=e.cellarLighting!.texture,{width,height,data}=texture.image;
+  const lit=(x:number,y:number,z:number)=>data[(Math.round((z+90)/.75)*height+Math.round((y+5)/.75))*width+Math.round((x+30)/.75)];
   for(const stair of BULKHEADS){
    e.setPose({x:stair.x,z:stair.top-stair.direction*.8,yaw:0,pitch:0});
    expect(e.inCellar()).toBe(false);
-   const z=stair.top+2.9*stair.direction;
-   expect(fixtures().some(light=>light.position[2]===z&&light.intensity===12)).toBe(true);
-   expect(fixtures()).toEqual(before);
+   expect(lit(stair.x,-2,stair.top+2.9*stair.direction)).toBeGreaterThan(0);
   }
-  e.setPose({x:-5,z:-43,elevation:CELLAR_FLOOR,yaw:0,pitch:0});expect(fixtures()).toEqual(before);
+  for(const [x,z] of [[-5,-27],[5,-35],[-5,-43]])expect(lit(x,-4.75,z)).toBeGreaterThan(0);
+  expect(e.scene.getObjectByName('Cellar lighting')).toBeUndefined();
  });
  it('connects the garden through the lodge and out to the woodland loop',()=>{
   const e=furnishedEstate(),s=freshState();landscape(e);buildGardenLodge(e);buildCellar(e);

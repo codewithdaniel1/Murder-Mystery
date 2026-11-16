@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type {Estate} from './world';
+import {bakeCellarLighting,type CellarLamp} from './cellar-lighting';
 
 export const CELLAR_FLOOR=-4.8;
 const CEILING=-1.05;
@@ -45,10 +46,9 @@ export function cellarGroundOpenings(){
 export function buildCellar(e:Estate){
  e.cellarBarriers=[];
  e.cellarDoors=new Map();
- const lamps:T.PointLight[]=[];
+ const lamps:CellarLamp[]=[];
  const fixedLight=(x:number,y:number,z:number,power:number,range:number)=>{
-  const lamp=new T.PointLight(0xffc58a,power,range,2);
-  lamp.position.set(x,y,z);lamps.push(lamp);
+  lamps.push({x,y,z,power,range});
  };
  const existing=new Set(e.scene.children);
  const stone=e.mats.stone.clone(),wood=e.mats.wood,iron=e.mat(0x303633,.66,.28),brass=e.mats.gold;
@@ -283,10 +283,6 @@ export function buildCellar(e:Estate){
  const interior=new T.Group();interior.name='Cellar and garden tunnel';
  for(const object of [...e.scene.children])if(!existing.has(object))interior.add(object);
  interior.visible=false;e.scene.add(interior);e.cellarInterior=interior;
- // Keep the same lights registered even when the cellar geometry is hidden.
- // Adding/removing lights from the render pass invalidates lit shader variants.
- const lighting=new T.Group();lighting.name='Cellar lighting';
- lighting.add(...lamps);e.scene.add(lighting);
  // Each metal leaf hinges along a long edge of the stone stairwell.
  const frame=e.mats.trim,paint=e.mat(0x292421,.73,.2);
  for(const s of BULKHEADS){
@@ -329,4 +325,6 @@ export function buildCellar(e:Estate){
   // Low roof over the buried part leaves headroom below the ground opening.
   if(!s.underpass)e.box(3.3,.24,depth-OPEN,s.x,-.29,(back+s.bottom)/2,stone);
  }
+ e.cellarLighting=bakeCellarLighting(lamps);
+ for(const object of e.scene.children)if(!existing.has(object))e.cellarLighting.apply(object);
 }

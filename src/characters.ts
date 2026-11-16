@@ -44,7 +44,6 @@ function stormLantern(e:Estate){
  const handle=new T.Mesh(new T.TorusGeometry(.066,.006,6,16,Math.PI),iron);
  handle.position.y=-.106;handle.scale.y=1.6;lamp.add(handle);
  for(const x of[-.066,.066])e.cyl(.006,.006,.07,x,-.136,0,iron,lamp,6);
- const glow=new T.PointLight(0xffb375,3,2.35,2);glow.position.y=-.226;lamp.add(glow);
  return lamp;
 }
 export function alignLantern(motion:CharacterMotion,actor:T.Group){
@@ -85,6 +84,7 @@ export async function loadCharacters(e:Estate){
    ...(id==='jonah'?{hat:undefined}:{})});
   if(spec.level==='cellar'){
    const lantern=stormLantern(e);witness.root.add(lantern);witness.motion.lantern=lantern;
+   e.cellarLighting?.apply(witness.root);
    alignLantern(witness.motion,witness.root);
   }
  }

@@ -1,5 +1,6 @@
 import {buildShed,Yard,type StaffLevel,type WitnessId} from './yard';
 import {withinGrounds} from './grounds';
+import type {bakeCellarLighting} from './cellar-lighting';
 import {ATTIC_FLOOR,atticStairHeight,inAtticStair,onAtticDeck} from './attic';
 import {gardenBench,gardenGroundDetail} from './detail';
 import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarOpeningEnd,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
@@ -30,6 +31,7 @@ export class Estate {
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
  upperBarriers:Barrier[]=[];atticBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
+ cellarLighting?:ReturnType<typeof bakeCellarLighting>;
  cellarDoors=new Map<string,{leaves:T.Group[];amount:number}>();
  yard:Yard;
  ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;fountainWater?:FountainWater;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
