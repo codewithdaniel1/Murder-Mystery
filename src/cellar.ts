@@ -45,7 +45,11 @@ export function cellarGroundOpenings(){
 export function buildCellar(e:Estate){
  e.cellarBarriers=[];
  e.cellarDoors=new Map();
- const lamps:NonNullable<Estate['cellarLightFixtures']>=[];
+ const lamps:T.PointLight[]=[];
+ const fixedLight=(x:number,y:number,z:number,power:number,range:number)=>{
+  const lamp=new T.PointLight(0xffc58a,power,range,2);
+  lamp.position.set(x,y,z);lamps.push(lamp);
+ };
  const existing=new Set(e.scene.children);
  const stone=e.mats.stone.clone(),wood=e.mats.wood,iron=e.mat(0x303633,.66,.28),brass=e.mats.gold;
  stone.color.multiplyScalar(.55);
@@ -258,7 +262,7 @@ export function buildCellar(e:Estate){
   e.cyl(.1,.25,.17,x,y,z,iron);
   const bulb=e.mat(0xffd98e);bulb.emissive.setHex(0xffb65b);bulb.emissiveIntensity=2;
   e.sphere(.092,x,y-.12,z,bulb,e.scene,1,.68,1);
-  lamps.push({position:new T.Vector3(x,y-.38,z),power:power*.38,range:8});
+  fixedLight(x,y-.38,z,power*.38,8);
  };
  for(const [x,z,power] of [[0,-5,65],[0,-14.3,100],[-7,-8,110],[7,-8,90],[-9.6,-18.5,110],[-7.45,-15.65,74],[7.6,-16.8,82],[0,-19,115],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
  for(let z=-24;z>tunnelEnd;z-=6)light(0,z,z>=-36?70:55);
@@ -268,7 +272,7 @@ export function buildCellar(e:Estate){
   const z=stair.top+2.9*stair.direction,y=cellarStairHeight(stair,z)+1.05,x=stair.x+HALF-.23;
   for(const [dx,w,h,d,mat] of [[.155,.15,.26,.35,iron],[0,.18,.19,.28,stairBulb]] as const)
    e.box(w,h,d,x+dx,y,z,mat);
-  lamps.push({position:new T.Vector3(x-.19,y,z),power:12,range:4.5});
+  fixedLight(x-.19,y,z,12,4.5);
  }
  for(let z=-21;z>tunnelEnd+1;z-=4){
   for(const side of [-1,1])if(!annexes.some(r=>r.side===side&&Math.abs(r.z-z)<annexDoor/2+.15))
@@ -281,9 +285,8 @@ export function buildCellar(e:Estate){
  interior.visible=false;e.scene.add(interior);e.cellarInterior=interior;
  // Keep the same lights registered even when the cellar geometry is hidden.
  // Adding/removing lights from the render pass invalidates lit shader variants.
- e.cellarLightFixtures=lamps;
- e.cellarLightPool=Array.from({length:4},()=>new T.PointLight(0xffc58a,0,8,2));
- e.scene.add(...e.cellarLightPool);
+ const lighting=new T.Group();lighting.name='Cellar lighting';
+ lighting.add(...lamps);e.scene.add(lighting);
  // Each metal leaf hinges along a long edge of the stone stairwell.
  const frame=e.mats.trim,paint=e.mat(0x292421,.73,.2);
  for(const s of BULKHEADS){
