@@ -1,3 +1,4 @@
+import {ATTIC_FLOOR,atticStairHeight,inAtticStair,onAtticDeck} from './attic';
 import {gardenBench,gardenGroundDetail} from './detail';
 import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
 import * as T from 'three';
@@ -24,7 +25,7 @@ const rnd=(()=>{let s=4217;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294
 export class Estate {
  scene=new T.Scene();camera=new T.PerspectiveCamera(65,innerWidth/innerHeight,.06,220);renderer:T.WebGLRenderer;
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
- upperBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
+ upperBarriers:Barrier[]=[];atticBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
  cellarDoors=new Map<string,{leaves:T.Group[];amount:number}>();
  ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;fountainWater?:FountainWater;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
@@ -207,6 +208,8 @@ export class Estate {
  if(this.dogMotion){this.dogMotion.weight=0;this.dogMotion.phase=0;animateDog(this.dogMotion,0,1/60)}
  }
  private playerSurface(x:number,z:number,from:number){
+  if(from>ATTIC_FLOOR-.25&&onAtticDeck(x,z))return ATTIC_FLOOR;
+  if(from>UPPER_FLOOR-.25&&inAtticStair(x,z))return atticStairHeight(x);
   if(from>UPPER_FLOOR-.25&&onUpperDeck(x,z))return UPPER_FLOOR;
   const stairs=cellarStairAt(x,z);
   if(stairs){
@@ -264,7 +267,7 @@ export class Estate {
  for(const entry of BULKHEADS)if(s.doors[entry.id]!==true||(this.cellarDoors?.get(entry.id)?.amount??1)<.83){
   ground.push(bulkheadGate(entry,false));cellar.push(bulkheadGate(entry,true));
  }
- const barriers=()=>elevation<-.15?cellar:elevation>UPPER_FLOOR-.25?upper:ground;
+ const barriers=()=>elevation<-.15?cellar:elevation>ATTIC_FLOOR-.25?this.atticBarriers:elevation>UPPER_FLOOR-.25?upper:ground;
  let p=resolveOverlap(start,barriers(),s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
  const advance=(x:number,z:number)=>{
   if(Math.abs(x)>=52||z>=53||z<=-49||!clearSegment(p,{x,z},barriers(),s.doors,.26))return;

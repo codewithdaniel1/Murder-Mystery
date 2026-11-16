@@ -1,4 +1,5 @@
 import {wovenFabric} from './detail';
+import {buildAttic} from './attic';
 import * as T from 'three';
 import type {Estate} from './world';
 
@@ -73,7 +74,7 @@ export function buildUpstairs(e:Estate){
   }
  }
  for(const x of [-13.6,13.6])wall(14.2,.25,x,-2);
- e.box(42,.22,28,0,8.69,-2,plaster);
+ buildAttic(e);
  solid(42,.44,0,-15.85);
  const frontWing=(42-BALCONY.doorWidth)/2;
  for(const side of [-1,1])solid(frontWing,.56,side*(BALCONY.doorWidth+frontWing)/2,12);

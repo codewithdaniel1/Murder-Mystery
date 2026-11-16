@@ -150,7 +150,7 @@ export function castle(e:Estate){
  e.upperBarriers.push({x:0,z:BALCONY.front,w:6,d:.22});
 
  // Chimney stacks, roof dormers and guttering.
- for(const x of[-13,13]){e.box(1.8,4,1.2,x,12,-3,stone);mould(e,2,.1,1.4,x,14,-3);for(const dx of[-.48,.48])e.cyl(.2,.22,.65,x+dx,14.45,-3,e.mat(0x6e4935),e.scene,16);}
+ for(const x of[-13,13]){e.box(1.8,5.2,1.2,x,11.4,-3,stone);mould(e,2,.1,1.4,x,14,-3);for(const dx of[-.48,.48])e.cyl(.2,.22,.65,x+dx,14.45,-3,e.mat(0x6e4935),e.scene,16);}
  for(const x of[-13,-6,6,13]){e.box(1.85,1.6,.7,x,10,8.3,stone);windowDetail(e,x,10,8.72,1.1,1.25,true);roof(e,x,10.8,8.25,2.2,1.8,.85);}
  for(const z of[-16.7,12.7])e.cyl(.065,.065,42,0,8.6,z,e.mats.dark,e.scene,12).rotation.z=Math.PI/2;
  for(const x of[-18.8,18.8])e.cyl(.055,.055,8.5,x,4.25,12.52,e.mats.dark,e.scene,10);
