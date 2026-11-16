@@ -12,6 +12,12 @@ export const BULKHEADS=[
 export const LODGE_BULKHEAD=BULKHEADS[1];
 const tunnelEnd=LODGE_BULKHEAD.bottom,tunnelMouth=-20;
 const tunnelLength=tunnelMouth-tunnelEnd,tunnelCenter=(tunnelMouth+tunnelEnd)/2;
+const annexes=[
+ {kind:'bottling',side:-1,z:-27},
+ {kind:'workshop',side:1,z:-35},
+ {kind:'archive',side:-1,z:-43},
+] as const;
+const annexEnd=9,annexHalf=3.5,annexDoor=2.4;
 const HALF=1.65, OPEN=3.6;
 export function bulkheadGate(s:typeof BULKHEADS[number],below:boolean){
  const distance=below?(s.bottom-s.top)*s.direction*.34:0;
@@ -27,7 +33,8 @@ export function cellarStairHeight(s:typeof BULKHEADS[number],z:number){
 }
 export const cellarContains=(x:number,z:number)=>
  (Math.abs(x)<11&&z>-20&&z<-2)||(Math.abs(x)<tunnelHalf&&z>=tunnelEnd&&z<=tunnelMouth)||
- (x>=-28.15&&x<=-11&&z>=-21.3&&z<=-18);
+ (x>=-28.15&&x<=-11&&z>=-21.3&&z<=-18)||
+ annexes.some(room=>x*room.side>=tunnelHalf&&x*room.side<=annexEnd&&Math.abs(z-room.z)<=annexHalf);
 export const HALL_BULKHEAD=BULKHEADS[2];
 export const cellarOpeningEnd=(s:typeof BULKHEADS[number])=>s.top+s.direction*OPEN;
 export function cellarGroundOpenings(){
@@ -71,7 +78,13 @@ export function buildCellar(e:Estate){
  const wing=11-tunnelHalf;
  for(const side of [-1,1]){
   wall(wing,.35,side*(tunnelHalf+wing/2),-20,bunkerBrick);
-  wall(.3,tunnelLength,side*tunnelHalf,tunnelCenter);
+  let edge:number=tunnelEnd;
+  for(const room of annexes.filter(room=>room.side===side).reverse()){
+   const start=room.z-annexDoor/2,end=room.z+annexDoor/2;
+   wall(.3,start-edge,side*tunnelHalf,(edge+start)/2);
+   edge=end;
+  }
+  wall(.3,tunnelMouth-edge,side*tunnelHalf,(edge+tunnelMouth)/2);
  }
 
  const item=(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material,parent=e.scene)=>
@@ -117,6 +130,52 @@ export function buildCellar(e:Estate){
  portal(-7.45,-16.55,2.9);portal(-3.8,-9,2.5,true);
  portal(3.8,-9,2.5,true);portal(3.8,-17.55,2.8,true,bunkerBrick);
  portal(0,-19.94,3.05,false,bunkerBrick);
+
+ for(const room of annexes){
+  const {kind,side,z}=room,depth=annexHalf*2,x=side*(annexEnd+tunnelHalf)/2;
+  const floorEdge=3.75/2;
+  slab(annexEnd-floorEdge,depth,z,side*(annexEnd+floorEdge)/2);
+  for(const end of[-1,1])wall(annexEnd-tunnelHalf,.3,x,z+end*annexHalf);
+  wall(.3,depth,side*annexEnd,z);
+  portal(side*tunnelHalf,z,annexDoor,true);
+  const workX=side*7.55;
+  if(kind==='bottling'){
+   solid(1.1,4.8,workX,z);
+   item(1.14,.12,4.8,workX,.94,z,wood);
+   for(const dz of[-2.15,0,2.15])for(const dx of[-.39,.39])item(.13,.9,.14,workX+dx,.45,z+dz,wood);
+   for(let i=0;i<9;i++){
+    const zz=z-1.8+i*.32;
+    e.cyl(.078,.086,.29,workX-.14,CELLAR_FLOOR+1.145,zz,e.mats.dark,e.scene,10);
+    e.cyl(.035,.048,.13,workX-.14,CELLAR_FLOOR+1.35,zz,e.mats.dark,e.scene,10);
+    e.cyl(.029,.029,.047,workX-.14,CELLAR_FLOOR+1.43,zz,crate,e.scene,10);
+   }
+   item(.36,.46,.36,workX+.17,1.23,z+1.43,iron);
+   item(.55,.085,.6,workX+.16,1.48,z+1.43,wood);
+  }else if(kind==='workshop'){
+   solid(1.15,4.8,workX,z);
+   item(1.15,.16,4.8,workX,.98,z,wood);
+   for(const dz of[-2.18,2.18])for(const dx of[-.4,.4])item(.17,.9,.18,workX+dx,.46,z+dz,wood);
+   item(.34,.24,.48,workX-.34,1.18,z-1.55,iron);
+   item(.52,.054,.92,workX,1.1,z,canvas);
+   for(const dz of[-.6,-.37,-.15,.07])item(.34,.053,.08,workX+.04,1.14,z+dz,brass);
+   item(.16,2.1,3.8,8.82,1.63,z,wood);
+   for(const dz of[-1.35,-.75,-.12,.5,1.15]){
+    item(.13,.63,.07,8.65,1.69,z+dz,iron);
+    item(.16,.11,.27,8.62,1.97,z+dz,iron);
+   }
+  }else{
+   solid(.76,4.5,workX,z);
+   item(.7,2.7,4.5,workX-side*.25,1.35,z,wood);
+   for(const dz of[-2.14,0,2.14])item(.83,2.7,.115,workX,1.35,z+dz,wood);
+   for(const y of[.3,.95,1.6,2.25]){
+    item(.84,.09,4.48,workX,y,z,wood);
+    for(const dz of[-1.57,-.8,.55,1.42]){
+     item(.62,.38,.57,workX,y+.23,z+dz,crate);
+     item(.022,.12,.29,workX-side*.318,y+.25,z+dz,e.mats.paper);
+    }
+   }
+  }
+ }
 
  const bottlePositions:T.Vector3[]=[];
  for(const [x,z,sideWall] of [[-10.4,-11.7,true],[-7,-3.05,false]] as const){
@@ -203,8 +262,10 @@ export function buildCellar(e:Estate){
  };
  for(const [x,z,power] of [[0,-5,65],[0,-14.3,100],[-7,-8,110],[7,-8,90],[-9.6,-18.5,110],[-7.45,-15.65,74],[7.6,-16.8,82],[0,-19,115],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
  for(let z=-24;z>tunnelEnd;z-=6)light(0,z,z>=-36?70:55);
+ for(const room of annexes)light(room.side*5.65,room.z,94);
  for(let z=-21;z>tunnelEnd+1;z-=4){
-  for(const side of [-1,1])e.box(.16,3.7,.23,side*(tunnelHalf-.07),CELLAR_FLOOR+1.85,z,stone);
+  for(const side of [-1,1])if(!annexes.some(r=>r.side===side&&Math.abs(r.z-z)<annexDoor/2+.15))
+   e.box(.16,3.7,.23,side*(tunnelHalf-.07),CELLAR_FLOOR+1.85,z,stone);
   e.box(3,.23,.23,0,CEILING-.11,z,stone);
  }
 

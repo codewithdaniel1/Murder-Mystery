@@ -14,6 +14,17 @@ import {buildShed,SHED,WITNESSES,Yard} from '../src/yard';
 import {buildCellar,BULKHEADS,bulkheadGate,CELLAR_FLOOR} from '../src/cellar';
 
 describe('walkable surfaces and physical obstacles',()=>{
+ it('lets the player enter and leave the three tunnel rooms without changing floors',()=>{
+  const e=furnishedEstate(),s=freshState();buildCellar(e);
+  e.setPose({x:0,z:-23,elevation:CELLAR_FLOOR,yaw:0,pitch:0});
+  for(const [x,z] of [[-5,-27],[5,-35],[-5,-43]]){
+   e.move(0,z-e.pose().z,s);expect(e.pose().z).toBeCloseTo(z);
+   e.move(x,0,s);expect(e.pose().x).toBeCloseTo(x);expect(e.pose().elevation).toBe(CELLAR_FLOOR);
+   e.move(0,-4,s);expect(e.pose().z).toBeGreaterThan(z-3.5);
+   e.move(0,z-e.pose().z,s);e.move(-x,0,s);expect(e.pose().x).toBeCloseTo(0);
+  }
+  e.move(0,-7,s);expect(e.pose().z).toBeCloseTo(-50);
+ });
  it('keeps the light count stable while crossing the library service doorway',()=>{
   const e=furnishedEstate(),s=freshState();buildCellar(e);
   const visibleLights=()=>{const lights:T.PointLight[]=[];e.scene.traverseVisible(o=>{if(o instanceof T.PointLight)lights.push(o)});return lights;};
