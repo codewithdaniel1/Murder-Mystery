@@ -6,6 +6,13 @@
 #prompt small{display:block;font-size:10px;color:#ddd4bb;margin-top:7px}
 
 .notebook-shell aside{overflow:auto}
+.people-directory h2{margin-top:25px}
+.people-directory .evidence-grid{margin-top:14px}
+.people-directory details{margin-top:12px;font-size:13px;line-height:1.5}
+.people-directory summary{cursor:pointer}
+.people-directory ul{padding-left:18px;margin-bottom:0}
+.people-directory li+li{margin-top:8px}
+.people-directory details small{color:#596456}
 .personal-notes{display:flex;flex-direction:column;min-height:100%}
 .note-pages{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:8px 0 14px}
 .note-pages label{display:flex;align-items:center;gap:8px;color:var(--ink)}
