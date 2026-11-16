@@ -58,7 +58,7 @@ export function landscape(e:Estate){
  const drive=new T.MeshStandardMaterial({map:earthTexture,color:0xe4d9c5,roughness:.98});
  // Stop the approach at the outside face of the mansion. The previous road
  // slab extended through the doorway and covered part of the interior floor.
- e.floor(8,.025,72.15,0,-.055,48.425,drive);e.floor(48,.025,8,0,-.05,17,drive);
+ e.floor(8,.025,72.5,0,-.055,48.25,drive);e.floor(48,.025,8,0,-.05,17,drive);
  for(const x of[-4.2,4.2])e.box(.19,.09,60,x,-.01,45,e.mats.trim);
  for(const z of[12.8,21.2])for(const x of[-14,14])e.box(19,.09,.18,x,-.01,z,e.mats.trim);
  // Fine iron boundary railings with stone gate piers.
@@ -118,7 +118,10 @@ export function castle(e:Estate){
    const pane=e.box(1.45,2.15,.035,x,6.65,z,glass,e.scene,false);e.walls.push(pane);
   }
   e.wall(21-edge,2.15,.6,(21+edge)/2,6.65,z,stone);
-  for(const y of [.23,4.72,8.52])mould(e,42,.09,.22,0,y,z+Math.sign(z)*.4);
+  const trimZ=z+Math.sign(z)*.4;
+  // Keep the base trim on either side of the doorway.
+  for(const x of [-11.4,11.4])mould(e,18.99,.09,.22,x,.23,trimZ);
+  for(const y of [4.72,8.52])mould(e,42,.09,.22,0,y,trimZ);
  }
  // Stone quoins alternate at the corners, rather than oversized battlements.
  for(const x of[-20.9,20.9])for(const z of[-16.1,12.1])for(let i=0;i<18;i++)e.box(i%2?.7:1.1,.38,i%2?1.1:.7,x,.25+i*.46,z,trim);

@@ -8,5 +8,11 @@ describe('castle shell and door seams',()=>{
  it('seals the front entry jambs where the old wall panels fell short',()=>{for(const x of[-1.95,-1.75,1.75,1.95])for(const y of[.25,.75,3.5,3.7])expect(hit(x,y,12.8,0,-1),`${x}, ${y}`).toBe(true)});
  it('fully frames both hall doors, including the upper corner beside each lintel',()=>{for(const side of[-1,1])for(let z=2.8;z<6.8;z+=.11)for(const y of[.25,1.7,3.3,3.6,4.6])expect(hit(side*6.4,y,z,side,0),`${side},${z},${y}`).toBe(true)});
  it('limits rear passage openings to the two framed doorways',()=>{for(let x=-18;x<18;x+=.17){const opening=Math.abs(x-9.2)<1.3||Math.abs(x+9.2)<1.3;if(!opening)expect(hit(x,1.7,-9.3,0,-1),String(x)).toBe(true);expect(hit(x,3.7,-9.3,0,-1),String(x)).toBe(true)}});
- it('leaves the intended entry walkable when the door opens',()=>{e.doors.get('front')!.pivot.rotation.y=-Math.PI/2;e.scene.updateMatrixWorld(true);expect(hit(0,1.7,12.8,0,-1)).toBe(false);e.doors.get('front')!.pivot.rotation.y=0;e.scene.updateMatrixWorld(true)});
+ it('leaves the front and rear openings clear at ankle and eye height',()=>{
+  for(const [id,z,direction] of [['front',12.8,-1],['rear',-16.8,1]] as const){
+   const leaf=e.doors.get(id)!.pivot;leaf.rotation.y=-Math.PI/2;e.scene.updateMatrixWorld(true);
+   try{for(const x of [-.9,0,.9])for(const y of [.12,.25,1.7])expect(hit(x,y,z,0,direction)).toBe(false)}
+   finally{leaf.rotation.y=0;e.scene.updateMatrixWorld(true)}
+  }
+ });
 });
