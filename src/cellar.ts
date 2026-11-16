@@ -57,8 +57,8 @@ export function buildCellar(e:Estate){
  wall(.35,18,11,-11);wall(.35,16,-11,-10);
  wall(.3,3.3,-28.15,-19.65);wall(17.3,.28,-19.5,-21.3);
  wall(13.85,.28,-17.925,-18);
- // Open the west wall into the passage beside the bunker.
- wall(.35,.25,-11,-20.0);
+ // Close the part of the wider west passage that extends past the cellar wall.
+ wall(.35,1.5,-11,-20.65);
  wall(22,.35,0,-2);
  const wing=11-tunnelHalf;
  for(const side of [-1,1]){

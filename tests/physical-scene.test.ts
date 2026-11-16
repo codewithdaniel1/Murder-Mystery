@@ -49,6 +49,11 @@ describe('walkable surfaces and physical obstacles',()=>{
   e.move(0,-4,s);
   expect(e.pose().elevation).toBeLessThan(-1);expect(e.pose().elevation).toBeGreaterThan(CELLAR_FLOOR);
   e.move(0,-5.8,s);expect(e.pose().elevation).toBe(CELLAR_FLOOR);
+  e.scene.updateMatrixWorld(true);
+  for(const y of [.08,1.65,3.65]){
+   const ray=new T.Raycaster(new T.Vector3(-12,CELLAR_FLOOR+y,-20.7),new T.Vector3(1,0,0),0,2);
+   expect(ray.intersectObjects(e.walls)).not.toHaveLength(0);
+  }
   e.move(16,0,s);expect(e.pose().x).toBeCloseTo(-10.5);
   // The west stair leads straight to the wine vault without crossing the hub.
   e.move(3.05,0,s);e.move(0,3.9,s);expect(e.pose().z).toBeCloseTo(-15.4);
