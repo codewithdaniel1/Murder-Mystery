@@ -188,25 +188,29 @@ export class Estate {
  if(this.dogMotion){this.dogMotion.weight=0;this.dogMotion.phase=0;animateDog(this.dogMotion,0,1/60)}
  }
  private playerSurface(x:number,z:number,from:number){
+  if(from>UPPER_FLOOR-.25&&onUpperDeck(x,z))return UPPER_FLOOR;
   const stairs=cellarStairAt(x,z);
-  if(stairs)return cellarStairHeight(stairs,z);
+  if(stairs){
+   const height=cellarStairHeight(stairs,z);
+   return stairs.indoors&&from===CELLAR_FLOOR&&height> -2.8?CELLAR_FLOOR:height;
+  }
   if(from<-.15)return cellarContains(x,z)?CELLAR_FLOOR:this.groundHeight(x,z);
   if(inStair(x,z))return stairHeight(z);
-  if(from>UPPER_FLOOR-.25&&onUpperDeck(x,z))return UPPER_FLOOR;
   return this.groundHeight(x,z);
  }
  inCellar(){return (this.playerElevation??0)<-.15}
  syncBulkheads(s:GameState,dt?:number){
   for(const [id,door] of this.cellarDoors??[]){
-   const goal=s.doors[id]!==false?1:0;
+   const goal=s.doors[id]===true?1:0;
    door.amount=dt===undefined?goal:T.MathUtils.damp(door.amount,goal,10,dt);
+   if(Math.abs(door.amount-goal)<.006)door.amount=goal;
    poseBulkhead(door.leaves,door.amount);
   }
  }
  toggleBulkhead(id:string,s:GameState){
   const entry=BULKHEADS.find(b=>b.id===id);
   if(!entry)return null;
-  const open=s.doors[id]!==false,p=this.camera.position;
+  const open=s.doors[id]===true,p=this.camera.position;
   const depth=(p.z-entry.top)*entry.direction;
   const gate=bulkheadGate(entry,true);
   if(open&&Math.abs(p.x-entry.x)<gate.w/2+.27&&depth>-.34&&depth<Math.abs(gate.z-entry.top)+.36)return null;
@@ -238,7 +242,7 @@ export class Estate {
  let elevation=this.playerElevation??this.groundHeight(start.x,start.z);
  const upper=this.collisionBarriers(s,true);
  const cellar=[...(this.cellarBarriers??[])];
- for(const entry of BULKHEADS)if(s.doors[entry.id]===false||(this.cellarDoors?.get(entry.id)?.amount??1)<.83){
+ for(const entry of BULKHEADS)if(s.doors[entry.id]!==true||(this.cellarDoors?.get(entry.id)?.amount??1)<.83){
   ground.push(bulkheadGate(entry,false));cellar.push(bulkheadGate(entry,true));
  }
  const barriers=()=>elevation<-.15?cellar:elevation>UPPER_FLOOR-.25?upper:ground;

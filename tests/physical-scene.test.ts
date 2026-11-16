@@ -12,12 +12,19 @@ import {decodeSave,encodeSave} from '../src/state';
 import {buildCellar,BULKHEADS,bulkheadGate,CELLAR_FLOOR} from '../src/cellar';
 
 describe('walkable surfaces and physical obstacles',()=>{
- it('opens and closes both cellar bulkheads, including from beneath the closed lids',()=>{
+ it('starts all three bulkheads closed, seals their lids, and opens from beneath',()=>{
   const e=furnishedEstate(),s=freshState();buildCellar(e);
   e.ray=new T.Raycaster();e.pointer=new T.Vector2();
   for(const entry of BULKHEADS){
    e.setPose({x:entry.x,z:entry.top-entry.direction,yaw:0,pitch:0});
-   expect(e.toggleBulkhead(entry.id,s)).toBe(false);e.syncBulkheads(s);
+   e.syncBulkheads(s);expect(e.cellarDoors.get(entry.id)?.amount).toBe(0);
+   e.scene.updateMatrixWorld(true);
+   const lid=e.targets.find(t=>t.id==='bulkhead:'+entry.id)!.root;
+   for(const dx of [-1.62,0,1.62])for(const along of [.015,1.8,3.585]){
+    const z=entry.top+entry.direction*along;
+    const ray=new T.Raycaster(new T.Vector3(entry.x+dx,1,z),new T.Vector3(0,-1,0),0,1);
+    expect(ray.intersectObject(lid,true)).not.toHaveLength(0);
+   }
    e.move(0,entry.direction*3,s);
    expect((e.pose().z-entry.top)*entry.direction).toBeLessThan(0);
    const gate=bulkheadGate(entry,true);
@@ -28,14 +35,16 @@ describe('walkable surfaces and physical obstacles',()=>{
    e.scene.updateMatrixWorld(true);e.camera.updateMatrixWorld(true);
    expect(e.targetAt()?.id).toBe('bulkhead:'+entry.id);
    const restored=decodeSave(encodeSave(s,e.pose()))!;
-   expect(restored.doors[entry.id]).toBe(false);
+   expect(restored.doors[entry.id]).not.toBe(true);
    expect(e.toggleBulkhead(entry.id,s)).toBe(true);e.syncBulkheads(s);
    e.move(0,-entry.direction*4,s);expect(e.inCellar()).toBe(false);
   }
  });
  it('connects both exterior stairways through the cellar and bunker',()=>{
-  const e=furnishedEstate(),s=freshState();buildCellar(e);
-  const [corner,garden]=BULKHEADS;
+  const e=furnishedEstate(),s=freshState();landscape(e);buildCellar(e);
+  const [corner,garden,hall]=BULKHEADS;
+  for(const d of BULKHEADS)s.doors[d.id]=true;
+  e.syncBulkheads(s);
   e.setPose({x:corner.x,z:corner.top+1,yaw:0,pitch:0});
   e.move(0,-4,s);
   expect(e.pose().elevation).toBeLessThan(-1);expect(e.pose().elevation).toBeGreaterThan(CELLAR_FLOOR);
@@ -46,9 +55,17 @@ describe('walkable surfaces and physical obstacles',()=>{
   const saved=decodeSave(encodeSave(s,e.pose()))!;
   e.setPose(s.pose);e.setPose(saved.pose);expect(e.inCellar()).toBe(true);
   e.move(0,-12,s);expect(e.pose().z).toBeLessThan(garden.top);expect(e.inCellar()).toBe(false);
-  e.move(0,-9-e.pose().z,s);expect(e.pose().z).toBeCloseTo(-9);
+  e.move(0,-14.6-e.pose().z,s);e.move(2,0,s);e.move(0,5.6,s);
+  expect(e.pose().z).toBeCloseTo(-9);
+  e.move(-2,0,s);
   e.move(-6.5,0,s);expect(e.pose().x).toBeLessThan(-6);
   e.move(12.5,0,s);expect(e.pose().x).toBeGreaterThan(5);
+  e.setPose({x:hall.x,z:hall.top+1,yaw:0,pitch:0});
+  e.scene.updateMatrixWorld(true);
+  const shaft=new T.Raycaster(new T.Vector3(hall.x,1,hall.top-1.8),new T.Vector3(0,-1,0),0,1.25);
+  expect(shaft.intersectObjects(e.scene.children,true)).toEqual([]);
+  e.move(0,-9,s);expect(e.pose().elevation).toBe(CELLAR_FLOOR);
+  e.move(0,9,s);expect(e.inCellar()).toBe(false);
  });
  it('connects both storeys through the stair and restores upstairs saves',()=>{
   const e=furnishedEstate(),s=freshState();

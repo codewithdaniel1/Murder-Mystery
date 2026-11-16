@@ -5,8 +5,9 @@ export const CELLAR_FLOOR=-4.8;
 const CEILING=-1.05;
 const tunnelHalf=1.65;
 export const BULKHEADS=[
- {id:'cellar-mansion',label:'Mansion cellar doors',x:-26.5,top:-10.5,bottom:-18,direction:-1},
- {id:'cellar-garden',label:'Garden cellar doors',x:0,top:-48,bottom:-42,direction:1}
+ {id:'cellar-mansion',label:'Mansion cellar doors',x:-26.5,top:-10.5,bottom:-18,direction:-1,indoors:false},
+ {id:'cellar-garden',label:'Garden cellar doors',x:0,top:-48,bottom:-42,direction:1,indoors:false},
+ {id:'cellar-hall',label:'Hall cellar doors',x:-.65,top:-5.7,bottom:-13.2,direction:-1,indoors:true}
 ] as const;
 const HALF=1.65, OPEN=3.6;
 export function bulkheadGate(s:typeof BULKHEADS[number],below:boolean){
@@ -24,6 +25,7 @@ export function cellarStairHeight(s:typeof BULKHEADS[number],z:number){
 export const cellarContains=(x:number,z:number)=>
  (Math.abs(x)<11&&z>-20&&z<-2)||(Math.abs(x)<tunnelHalf&&z>=-42&&z<=-20)||
  (x>=-28.15&&x<=-11&&z>=-21.3&&z<=-18);
+export const HALL_BULKHEAD=BULKHEADS[2];
 export function cellarGroundOpenings(){
  return BULKHEADS.map(s=>({left:s.x-HALF,right:s.x+HALF,
   near:Math.min(s.top,s.top+s.direction*OPEN),far:Math.max(s.top,s.top+s.direction*OPEN)}));
@@ -40,11 +42,18 @@ export function buildCellar(e:Estate){
   e.walls.push(e.box(w,CEILING-CELLAR_FLOOR,d,x,(CEILING+CELLAR_FLOOR)/2,z,mat));
   e.cellarBarriers.push({w,d,x,z});
  };
- const slab=(w:number,d:number,z:number,x=0)=>{
+ const slab=(w:number,d:number,z:number,x=0,skipCeiling=false)=>{
   e.box(w,.23,d,x,CELLAR_FLOOR-.115,z,stone);
-  e.walls.push(e.box(w,.25,d,x,CEILING+.125,z,stone));
+  if(!skipCeiling)e.walls.push(e.box(w,.25,d,x,CEILING+.125,z,stone));
  };
- slab(22.4,18,-11);slab(3.75,22,-31);slab(17.5,3.3,-19.65,-19.65);
+ slab(22.4,18,-11,0,true);
+ const hall=HALL_BULKHEAD;
+ for(const [x0,x1,z0,z1] of [
+  [-11.2,hall.x-HALF,-20,-2],[hall.x+HALF,11.2,-20,-2],
+  [hall.x-HALF,hall.x+HALF,-20,hall.bottom],
+  [hall.x-HALF,hall.x+HALF,hall.top,-2]
+ ])e.walls.push(e.box(x1-x0,.25,z1-z0,(x0+x1)/2,CEILING+.125,(z0+z1)/2,stone));
+ slab(3.75,22,-31);slab(17.5,3.3,-19.65,-19.65);
  wall(.35,18,11,-11);wall(.35,16,-11,-10);
  wall(.3,3.3,-28.15,-19.65);wall(17.3,.28,-19.5,-21.3);
  wall(13.85,.28,-17.925,-18);
@@ -142,7 +151,7 @@ export function buildCellar(e:Estate){
   e.sphere(.092,x,y-.12,z,bulb,e.scene,1,.68,1);
   const lamp=new T.PointLight(0xffc58a,power*.38,8,2);lamp.position.set(x,y-.38,z);e.scene.add(lamp);
  };
- for(const [x,z,power] of [[0,-5,65],[0,-11,75],[-7,-8,125],[7,-8,105],[-5,-17.6,75],[5,-17.6,75],[0,-19,75],[0,-24,68],[0,-30,70],[0,-36,70],[0,-40,55],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
+ for(const [x,z,power] of [[0,-5,65],[0,-14.2,75],[-7,-8,125],[7,-8,105],[-5,-17.6,75],[5,-17.6,75],[0,-19,75],[0,-24,68],[0,-30,70],[0,-36,70],[0,-40,55],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
  for(const z of [-21,-25,-29,-33,-37]){
   for(const side of [-1,1])e.box(.16,3.7,.23,side*(tunnelHalf-.07),CELLAR_FLOOR+1.85,z,stone);
   e.box(3,.23,.23,0,CEILING-.11,z,stone);
@@ -165,24 +174,32 @@ export function buildCellar(e:Estate){
   }
   for(const side of [-1,1]){
    const edge=s.x+side*HALF;
-   e.box(.24,4.7,depth,edge,-2.41,(s.top+s.bottom)/2,stone);
-   e.box(.33,.14,OPEN,edge,.19,s.top+s.direction*OPEN/2,frame);
-   e.cellarBarriers.push({x:edge,z:(s.top+s.bottom)/2,w:.24,d:depth});
+   if(s.indoors){
+    // Leave a walkable cross passage under the upper half of the hall steps.
+    for(let i=0;i<count;i++){
+     const z=s.top+s.direction*(i+.5)*depth/count,y=cellarStairHeight(s,z);
+     e.box(.24,-y,depth/count+.002,edge,y/2,z,stone);
+    }
+   }else e.box(.24,4.7,depth,edge,-2.41,(s.top+s.bottom)/2,stone);
+   e.box(.33,.42,OPEN+.18,edge,.12,s.top+s.direction*OPEN/2,frame);
+   const wallTop=s.indoors?s.top+s.direction*4.35:s.top;
+   e.cellarBarriers.push({x:edge,z:(wallTop+s.bottom)/2,w:.24,d:Math.abs(s.bottom-wallTop)});
    e.barrier(edge,s.top+s.direction*OPEN/2,.24,OPEN);
    const leaf=new T.Group();leaf.position.x=side*HALF;
-   e.box(.07,HALF-.018,OPEN,0,(HALF-.018)/2,0,paint,leaf);
+   // Both leaves overlap at the center and seat inside the stone rim.
+   e.box(.07,HALF+.024,OPEN+.08,-side*.012,(HALF+.024)/2,0,paint,leaf);
    for(const dz of [-1.48,0,1.48])e.box(.1,HALF-.08,.065,0,HALF/2,dz,iron,leaf);
    for(const y of [.035,HALF-.047])e.box(.11,.05,OPEN,0,y,0,iron,leaf);
    for(const face of [-1,1])e.box(.14,.12,.27,face*.068,HALF-.22,-s.direction*.83,brass,leaf);
    doors.add(leaf);leaves.push(leaf);
   }
-  poseBulkhead(leaves,1);e.scene.add(doors);e.walls.push(doors);
+  poseBulkhead(leaves,0);e.scene.add(doors);e.walls.push(doors);
   e.target(doors,'bulkhead:'+s.id,s.label,'Open / close');
-  e.cellarDoors.set(s.id,{leaves,amount:1});
+  e.cellarDoors.set(s.id,{leaves,amount:0});
   const back=s.top+s.direction*OPEN;
-  e.box(3.3,.23,.21,s.x,.115,back,frame);
+  for(const z of [s.top,back])e.box(3.3,.41,.15,s.x,.115,z,frame);
   e.barrier(s.x,back,3.3,.21);
   // Low roof over the buried part leaves headroom below the ground opening.
-  e.box(3.3,.24,depth-OPEN,s.x,-.29,(back+s.bottom)/2,stone);
+  if(!s.indoors)e.box(3.3,.24,depth-OPEN,s.x,-.29,(back+s.bottom)/2,stone);
  }
 }

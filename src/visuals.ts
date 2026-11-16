@@ -1,4 +1,4 @@
-import {cellarGroundOpenings} from './cellar';
+import {cellarGroundOpenings,HALL_BULKHEAD} from './cellar';
 import * as T from 'three';
 import {BALCONY,buildUpstairs,STAIR,UPPER_FLOOR} from './upstairs';
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
@@ -41,9 +41,13 @@ export function landscape(e:Estate){
  const holes=cellarGroundOpenings();
  const xs=[-110,...holes.flatMap(h=>[h.left,h.right]).sort((a,b)=>a-b),110];
  for(let i=0;i<xs.length-1;i++){
-  const a=xs[i],b=xs[i+1],x=(a+b)/2,h=holes.find(h=>x>h.left&&x<h.right);
-  for(const [near,far] of h?[[-110,h.near],[h.far,110]]:[[-110,110]])
-   e.box(b-a,.2,far-near,x,-.18,(near+far)/2,e.mats.grass,e.scene,false);
+  const a=xs[i],b=xs[i+1],x=(a+b)/2;
+  let edge=-110;
+  for(const hole of holes.filter(h=>x>h.left&&x<h.right).sort((a,b)=>a.near-b.near)){
+   if(hole.near>edge)e.box(b-a,.2,hole.near-edge,x,-.18,(edge+hole.near)/2,e.mats.grass,e.scene,false);
+   edge=Math.max(edge,hole.far);
+  }
+  e.box(b-a,.2,110-edge,x,-.18,(edge+110)/2,e.mats.grass,e.scene,false);
  }
  // A compacted-earth approach keeps the entrance court from reading as a bed
  // of coarse stone. Fine, low-contrast grain breaks up the surface at a distance.
@@ -75,7 +79,12 @@ export function landscape(e:Estate){
 export function castle(e:Estate){
  const {stone,trim,wood,plaster}=e.mats;
  const entranceOak=wood.clone();entranceOak.color.setHex(0xc3ac87);entranceOak.roughness=.72;
- e.floor(42,.15,28,0,0,-2,entranceOak);
+ const hallHole=cellarGroundOpenings()[2];
+ for(const [x0,x1,z0,z1] of [
+  [-21,hallHole.left,-16,12],[hallHole.right,21,-16,12],
+  [hallHole.left,hallHole.right,-16,hallHole.near],
+  [hallHole.left,hallHole.right,HALL_BULKHEAD.top,12]
+ ])e.floor(x1-x0,.15,z1-z0,(x0+x1)/2,0,(z0+z1)/2,entranceOak);
  e.wall(19.2,1,.6,-11.4,.5,12);e.wall(19.2,1,.6,11.4,.5,12);e.wall(42,1,.65,0,4.35,12);e.wall(3.6,1.4,.65,0,4.1,12);
  const cuts=[-21,-18,-16,-12,-10,-1.8,1.8,10,12,16,18,21];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1],mid=(a+b)/2;if(Math.abs(mid)<1.81||[-17,-11,11,17].some(x=>Math.abs(mid-x)<.1))continue;e.wall(b-a,2.85,.6,mid,2.425,12);}
  for(const x of[-17,-11,11,17])windowDetail(e,x,2.45,12.12,2,2.7);
@@ -172,7 +181,7 @@ export function interiorDetail(e:Estate){
  e.box(1.1,.18,3.7,-20.1,2.17,4.5,e.mats.panel);
  // Persian-style woven rugs are geometric textiles, with a clear border and medallion.
  const cv=document.createElement('canvas');cv.width=512;cv.height=1024;const c=cv.getContext('2d')!;c.fillStyle='#422526';c.fillRect(0,0,512,1024);for(let i=0;i<5;i++){c.strokeStyle=i%2?'#97805c':'#2a3833';c.lineWidth=5;c.strokeRect(12+i*9,12+i*9,488-i*18,1000-i*18);}for(let y=80;y<970;y+=72)for(let x=80;x<470;x+=72){c.save();c.translate(x,y);c.rotate(Math.PI/4);c.strokeStyle='#9b8969';c.lineWidth=2;c.strokeRect(-12,-12,24,24);c.strokeStyle='#6a785d';c.strokeRect(-7,-7,14,14);c.restore();}c.save();c.translate(256,512);c.rotate(Math.PI/4);c.fillStyle='#273d38';c.fillRect(-95,-95,190,190);c.strokeStyle='#bca573';c.lineWidth=9;c.strokeRect(-95,-95,190,190);c.restore();
- const tex=new T.CanvasTexture(cv);tex.colorSpace=T.SRGBColorSpace;const rug=new T.MeshStandardMaterial({map:tex,roughness:1});for(const [x,z,w,h]of[[0,1,3,17],[-15,3.5,4.2,5.4],[15,4,4,5]]){const m=mesh(e,new T.PlaneGeometry(w,h),rug,x,.081,z);e.surfaces.push({x,z,w,d:h,y:.081});m.rotation.x=-Math.PI/2;m.castShadow=false;}
+ const tex=new T.CanvasTexture(cv);tex.colorSpace=T.SRGBColorSpace;const rug=new T.MeshStandardMaterial({map:tex,roughness:1});for(const [x,z,w,h]of[[0,1.95,3,15.1],[-15,3.5,4.2,5.4],[15,4,4,5]]){const m=mesh(e,new T.PlaneGeometry(w,h),rug,x,.081,z);e.surfaces.push({x,z,w,d:h,y:.081});m.rotation.x=-Math.PI/2;m.castShadow=false;}
 }
 
 export function normalized(source:T.Object3D,height:number){
