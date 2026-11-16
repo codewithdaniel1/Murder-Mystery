@@ -43,10 +43,10 @@ export class EstateAudio {
  update(dt:number,p:{x:number;y:number;z:number},yaw:number,moving:boolean,inside:boolean,dog:Position,car:Position|null){const c=this.context;if(!c||this.paused)return;const l=c.listener;
  l.positionX.value=p.x;l.positionY.value=p.y;l.positionZ.value=p.z;l.forwardX.value=-Math.sin(yaw);l.forwardY.value=0;l.forwardZ.value=-Math.cos(yaw);l.upX.value=0;l.upY.value=1;l.upZ.value=0;
  this.loop('wind',inside?.025:.24,undefined,inside?650:8000);this.loop('birds',inside?.035:.26,undefined,inside?1100:10000);
- this.loop('fountain',inside?.02:.75,[0,.8,-30],inside?550:14000);this.loop('fireplace',inside&&p.x<-7?.65:inside?.12:.005,[-20,1,4.5],inside?11000:400);
+ this.loop('fountain',inside?.02:.75,[0,.8,-30],inside?550:14000);this.loop('fireplace',p.y<0?0:inside&&p.x<-7?.65:inside?.12:.005,[-20,1,4.5],inside?11000:400);
  this.loop('engine',car?(inside?.12:.9):0,car??[4,1,24],inside?850:9500);
  const current:Position=[p.x,p.y,p.z];if(this.lastPosition&&moving){const d=Math.hypot(p.x-this.lastPosition[0],p.z-this.lastPosition[2]);if(d<1)this.distance+=d;else this.distance=0;}else this.distance=0;this.lastPosition=current;
- if(this.distance>1.15){this.distance%=1.15;const surface=surfaceAt(p.x,p.z);this.stepIndex++;const n=this.stepIndex%2+1;const file=surface==='carpet'||surface==='wood'?'step-wood-'+n:surface==='grass'?'step-grass-'+n:surface==='stone'?'step-stone-1':'step-gravel-1';this.playClip(file,surface==='carpet'?.17:.48,undefined,.94+Math.random()*.12);}
+ if(this.distance>1.15){this.distance%=1.15;const surface=p.y<0?'stone':surfaceAt(p.x,p.z);this.stepIndex++;const n=this.stepIndex%2+1;const file=surface==='carpet'||surface==='wood'?'step-wood-'+n:surface==='grass'?'step-grass-'+n:surface==='stone'?'step-stone-1':'step-gravel-1';this.playClip(file,surface==='carpet'?.17:.48,undefined,.94+Math.random()*.12);}
  this.barkAt-=dt;if(this.barkAt<0){this.barkAt=24+Math.random()*22;if(Math.hypot(p.x-dog[0],p.z-dog[2])<12)this.effect('bark',dog)}
 
  }

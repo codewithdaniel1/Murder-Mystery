@@ -70,7 +70,7 @@ export function encodeSave(s:GameState,pose:Pose){if(s.arrival==='arriving')thro
 export function decodeSave(raw:string):GameState|null{
  try{const v=JSON.parse(raw);if(!v||v.version!==1||!Array.isArray(v.evidence)||!v.evidence.every((e:unknown)=>typeof e==='string'&&Object.hasOwn(EVIDENCE,e))||!Array.isArray(v.deductions)||!v.deductions.every((e:unknown)=>typeof e==='string'&&Object.hasOwn(DEDUCTIONS,e))||!Array.isArray(v.interviews)||!v.interviews.every((e:unknown)=>typeof e==='string'&&Object.hasOwn(PEOPLE,e))||!v.flags||typeof v.flags!=='object'||Array.isArray(v.flags)||!Object.values(v.flags).every(x=>typeof x==='boolean')||!v.doors||typeof v.doors!=='object'||Array.isArray(v.doors)||!Object.values(v.doors).every(x=>typeof x==='boolean')||!['waiting','walking','done'].includes(v.dog)||!['absent','queued','present'].includes(v.arrival)||typeof v.finished!=='boolean')return null;
  const p=v.pose;if(!p||!['x','z','yaw','pitch'].every(k=>typeof p[k]==='number'&&Number.isFinite(p[k]))||Math.abs(p.x)>100||Math.abs(p.z)>100||Math.abs(p.pitch)>1.55)return null;
- if(p.elevation!==undefined&&(typeof p.elevation!=='number'||!Number.isFinite(p.elevation)||p.elevation<-.1||p.elevation>6))return null;
+ if(p.elevation!==undefined&&(typeof p.elevation!=='number'||!Number.isFinite(p.elevation)||p.elevation<-4.8||p.elevation>6))return null;
  return {...v,evidence:[...new Set(v.evidence)],deductions:[...new Set(v.deductions)],interviews:[...new Set(v.interviews)],flags:{...v.flags},doors:{...v.doors},pose:{...p}} as GameState;
  }catch{return null}
 }

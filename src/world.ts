@@ -1,3 +1,4 @@
+import {buildCellar,cellarContains,cellarRoutes,CELLAR_FLOOR} from './cellar';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {materials,landscape,castle,interiorDetail,sceneryAssets,batchDetail,grandfatherClock} from './visuals';
@@ -23,6 +24,7 @@ export class Estate {
  scene=new T.Scene();camera=new T.PerspectiveCamera(65,innerWidth/innerHeight,.06,220);renderer:T.WebGLRenderer;
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
  upperBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
+ cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
  ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;fountainWater?:FountainWater;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
  composer:EffectComposer;ao:GTAOPass;sun:T.DirectionalLight; mats:Record<string,T.MeshStandardMaterial>={}; pointer=new T.Vector2(0,0);lastMove=false;inspectRotation=0;ready:Promise<void>;quality='Auto';
  constructor(container:HTMLElement){
@@ -31,7 +33,7 @@ export class Estate {
  this.scene.add(new T.HemisphereLight(0xc7def0,0x615241,.42));this.sun=new T.DirectionalLight(0xffe7c7,3.2);this.sun.position.set(-28,38,26);this.sun.castShadow=true;this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-44,right:44,top:44,bottom:-44,near:1,far:115});this.sun.shadow.bias=-.00008;this.sun.shadow.normalBias=.025;this.sun.shadow.radius=2;this.scene.add(this.sun);
  this.mats={dark:this.mat(0x26302a),gold:this.mat(0xaa8c51,.4,.7),black:this.mat(0x171c1a,.6),cream:this.mat(0xcdbfa3),leaf:this.mat(0x3c5631),red:this.mat(0x472d2c),paper:this.mat(0xe4d5b6),glass:this.mat(0xbac7c4)};
  const loaded=materials(this);
- this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();
+ this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();buildCellar(this);
  this.addActor('june',2,6,0x3b4943,0xd1b39c,true);this.addActor('rook',-12,3,0x3f3e47,0xc2a48a,false);this.addActor('mara',13,1,0x7d6045,0xd2b7a1,true);this.addActor('ada',-9,-20,0x537b72,0xd7b79e,true);this.addActor('tomas',23,-21,0x66704b,0xc6a182,false);this.addActor('beatrice',4,20,0x664d56,0xd8b59b,true);this.addActor('jonah',7,24,0x3c4853,0xc7a085,false);
  this.actors.get('beatrice')!.root.visible=false;this.actors.get('jonah')!.root.visible=false;
  this.car=this.makeCar();this.car.position.set(4,0,56);this.car.visible=false;this.scene.add(this.car);
@@ -180,14 +182,26 @@ export class Estate {
  present(id:string){this.clearHeld();const g=new T.Group();if(id==='fragment'){this.cyl(.02,.08,.18,0,0,0,this.mats.gold,g).rotation.z=.6;}else if(id==='falcon'){this.falcon(g);g.scale.setScalar(.5);}else if(id==='lining'){this.box(.22,.26,.02,0,0,0,this.mat(0x73506d),g);}else{const data:Record<string,[string,string[]]>={note:['E. VALE',['Compare the original invoice.','We must speak tonight.']],ledger:['ESTATE ACCOUNTS',['£60  /  £180  /  £120','vel aran si']],bell:['REPAIR NOTICE',['Manual rope removed.','Automatic chime operating.']],display:['BRONZE FALCON',['Presented to Edmund Rook']],lexicon:['AVELLIC REGISTER',['vel aran si','received personally','by the steward']]};const [title,lines]=data[id]??['CASE NOTES',['Bramblewick Estate']];this.paper(title,lines,0,0,0,id==='ledger'||id==='lexicon',g);g.rotation.x=.9;g.scale.setScalar(.65);}g.position.set(-.24,-.2,-.72);this.camera.add(g);this.held=g;this.hands.visible=true;this.hands.position.y=.06;}
  clearHeld(){if(this.held){this.camera.remove(this.held);this.held.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.held=null;}this.hands.position.y=0;}
  resetDog(walking:boolean,doors:Record<string,boolean>){
- this.dogFollower.reset();const target=walking&&(this.playerElevation??0)<1.2?this.camera.position:this.actors.get('mara')!.root.position;
+ this.dogFollower.reset();const target=walking&&this.onGroundLevel()?this.camera.position:this.actors.get('mara')!.root.position;
  for(const radius of[1.4,.8,.4,0]){let placed=false;for(let i=0;i<8;i++){const p={x:target.x+Math.sin(i*Math.PI/4)*radius,z:target.z+Math.cos(i*Math.PI/4)*radius};if(!inStair(p.x,p.z)&&clearAt(p,this.barriers,doors,.22)){this.dog.position.set(p.x,.08,p.z);placed=true;break}}if(placed)break}
  if(this.dogMotion){this.dogMotion.weight=0;this.dogMotion.phase=0;animateDog(this.dogMotion,0,1/60)}
  }
  private playerSurface(x:number,z:number,from:number){
+  if(from===CELLAR_FLOOR)return cellarContains(x,z)?CELLAR_FLOOR:this.groundHeight(x,z);
   if(inStair(x,z))return stairHeight(z);
   if(from>UPPER_FLOOR-.25&&onUpperDeck(x,z))return UPPER_FLOOR;
   return this.groundHeight(x,z);
+ }
+ inCellar(){return this.playerElevation===CELLAR_FLOOR}
+ onGroundLevel(){return !this.inCellar()&&(this.playerElevation??0)<1.2}
+ useCellarLadder(id:string){
+  if(!Object.hasOwn(cellarRoutes,id))return false;
+  const route=cellarRoutes[id],target=this.targets.find(t=>t.id===id);
+  if(!target||route.below===this.inCellar()||(route.below&&!this.onGroundLevel())||
+     target.root.getWorldPosition(new T.Vector3()).distanceTo(this.camera.position)>3.5)return false;
+  this.setPose({...route,pitch:0,elevation:route.below?CELLAR_FLOOR:undefined});
+  this.lastMove=false;
+  return true;
  }
  pose():Pose{return {x:this.camera.position.x,z:this.camera.position.z,yaw:this.camera.rotation.y,pitch:this.camera.rotation.x,elevation:this.playerElevation};}
  setPose(p:Pose){
@@ -196,6 +210,7 @@ export class Estate {
   const x=saved===undefined&&inStair(p.x,p.z)?STAIR.x+STAIR.width/2+.4:p.x;
   const ground=this.groundHeight(x,p.z);
   this.playerElevation=saved===undefined?ground:this.playerSurface(x,p.z,saved);
+  if(this.cellarInterior)this.cellarInterior.visible=this.inCellar();
   this.camera.rotation.order='YXZ';this.camera.position.set(x,this.playerElevation+1.65,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,'YXZ');
  }
  move(dx:number,dz:number,s:GameState){
@@ -203,7 +218,7 @@ export class Estate {
  for(const a of this.actors.values())if(a.root.visible)ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
  let elevation=this.playerElevation??this.groundHeight(start.x,start.z);
  const upper=this.collisionBarriers(s,true);
- const barriers=()=>elevation>UPPER_FLOOR-.25?upper:ground;
+ const barriers=()=>elevation===CELLAR_FLOOR?this.cellarBarriers:elevation>UPPER_FLOOR-.25?upper:ground;
  let p=resolveOverlap(start,barriers(),s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
  const advance=(x:number,z:number)=>{
   if(Math.abs(x)>=52||z>=53||z<=-49||!clearSegment(p,{x,z},barriers(),s.doors,.26))return;
@@ -226,7 +241,7 @@ export class Estate {
  if((id==='beatrice'||id==='jonah')&&s.arrival!=='present'){a.root.visible=false;continue;}a.root.visible=true;
  const before=a.root.position.clone();
  const nearby=[...this.actors.values()].filter(other=>other.id!==id&&other.root.visible&&other.root.position.distanceTo(a.root.position)<4).map(other=>({x:other.root.position.x,z:other.root.position.z,w:.48,d:.48}));
- const result=this.routines.update(id,a.root.position,dt,[...solid,...nearby],s.doors,!playing||id===talking,(this.playerElevation??0)<1.2?this.camera.position:undefined,a.root.rotation.y);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
+ const result=this.routines.update(id,a.root.position,dt,[...solid,...nearby],s.doors,!playing||id===talking,this.onGroundLevel()?this.camera.position:undefined,a.root.rotation.y);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
  a.root.position.y=this.groundHeight(a.root.position.x,a.root.position.z);a.isWalking=result.moving;a.activity=id===talking?null:result.activity;a.activityLabel=result.label;
  const targetAngle=id===talking?Math.atan2(this.camera.position.x-a.root.position.x,this.camera.position.z-a.root.position.z):result.face;
  if(playing||id===talking){const delta=Math.atan2(Math.sin(targetAngle-a.root.rotation.y),Math.cos(targetAngle-a.root.rotation.y));a.root.rotation.y+=delta*Math.min(1,dt*3.4);}
@@ -235,7 +250,7 @@ export class Estate {
 
  this.car.visible=s.arrival!=='absent'&&s.arrival!=='queued';if(s.arrival==='arriving')this.car.position.z=56-32*T.MathUtils.smoothstep(arrivalT,0,1);if(s.arrival==='present')this.car.position.z=24;this.car.position.y=this.groundHeight(this.car.position.x,this.car.position.z)-.03;
  if(playing){
- const target=s.dog==='walking'?((this.playerElevation??0)>1.2?this.dog.position:this.camera.position):this.actors.get('mara')!.root.position;
+ const target=s.dog==='walking'?(this.onGroundLevel()?this.camera.position:this.dog.position):this.actors.get('mara')!.root.position;
  const follow=this.dogFollower.update(this.dog.position,this.dog.rotation.y,target,dt,solid,s.doors,false);
  this.dog.position.x=follow.position.x;this.dog.position.z=follow.position.z;this.dog.rotation.y=follow.heading;
  this.dog.position.y=this.groundHeight(this.dog.position.x,this.dog.position.z);
