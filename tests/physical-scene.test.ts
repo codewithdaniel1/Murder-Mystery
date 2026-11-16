@@ -9,9 +9,30 @@ import type {Estate} from '../src/world';
 import {resolveOverlap,clearAt,clearSegment} from '../src/navigation';
 import {STAIR,UPPER_FLOOR} from '../src/upstairs';
 import {decodeSave,encodeSave} from '../src/state';
-import {buildCellar,BULKHEADS,CELLAR_FLOOR} from '../src/cellar';
+import {buildCellar,BULKHEADS,bulkheadGate,CELLAR_FLOOR} from '../src/cellar';
 
 describe('walkable surfaces and physical obstacles',()=>{
+ it('opens and closes both cellar bulkheads, including from beneath the closed lids',()=>{
+  const e=furnishedEstate(),s=freshState();buildCellar(e);
+  e.ray=new T.Raycaster();e.pointer=new T.Vector2();
+  for(const entry of BULKHEADS){
+   e.setPose({x:entry.x,z:entry.top-entry.direction,yaw:0,pitch:0});
+   expect(e.toggleBulkhead(entry.id,s)).toBe(false);e.syncBulkheads(s);
+   e.move(0,entry.direction*3,s);
+   expect((e.pose().z-entry.top)*entry.direction).toBeLessThan(0);
+   const gate=bulkheadGate(entry,true);
+   e.setPose({x:entry.x,z:gate.z+entry.direction*.65,elevation:-2,yaw:0,pitch:0});
+   e.move(0,-entry.direction*3,s);
+   expect((e.pose().z-gate.z)*entry.direction).toBeGreaterThan(0);
+   e.setPose(e.pose());e.camera.lookAt(entry.x+.45,.25,gate.z-entry.direction*.25);
+   e.scene.updateMatrixWorld(true);e.camera.updateMatrixWorld(true);
+   expect(e.targetAt()?.id).toBe('bulkhead:'+entry.id);
+   const restored=decodeSave(encodeSave(s,e.pose()))!;
+   expect(restored.doors[entry.id]).toBe(false);
+   expect(e.toggleBulkhead(entry.id,s)).toBe(true);e.syncBulkheads(s);
+   e.move(0,-entry.direction*4,s);expect(e.inCellar()).toBe(false);
+  }
+ });
  it('connects both exterior stairways through the cellar and bunker',()=>{
   const e=furnishedEstate(),s=freshState();buildCellar(e);
   const [corner,garden]=BULKHEADS;

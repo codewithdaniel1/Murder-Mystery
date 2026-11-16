@@ -5,10 +5,17 @@ export const CELLAR_FLOOR=-4.8;
 const CEILING=-1.05;
 const tunnelHalf=1.65;
 export const BULKHEADS=[
- {x:-26.5,top:-10.5,bottom:-18,direction:-1},
- {x:0,top:-48,bottom:-42,direction:1}
+ {id:'cellar-mansion',label:'Mansion cellar doors',x:-26.5,top:-10.5,bottom:-18,direction:-1},
+ {id:'cellar-garden',label:'Garden cellar doors',x:0,top:-48,bottom:-42,direction:1}
 ] as const;
 const HALF=1.65, OPEN=3.6;
+export function bulkheadGate(s:typeof BULKHEADS[number],below:boolean){
+ const distance=below?(s.bottom-s.top)*s.direction*.34:0;
+ return {x:s.x,z:s.top+s.direction*distance,w:HALF*2,d:.15};
+}
+export function poseBulkhead(leaves:T.Group[],amount:number){
+ for(const [i,leaf] of leaves.entries())leaf.rotation.z=(i===0?-1:1)*T.MathUtils.lerp(Math.PI/2,-.1,amount);
+}
 export const cellarStairAt=(x:number,z:number)=>BULKHEADS.find(s=>
  Math.abs(x-s.x)<HALF&&(z-s.top)*s.direction>=0&&(s.bottom-z)*s.direction>=0);
 export function cellarStairHeight(s:typeof BULKHEADS[number],z:number){
@@ -24,6 +31,7 @@ export function cellarGroundOpenings(){
 
 export function buildCellar(e:Estate){
  e.cellarBarriers=[];
+ e.cellarDoors=new Map();
  const existing=new Set(e.scene.children);
  const stone=e.mats.stone.clone(),wood=e.mats.wood,iron=e.mat(0x303633,.66,.28),brass=e.mats.gold;
  stone.color.multiplyScalar(.55);
@@ -143,9 +151,12 @@ export function buildCellar(e:Estate){
  const interior=new T.Group();interior.name='Cellar and garden tunnel';
  for(const object of [...e.scene.children])if(!existing.has(object))interior.add(object);
  interior.visible=false;e.scene.add(interior);e.cellarInterior=interior;
- // The paired leaves are propped open above the stone stair wells.
+ // Each metal leaf hinges along a long edge of the stone stairwell.
  const frame=e.mats.trim,paint=e.mat(0x292421,.73,.2);
  for(const s of BULKHEADS){
+  const doors=new T.Group(),leaves:T.Group[]=[];
+  doors.position.set(s.x,.29,s.top+s.direction*OPEN/2);
+  doors.name=s.label;
   const depth=Math.abs(s.bottom-s.top),count=Math.ceil(depth/.255);
   for(let i=0;i<count;i++){
    const z=s.top+s.direction*(i+.5)*depth/count,y=cellarStairHeight(s,z);
@@ -158,14 +169,16 @@ export function buildCellar(e:Estate){
    e.box(.33,.14,OPEN,edge,.19,s.top+s.direction*OPEN/2,frame);
    e.cellarBarriers.push({x:edge,z:(s.top+s.bottom)/2,w:.24,d:depth});
    e.barrier(edge,s.top+s.direction*OPEN/2,.24,OPEN);
-   const leaf=new T.Group();leaf.position.set(edge,.28,s.top+s.direction*OPEN/2);
-   leaf.rotation.x=s.direction*.12;
-   e.box(.07,1.03,OPEN,0,.43,0,paint,leaf);
-   for(const dz of [-1.36,0,1.36])e.box(.1,.98,.065,0,.43,dz,iron,leaf);
-   for(const y of [.015,.91])e.box(.11,.05,OPEN,0,y,0,iron,leaf);
-   e.box(.12,.14,.3,-side*.08,.66,-s.direction*.65,brass,leaf);
-   e.scene.add(leaf);
+   const leaf=new T.Group();leaf.position.x=side*HALF;
+   e.box(.07,HALF-.018,OPEN,0,(HALF-.018)/2,0,paint,leaf);
+   for(const dz of [-1.48,0,1.48])e.box(.1,HALF-.08,.065,0,HALF/2,dz,iron,leaf);
+   for(const y of [.035,HALF-.047])e.box(.11,.05,OPEN,0,y,0,iron,leaf);
+   for(const face of [-1,1])e.box(.14,.12,.27,face*.068,HALF-.22,-s.direction*.83,brass,leaf);
+   doors.add(leaf);leaves.push(leaf);
   }
+  poseBulkhead(leaves,1);e.scene.add(doors);e.walls.push(doors);
+  e.target(doors,'bulkhead:'+s.id,s.label,'Open / close');
+  e.cellarDoors.set(s.id,{leaves,amount:1});
   const back=s.top+s.direction*OPEN;
   e.box(3.3,.23,.21,s.x,.115,back,frame);
   e.barrier(s.x,back,3.3,.21);

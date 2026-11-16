@@ -1,4 +1,4 @@
-import {buildCellar,BULKHEADS,cellarContains,cellarStairAt,cellarStairHeight,CELLAR_FLOOR} from './cellar';
+import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {materials,landscape,castle,interiorDetail,sceneryAssets,batchDetail,grandfatherClock} from './visuals';
@@ -25,6 +25,7 @@ export class Estate {
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
  upperBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
+ cellarDoors=new Map<string,{leaves:T.Group[];amount:number}>();
  ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;fountainWater?:FountainWater;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
  composer:EffectComposer;ao:GTAOPass;sun:T.DirectionalLight; mats:Record<string,T.MeshStandardMaterial>={}; pointer=new T.Vector2(0,0);lastMove=false;inspectRotation=0;ready:Promise<void>;quality='Auto';
  constructor(container:HTMLElement){
@@ -195,6 +196,23 @@ export class Estate {
   return this.groundHeight(x,z);
  }
  inCellar(){return (this.playerElevation??0)<-.15}
+ syncBulkheads(s:GameState,dt?:number){
+  for(const [id,door] of this.cellarDoors??[]){
+   const goal=s.doors[id]!==false?1:0;
+   door.amount=dt===undefined?goal:T.MathUtils.damp(door.amount,goal,10,dt);
+   poseBulkhead(door.leaves,door.amount);
+  }
+ }
+ toggleBulkhead(id:string,s:GameState){
+  const entry=BULKHEADS.find(b=>b.id===id);
+  if(!entry)return null;
+  const open=s.doors[id]!==false,p=this.camera.position;
+  const depth=(p.z-entry.top)*entry.direction;
+  const gate=bulkheadGate(entry,true);
+  if(open&&Math.abs(p.x-entry.x)<gate.w/2+.27&&depth>-.34&&depth<Math.abs(gate.z-entry.top)+.36)return null;
+  s.doors[id]=!open;
+  return !open;
+ }
  onGroundLevel(){return !this.inCellar()&&(this.playerElevation??0)<1.2}
  private updateCellarView(menu=false){
   const depth=menu?0:Math.max(0,-(this.playerElevation??0));
@@ -219,7 +237,11 @@ export class Estate {
  for(const a of this.actors.values())if(a.root.visible)ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
  let elevation=this.playerElevation??this.groundHeight(start.x,start.z);
  const upper=this.collisionBarriers(s,true);
- const barriers=()=>elevation<-.15?this.cellarBarriers:elevation>UPPER_FLOOR-.25?upper:ground;
+ const cellar=[...(this.cellarBarriers??[])];
+ for(const entry of BULKHEADS)if(s.doors[entry.id]===false||(this.cellarDoors?.get(entry.id)?.amount??1)<.83){
+  ground.push(bulkheadGate(entry,false));cellar.push(bulkheadGate(entry,true));
+ }
+ const barriers=()=>elevation<-.15?cellar:elevation>UPPER_FLOOR-.25?upper:ground;
  let p=resolveOverlap(start,barriers(),s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
  const advance=(x:number,z:number)=>{
   if(Math.abs(x)>=52||z>=53||z<=-49||!clearSegment(p,{x,z},barriers(),s.doors,.26))return;
@@ -237,6 +259,7 @@ export class Estate {
  targetAt():Target|null{this.ray.setFromCamera(this.pointer,this.camera);let best:Target|null=null,near=3.25;for(const t of this.targets){if(!t.root.visible||!t.root.parent?.visible)continue;const hit=this.ray.intersectObject(t.root,true)[0];if(hit&&hit.distance<near){const occluder=this.ray.intersectObjects([...this.walls,...[...this.doors.values()].map(d=>d.pivot)],true)[0];if(occluder&&occluder.distance<hit.distance-.08)continue;near=hit.distance;best={...t,distance:near};}}return best;}
   setQuality(q:string){this.quality=q;const cap=q==='Low'?.85:q==='High'?1.8:q==='Medium'?1.25:Math.min(devicePixelRatio,1.25);this.renderer.setPixelRatio(Math.min(devicePixelRatio,cap));this.renderer.shadowMap.enabled=q!=='Low';this.ao.enabled=q!=='Low';this.renderer.setSize(innerWidth,innerHeight);this.composer.setPixelRatio(this.renderer.getPixelRatio());this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));}
  update(dt:number,s:GameState,playing:boolean,talking:PersonId|null,arrivalT:number,menu=false){if(playing||talking)this.clock+=dt;
+ this.syncBulkheads(s,dt);
  for(const[id,d]of this.doors){const goal=s.doors[id]?-Math.PI/2:0;d.angle=T.MathUtils.damp(d.angle,goal,10,dt);d.pivot.rotation.y=d.angle;}
  const solid=[...this.collisionBarriers(s),{x:STAIR.x,z:(STAIR.top+STAIR.bottom)/2,w:STAIR.width,d:STAIR.bottom-STAIR.top}];
  for(const[id,a]of this.actors){
