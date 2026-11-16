@@ -10,7 +10,7 @@ import {DogFollower,animateDog} from './dog';
 import type {DogMotion} from './dog';
 import type {CharacterMotion} from './characters';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-import {EstateRoutines} from './routines';
+import {EstateRoutines,HALL_CLOCK} from './routines';
 import {FountainWater} from './fountain';
 import {inStair,onUpperDeck,STAIR,stairHeight,UPPER_FLOOR} from './upstairs';
 import {clearAt,clearSegment,resolveOverlap} from './navigation';
@@ -134,7 +134,7 @@ export class Estate {
  this.table(4,8,2.4,.85);this.lamp(4.8,1.02,8);
  const phone=new T.Group();phone.position.set(3.55,1.05,8);this.round(.55,.13,.42,0,0,0,this.mats.black,phone);this.cyl(.15,.15,.035,0,.09,.02,this.mats.gold,phone);this.cyl(.09,.09,.05,0,.12,.02,this.mats.black,phone);this.box(.45,.065,.09,0,.26,-.1,this.mats.black,phone);for(const x of[-.23,.23])this.sphere(.08,x,.23,-.1,this.mats.black,phone);this.scene.add(phone);this.target(phone,'phone','Telephone','Use');
  // Hall clock and paintings.
- grandfatherClock(this,-4,-8.8);
+ grandfatherClock(this,HALL_CLOCK.x,HALL_CLOCK.z);
 
  this.table(-15,0,3.6,1.5);this.lamp(-16.25,1.02,0);this.target(this.paper('TO LADY BEATRICE',['Before another payment,','compare the original invoice.','We must speak tonight.','                         E. Vale'],-15,1.02,.15),'note','Elias’s unfinished letter');this.target(this.paper('ESTATE ACCOUNTS',['Supplier invoice       £60','Estate claim            £180','Personal receipt       £120','','vel aran si'],-14,1.04,-.1,true),'ledger','The ledger & receipts');
  const fragment=new T.Group();fragment.position.set(-13.4,.18,1.25);const claw=this.cyl(.03,.09,.22,0,.05,0,this.mats.gold,fragment);claw.rotation.z=.7;this.scene.add(fragment);this.target(fragment,'fragment','A bronze fragment','Pick up');this.barrier(-15,0,3.6,1.5);
