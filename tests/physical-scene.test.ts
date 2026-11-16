@@ -37,6 +37,15 @@ describe('walkable surfaces and physical obstacles',()=>{
   expect(visibleLights()).toEqual(before);
   expect(e.cellarLightPool!.some(light=>light.intensity>0)).toBe(true);
  });
+ it('lights all three cellar stairs before the player descends',()=>{
+  const e=furnishedEstate();buildCellar(e);
+  for(const stair of BULKHEADS){
+   e.setPose({x:stair.x,z:stair.top-stair.direction*.8,yaw:0,pitch:0});
+   expect(e.inCellar()).toBe(false);
+   const z=stair.top+2.9*stair.direction;
+   expect(e.cellarLightPool!.some(light=>light.position.z===z&&light.intensity===12)).toBe(true);
+  }
+ });
  it('connects the garden through the lodge and out to the woodland loop',()=>{
   const e=furnishedEstate(),s=freshState();landscape(e);buildGardenLodge(e);buildCellar(e);
   for(const x of[-7,5]){

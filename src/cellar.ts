@@ -45,7 +45,7 @@ export function cellarGroundOpenings(){
 export function buildCellar(e:Estate){
  e.cellarBarriers=[];
  e.cellarDoors=new Map();
- const lamps:{position:T.Vector3;power:number}[]=[];
+ const lamps:NonNullable<Estate['cellarLightFixtures']>=[];
  const existing=new Set(e.scene.children);
  const stone=e.mats.stone.clone(),wood=e.mats.wood,iron=e.mat(0x303633,.66,.28),brass=e.mats.gold;
  stone.color.multiplyScalar(.55);
@@ -258,11 +258,18 @@ export function buildCellar(e:Estate){
   e.cyl(.1,.25,.17,x,y,z,iron);
   const bulb=e.mat(0xffd98e);bulb.emissive.setHex(0xffb65b);bulb.emissiveIntensity=2;
   e.sphere(.092,x,y-.12,z,bulb,e.scene,1,.68,1);
-  lamps.push({position:new T.Vector3(x,y-.38,z),power:power*.38});
+  lamps.push({position:new T.Vector3(x,y-.38,z),power:power*.38,range:8});
  };
  for(const [x,z,power] of [[0,-5,65],[0,-14.3,100],[-7,-8,110],[7,-8,90],[-9.6,-18.5,110],[-7.45,-15.65,74],[7.6,-16.8,82],[0,-19,115],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
  for(let z=-24;z>tunnelEnd;z-=6)light(0,z,z>=-36?70:55);
  for(const room of annexes)light(room.side*5.65,room.z,94);
+ const stairBulb=e.mat(0xffd98e);stairBulb.emissive.setHex(0xffb65b);stairBulb.emissiveIntensity=1.6;
+ for(const stair of BULKHEADS){
+  const z=stair.top+2.9*stair.direction,y=cellarStairHeight(stair,z)+1.05,x=stair.x+HALF-.23;
+  for(const [dx,w,h,d,mat] of [[.155,.15,.26,.35,iron],[0,.18,.19,.28,stairBulb]] as const)
+   e.box(w,h,d,x+dx,y,z,mat);
+  lamps.push({position:new T.Vector3(x-.19,y,z),power:12,range:4.5});
+ }
  for(let z=-21;z>tunnelEnd+1;z-=4){
   for(const side of [-1,1])if(!annexes.some(r=>r.side===side&&Math.abs(r.z-z)<annexDoor/2+.15))
    e.box(.16,3.7,.23,side*(tunnelHalf-.07),CELLAR_FLOOR+1.85,z,stone);

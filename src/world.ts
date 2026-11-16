@@ -30,7 +30,7 @@ export class Estate {
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
  upperBarriers:Barrier[]=[];atticBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
- cellarLightFixtures?:{position:T.Vector3;power:number}[];
+ cellarLightFixtures?:{position:T.Vector3;power:number;range:number}[];
  cellarLightPool?:T.PointLight[];
  cellarDoors=new Map<string,{leaves:T.Group[];amount:number}>();
  yard:Yard;
@@ -257,12 +257,13 @@ export class Estate {
    BULKHEADS.some(s=>Math.hypot(this.camera.position.x-s.x,this.camera.position.z-s.top)<10));
   const fade=T.MathUtils.smoothstep(depth,.5,3.3);
   if(this.cellarLightPool&&this.cellarLightFixtures){
-   const strength=T.MathUtils.smoothstep(depth,.15,.8);
-   const nearest=strength>0?[...this.cellarLightFixtures].sort((a,b)=>
-    a.position.distanceToSquared(this.camera.position)-b.position.distanceToSquared(this.camera.position)):[];
+   // Use the closest fixtures at their normal brightness, even above the stairs.
+   // The pool size stays fixed so crossing a hatch doesn't invalidate shaders.
+   const nearest=[...this.cellarLightFixtures].sort((a,b)=>
+    a.position.distanceToSquared(this.camera.position)-b.position.distanceToSquared(this.camera.position));
    this.cellarLightPool.forEach((light,i)=>{
-    const fixture=nearest[i];light.intensity=fixture?fixture.power*strength:0;
-    if(fixture)light.position.copy(fixture.position);
+    const fixture=nearest[i];light.intensity=fixture?.power??0;
+    if(fixture){light.position.copy(fixture.position);light.distance=fixture.range;}
    });
   }
   this.scene.environmentIntensity=T.MathUtils.lerp(.42,.065,fade);
