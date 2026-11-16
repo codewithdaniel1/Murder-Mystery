@@ -126,7 +126,6 @@ Navigation rules:
 - NPCs can pass the player in corridors.
 - The driveway's car route is separated from the pedestrian approach with a curb or gate.
 - Decorative doors visibly communicate that they are outside the playable wing.
-- A simple illustrated estate map becomes available immediately in the notebook.
 
 ## 6. Cast and what each person contributes
 
@@ -406,7 +405,6 @@ Five tabs are sufficient:
 2. **Evidence:** inspectable entries with source, place, and discovery time.
 3. **Timeline:** past-event claims and witnessed present events, with uncertainty preserved.
 4. **Connections:** a small set of player-built deductions.
-5. **Map / current leads:** estate layout and two or three useful next actions.
 
 Do not show omniscient live NPC positions by default. “Last seen in library” is more honest than an unexplained tracking dot. An optional assistance setting may show current locations for convenience.
 

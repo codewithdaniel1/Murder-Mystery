@@ -106,7 +106,7 @@ export function buildWartimeEstate(e:Estate){
  const iron=e.mat(0x393d3b,.74,.28),enamel=e.mat(0xb3b8a1,.44),soil=e.mat(0x49412e,.98);
  // The gatehouse is offset from the carriage lane; the pedestrian gap leads to its side door.
  const gx=-12.5,gz=44.5,floor=.075;
- e.floor(5.6,.16,4.8,gx,-.005,gz,stone);
+ e.floor(5.6,.16,4.8,gx,-.005,gz,wood);
  e.floor(2.3,.04,1.9,-8.55,-.065,gz,e.mats.gravel);
  e.wall(5.6,2.8,.28,gx,1.4,gz-2.4,stone);
  for(const side of[-1,1])e.wall(2,2.8,.28,gx+side*1.8,1.4,gz+2.4,stone);

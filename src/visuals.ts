@@ -213,7 +213,7 @@ export function castle(e:Estate){
   [-21,hallHole.left,-16,12],[hallHole.right,21,-16,12],
   [hallHole.left,hallHole.right,-16,hallHole.near],
   [hallHole.left,hallHole.right,HALL_BULKHEAD.top,12]
- ])e.floor(x1-x0,.15,z1-z0,(x0+x1)/2,0,(z0+z1)/2,stone);
+ ])e.floor(x1-x0,.15,z1-z0,(x0+x1)/2,0,(z0+z1)/2,e.mats.wood);
  e.wall(19.2,1,.6,-11.4,.5,12);e.wall(19.2,1,.6,11.4,.5,12);e.wall(42,1,.65,0,4.35,12);e.wall(3.6,1.4,.65,0,4.1,12);
  const cuts=[-21,-18,-16,-12,-10,-1.8,1.8,10,12,16,18,21];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1],mid=(a+b)/2;if(Math.abs(mid)<1.81||[-17,-11,11,17].some(x=>Math.abs(mid-x)<.1))continue;e.wall(b-a,2.85,.6,mid,2.425,12);}
  for(const x of[-17,-11,11,17])windowDetail(e,x,2.45,12.12,2,2.7);

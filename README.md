@@ -22,7 +22,7 @@ Open the Local address printed by Vite (normally http://127.0.0.1:5173). Use a d
 - Escape: leave an interaction or pause exploration.
 - Left/right arrow: rotate an inspected object.
 
-Start by walking through the front entrance and speaking to June. Objectives and the notebook map provide directions. The case requires examining clues, listening to accounts and establishing connections in the notebook. An unsupported accusation can be revised without restarting.
+Start by walking through the front entrance and speaking to June. The on-screen objectives point to your next lead. The case requires examining clues, listening to accounts and establishing connections in the notebook. An unsupported accusation can be revised without restarting.
 
 ## Save
 

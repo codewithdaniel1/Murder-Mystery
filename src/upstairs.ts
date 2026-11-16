@@ -25,7 +25,7 @@ export function buildUpstairs(e:Estate){
   [-21,left,-16,12],[right,21,-16,12],
   [left,right,-16,STAIR.top],[left,right,STAIR.bottom,12]
  ]){
-  e.box(x1-x0,.25,z1-z0,mid(x0,x1),UPPER_FLOOR-.125,mid(z0,z1),stone);
+  e.box(x1-x0,.25,z1-z0,mid(x0,x1),UPPER_FLOOR-.125,mid(z0,z1),wood);
   e.walls.push(e.box(x1-x0,.02,z1-z0,mid(x0,x1),UPPER_FLOOR-.25,mid(z0,z1),plaster));
  }
  const stairDepth=STAIR.bottom-STAIR.top,steps=28,tread=stairDepth/steps;

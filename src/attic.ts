@@ -18,7 +18,7 @@ export function buildAttic(e:Estate){
   [-21,left,-16,12],[right,21,-16,12],
   [left,right,-16,S.top],[left,right,S.bottom,12]
  ]){
-  e.box(x1-x0,.21,z1-z0,mid(x0,x1),ATTIC_FLOOR-.105,mid(z0,z1),stone);
+  e.box(x1-x0,.21,z1-z0,mid(x0,x1),ATTIC_FLOOR-.105,mid(z0,z1),wood);
   e.walls.push(e.box(x1-x0,.02,z1-z0,mid(x0,x1),ATTIC_FLOOR-.22,mid(z0,z1),plaster));
  }
  const length=S.bottom-S.top,tread=length/23;
