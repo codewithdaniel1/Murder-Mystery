@@ -4,38 +4,51 @@ import type {Estate} from './world';
 export const CELLAR_FLOOR=-4.8;
 const CEILING=-1.05;
 const tunnelHalf=1.65;
+export const BULKHEADS=[
+ {x:-26.5,top:-10.5,bottom:-18,direction:-1},
+ {x:0,top:-48,bottom:-42,direction:1}
+] as const;
+const HALF=1.65, OPEN=3.6;
+export const cellarStairAt=(x:number,z:number)=>BULKHEADS.find(s=>
+ Math.abs(x-s.x)<HALF&&(z-s.top)*s.direction>=0&&(s.bottom-z)*s.direction>=0);
+export function cellarStairHeight(s:typeof BULKHEADS[number],z:number){
+ return T.MathUtils.lerp(-.08,CELLAR_FLOOR,(z-s.top)/(s.bottom-s.top));
+}
 export const cellarContains=(x:number,z:number)=>
- (Math.abs(x)<11&&z>-20&&z<-2)||(Math.abs(x)<tunnelHalf&&z>=-40&&z<=-20);
-type Travel={x:number;z:number;yaw:number;below:boolean};
-export const cellarRoutes:Record<string,Travel>={
- 'cellar:hall-down':{x:1.5,z:-12.8,yaw:1.05,below:true},
- 'cellar:hall-up':{x:1.5,z:-10.7,yaw:0,below:false},
- 'cellar:garden-down':{x:0,z:-37.6,yaw:Math.PI,below:true},
- 'cellar:garden-up':{x:0,z:-37.3,yaw:Math.PI,below:false}
-};
+ (Math.abs(x)<11&&z>-20&&z<-2)||(Math.abs(x)<tunnelHalf&&z>=-42&&z<=-20)||
+ (x>=-28.15&&x<=-11&&z>=-21.3&&z<=-18);
+export function cellarGroundOpenings(){
+ return BULKHEADS.map(s=>({left:s.x-HALF,right:s.x+HALF,
+  near:Math.min(s.top,s.top+s.direction*OPEN),far:Math.max(s.top,s.top+s.direction*OPEN)}));
+}
 
 export function buildCellar(e:Estate){
  e.cellarBarriers=[];
  const existing=new Set(e.scene.children);
- const stone=e.mats.stone,wood=e.mats.wood,iron=e.mat(0x303633,.66,.28),brass=e.mats.gold;
+ const stone=e.mats.stone.clone(),wood=e.mats.wood,iron=e.mat(0x303633,.66,.28),brass=e.mats.gold;
+ stone.color.multiplyScalar(.55);
  const concrete=e.mat(0x77756b,.98),canvas=e.mat(0x657058,.98),crate=e.mat(0x8b6842,.91);
  const wall=(w:number,d:number,x:number,z:number,mat=stone)=>{
   e.walls.push(e.box(w,CEILING-CELLAR_FLOOR,d,x,(CEILING+CELLAR_FLOOR)/2,z,mat));
   e.cellarBarriers.push({w,d,x,z});
  };
- const slab=(w:number,d:number,z:number)=>{
-  e.box(w,.23,d,0,CELLAR_FLOOR-.115,z,stone);
-  e.walls.push(e.box(w,.25,d,0,CEILING+.125,z,stone));
+ const slab=(w:number,d:number,z:number,x=0)=>{
+  e.box(w,.23,d,x,CELLAR_FLOOR-.115,z,stone);
+  e.walls.push(e.box(w,.25,d,x,CEILING+.125,z,stone));
  };
- slab(22.4,18,-11);slab(3.75,20,-30);
- for(const x of [-11,11])wall(.35,18,x,-11);
+ slab(22.4,18,-11);slab(3.75,22,-31);slab(17.5,3.3,-19.65,-19.65);
+ wall(.35,18,11,-11);wall(.35,16,-11,-10);
+ wall(.3,3.3,-28.15,-19.65);wall(17.3,.28,-19.5,-21.3);
+ wall(13.85,.28,-17.925,-18);
+ // Open the west wall into the passage beside the bunker.
+ wall(.35,.25,-11,-20.0);
  wall(22,.35,0,-2);
  const wing=11-tunnelHalf;
  for(const side of [-1,1]){
   wall(wing,.35,side*(tunnelHalf+wing/2),-20,concrete);
-  wall(.3,20,side*tunnelHalf,-30);
+  wall(.3,22,side*tunnelHalf,-31);
  }
- wall(3.3,.35,0,-40);
+
  // A central aisle connects the wine vault, stores, bunker and escape passage.
  for(const x of [-3.1,3.1])for(const [a,b] of [[-15.4,-10.3],[-7.7,-2]]){
   wall(.32,b-a,x,(a+b)/2);
@@ -119,9 +132,9 @@ export function buildCellar(e:Estate){
   e.cyl(.1,.25,.17,x,y,z,iron);
   const bulb=e.mat(0xffd98e);bulb.emissive.setHex(0xffb65b);bulb.emissiveIntensity=2;
   e.sphere(.092,x,y-.12,z,bulb,e.scene,1,.68,1);
-  const lamp=new T.PointLight(0xffd3a0,power,11,2);lamp.position.set(x,y-.38,z);e.scene.add(lamp);
+  const lamp=new T.PointLight(0xffc58a,power*.38,8,2);lamp.position.set(x,y-.38,z);e.scene.add(lamp);
  };
- for(const [x,z,power] of [[0,-5,65],[0,-11,75],[-7,-8,125],[7,-8,105],[-5,-17.6,75],[5,-17.6,75],[0,-19,75],[0,-24,68],[0,-30,70],[0,-36,70]])light(x,z,power);
+ for(const [x,z,power] of [[0,-5,65],[0,-11,75],[-7,-8,125],[7,-8,105],[-5,-17.6,75],[5,-17.6,75],[0,-19,75],[0,-24,68],[0,-30,70],[0,-36,70],[0,-40,55],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
  for(const z of [-21,-25,-29,-33,-37]){
   for(const side of [-1,1])e.box(.16,3.7,.23,side*(tunnelHalf-.07),CELLAR_FLOOR+1.85,z,stone);
   e.box(3,.23,.23,0,CEILING-.11,z,stone);
@@ -130,23 +143,33 @@ export function buildCellar(e:Estate){
  const interior=new T.Group();interior.name='Cellar and garden tunnel';
  for(const object of [...e.scene.children])if(!existing.has(object))interior.add(object);
  interior.visible=false;e.scene.add(interior);e.cellarInterior=interior;
- const hatch=(x:number,y:number,z:number,id:string,label:string,verb:string)=>{
-  const g=new T.Group();g.position.set(x,y,z);
-  e.box(1.36,.095,1.48,0,0,0,iron,g);
-  for(let i=0;i<5;i++)e.box(.218,.055,1.3,(i-2)*.243,.055,0,id.includes('hall')?wood:iron,g);
-  for(const zz of [-.56,.56])e.box(1.28,.06,.095,0,.088,zz,brass,g);
-  const ring=new T.Mesh(new T.TorusGeometry(.09,.018,8,18),brass);
-  ring.rotation.x=-Math.PI/2;ring.position.set(0,.135,.28);g.add(ring);
-  e.scene.add(g);e.target(g,id,label,verb);
- };
- hatch(1.5,.105,-12,'cellar:hall-down','Cellar hatch','Climb down');
- hatch(0,.035,-39,'cellar:garden-down','Garden escape hatch','Climb down');
- const ladder=(x:number,z:number,id:string,label:string)=>{
-  const g=new T.Group();g.position.set(x,CELLAR_FLOOR,z);
-  for(const dx of [-.36,.36])e.box(.09,3.65,.1,dx,1.84,0,iron,g);
-  for(let i=0;i<11;i++)e.box(.76,.08,.09,0,.27+i*.31,0,brass,g);
-  solid(.85,.16,x,z);interior.add(g);e.target(g,id,label,'Climb up');
- };
- ladder(1.5,-12,'cellar:hall-up','Ladder to the mansion');
- ladder(0,-39.35,'cellar:garden-up','Ladder to the garden');
+ // The paired leaves are propped open above the stone stair wells.
+ const frame=e.mats.trim,paint=e.mat(0x292421,.73,.2);
+ for(const s of BULKHEADS){
+  const depth=Math.abs(s.bottom-s.top),count=Math.ceil(depth/.255);
+  for(let i=0;i<count;i++){
+   const z=s.top+s.direction*(i+.5)*depth/count,y=cellarStairHeight(s,z);
+   e.box(HALF*2,.18,depth/count+.003,s.x,y-.09,z,stone);
+   e.box(HALF*2,.045,.055,s.x,y-.025,z-s.direction*(depth/count/2-.035),frame);
+  }
+  for(const side of [-1,1]){
+   const edge=s.x+side*HALF;
+   e.box(.24,4.7,depth,edge,-2.41,(s.top+s.bottom)/2,stone);
+   e.box(.33,.14,OPEN,edge,.19,s.top+s.direction*OPEN/2,frame);
+   e.cellarBarriers.push({x:edge,z:(s.top+s.bottom)/2,w:.24,d:depth});
+   e.barrier(edge,s.top+s.direction*OPEN/2,.24,OPEN);
+   const leaf=new T.Group();leaf.position.set(edge,.28,s.top+s.direction*OPEN/2);
+   leaf.rotation.x=s.direction*.12;
+   e.box(.07,1.03,OPEN,0,.43,0,paint,leaf);
+   for(const dz of [-1.36,0,1.36])e.box(.1,.98,.065,0,.43,dz,iron,leaf);
+   for(const y of [.015,.91])e.box(.11,.05,OPEN,0,y,0,iron,leaf);
+   e.box(.12,.14,.3,-side*.08,.66,-s.direction*.65,brass,leaf);
+   e.scene.add(leaf);
+  }
+  const back=s.top+s.direction*OPEN;
+  e.box(3.3,.23,.21,s.x,.115,back,frame);
+  e.barrier(s.x,back,3.3,.21);
+  // Low roof over the buried part leaves headroom below the ground opening.
+  e.box(3.3,.24,depth-OPEN,s.x,-.29,(back+s.bottom)/2,stone);
+ }
 }

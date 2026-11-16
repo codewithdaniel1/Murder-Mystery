@@ -9,30 +9,25 @@ import type {Estate} from '../src/world';
 import {resolveOverlap,clearAt,clearSegment} from '../src/navigation';
 import {STAIR,UPPER_FLOOR} from '../src/upstairs';
 import {decodeSave,encodeSave} from '../src/state';
-import {buildCellar,CELLAR_FLOOR} from '../src/cellar';
+import {buildCellar,BULKHEADS,CELLAR_FLOOR} from '../src/cellar';
 
 describe('walkable surfaces and physical obstacles',()=>{
- it('connects the mansion hatch, cellar rooms, bunker, and garden exit',()=>{
+ it('connects both exterior stairways through the cellar and bunker',()=>{
   const e=furnishedEstate(),s=freshState();buildCellar(e);
-  e.setPose({x:1.5,z:-10.7,yaw:0,pitch:0});
-  expect(e.useCellarLadder('cellar:garden-down')).toBe(false);
-  expect(e.useCellarLadder('cellar:hall-down')).toBe(true);
-  expect(e.pose().elevation).toBe(CELLAR_FLOOR);
-  e.move(-1.5,0,s);e.move(0,3.8,s);
-  e.move(-6.5,0,s);expect(e.pose().x).toBeLessThan(-6);
-  e.move(12.5,0,s);expect(e.pose().x).toBeGreaterThan(5);
-  e.move(-e.pose().x,0,s);e.move(0,-27,s);
-  expect(e.pose().z).toBeLessThan(-35);
-  e.move(8,0,s);expect(e.pose().x).toBeLessThan(1.3);
-  e.move(-e.pose().x,0,s);e.move(0,-4,s);
+  const [corner,garden]=BULKHEADS;
+  e.setPose({x:corner.x,z:corner.top+1,yaw:0,pitch:0});
+  e.move(0,-4,s);
+  expect(e.pose().elevation).toBeLessThan(-1);expect(e.pose().elevation).toBeGreaterThan(CELLAR_FLOOR);
+  e.move(0,-5.8,s);expect(e.pose().elevation).toBe(CELLAR_FLOOR);
+  e.move(16,0,s);expect(e.pose().x).toBeCloseTo(-10.5);
+  e.move(0,2,s);e.move(10.5,0,s);expect(e.pose().x).toBeCloseTo(0);
+  e.move(0,-20,s);
   const saved=decodeSave(encodeSave(s,e.pose()))!;
   e.setPose(s.pose);e.setPose(saved.pose);expect(e.inCellar()).toBe(true);
-  expect(e.useCellarLadder('cellar:garden-up')).toBe(true);
-  expect(e.camera.position.y).toBeGreaterThan(1.5);
-  expect(e.useCellarLadder('cellar:garden-down')).toBe(true);
-  e.move(0,20,s);e.move(0,4,s);e.move(1.5,0,s);
-  expect(e.useCellarLadder('cellar:hall-up')).toBe(true);
-  expect(e.pose().z).toBeCloseTo(-10.7);
+  e.move(0,-12,s);expect(e.pose().z).toBeLessThan(garden.top);expect(e.inCellar()).toBe(false);
+  e.move(0,-9-e.pose().z,s);expect(e.pose().z).toBeCloseTo(-9);
+  e.move(-6.5,0,s);expect(e.pose().x).toBeLessThan(-6);
+  e.move(12.5,0,s);expect(e.pose().x).toBeGreaterThan(5);
  });
  it('connects both storeys through the stair and restores upstairs saves',()=>{
   const e=furnishedEstate(),s=freshState();

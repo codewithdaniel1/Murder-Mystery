@@ -1,4 +1,4 @@
-import {buildCellar,cellarContains,cellarRoutes,CELLAR_FLOOR} from './cellar';
+import {buildCellar,BULKHEADS,cellarContains,cellarStairAt,cellarStairHeight,CELLAR_FLOOR} from './cellar';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {materials,landscape,castle,interiorDetail,sceneryAssets,batchDetail,grandfatherClock} from './visuals';
@@ -187,21 +187,22 @@ export class Estate {
  if(this.dogMotion){this.dogMotion.weight=0;this.dogMotion.phase=0;animateDog(this.dogMotion,0,1/60)}
  }
  private playerSurface(x:number,z:number,from:number){
-  if(from===CELLAR_FLOOR)return cellarContains(x,z)?CELLAR_FLOOR:this.groundHeight(x,z);
+  const stairs=cellarStairAt(x,z);
+  if(stairs)return cellarStairHeight(stairs,z);
+  if(from<-.15)return cellarContains(x,z)?CELLAR_FLOOR:this.groundHeight(x,z);
   if(inStair(x,z))return stairHeight(z);
   if(from>UPPER_FLOOR-.25&&onUpperDeck(x,z))return UPPER_FLOOR;
   return this.groundHeight(x,z);
  }
- inCellar(){return this.playerElevation===CELLAR_FLOOR}
+ inCellar(){return (this.playerElevation??0)<-.15}
  onGroundLevel(){return !this.inCellar()&&(this.playerElevation??0)<1.2}
- useCellarLadder(id:string){
-  if(!Object.hasOwn(cellarRoutes,id))return false;
-  const route=cellarRoutes[id],target=this.targets.find(t=>t.id===id);
-  if(!target||route.below===this.inCellar()||(route.below&&!this.onGroundLevel())||
-     target.root.getWorldPosition(new T.Vector3()).distanceTo(this.camera.position)>3.5)return false;
-  this.setPose({...route,pitch:0,elevation:route.below?CELLAR_FLOOR:undefined});
-  this.lastMove=false;
-  return true;
+ private updateCellarView(menu=false){
+  const depth=menu?0:Math.max(0,-(this.playerElevation??0));
+  if(this.cellarInterior)this.cellarInterior.visible=!menu&&(depth>.15||
+   BULKHEADS.some(s=>Math.hypot(this.camera.position.x-s.x,this.camera.position.z-s.top)<10));
+  const fade=T.MathUtils.smoothstep(depth,.5,3.3);
+  this.scene.environmentIntensity=T.MathUtils.lerp(.42,.065,fade);
+  if(this.sun)this.sun.intensity=T.MathUtils.lerp(3.2,.06,fade);
  }
  pose():Pose{return {x:this.camera.position.x,z:this.camera.position.z,yaw:this.camera.rotation.y,pitch:this.camera.rotation.x,elevation:this.playerElevation};}
  setPose(p:Pose){
@@ -210,15 +211,15 @@ export class Estate {
   const x=saved===undefined&&inStair(p.x,p.z)?STAIR.x+STAIR.width/2+.4:p.x;
   const ground=this.groundHeight(x,p.z);
   this.playerElevation=saved===undefined?ground:this.playerSurface(x,p.z,saved);
-  if(this.cellarInterior)this.cellarInterior.visible=this.inCellar();
   this.camera.rotation.order='YXZ';this.camera.position.set(x,this.playerElevation+1.65,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,'YXZ');
+  this.updateCellarView();
  }
  move(dx:number,dz:number,s:GameState){
  const start=this.camera.position.clone(),ground=[...this.collisionBarriers(s),...(this.stairBarriers??[])];
  for(const a of this.actors.values())if(a.root.visible)ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
  let elevation=this.playerElevation??this.groundHeight(start.x,start.z);
  const upper=this.collisionBarriers(s,true);
- const barriers=()=>elevation===CELLAR_FLOOR?this.cellarBarriers:elevation>UPPER_FLOOR-.25?upper:ground;
+ const barriers=()=>elevation<-.15?this.cellarBarriers:elevation>UPPER_FLOOR-.25?upper:ground;
  let p=resolveOverlap(start,barriers(),s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
  const advance=(x:number,z:number)=>{
   if(Math.abs(x)>=52||z>=53||z<=-49||!clearSegment(p,{x,z},barriers(),s.doors,.26))return;
@@ -230,6 +231,7 @@ export class Estate {
  this.playerElevation=elevation;
  this.lastMove=Math.hypot(p.x-start.x,p.z-start.z)>.0001;this.camera.position.x=p.x;this.camera.position.z=p.z;
  this.camera.position.y=T.MathUtils.lerp(this.camera.position.y,elevation+1.65,.35);
+ this.updateCellarView();
  }
 
  targetAt():Target|null{this.ray.setFromCamera(this.pointer,this.camera);let best:Target|null=null,near=3.25;for(const t of this.targets){if(!t.root.visible||!t.root.parent?.visible)continue;const hit=this.ray.intersectObject(t.root,true)[0];if(hit&&hit.distance<near){const occluder=this.ray.intersectObjects([...this.walls,...[...this.doors.values()].map(d=>d.pivot)],true)[0];if(occluder&&occluder.distance<hit.distance-.08)continue;near=hit.distance;best={...t,distance:near};}}return best;}
@@ -259,7 +261,7 @@ export class Estate {
  if(this.clockPendulum)this.clockPendulum.rotation.z=Math.sin(this.clock*2.7)*.085;
  this.fountainWater?.update(dt,this.camera.position);
  this.gesture=Math.max(0,this.gesture-dt*2);if(!this.held){this.hands.visible=this.gesture>0;this.hands.position.y=this.gesture*.16+(playing&&this.lastMove?Math.sin(this.clock*7)*.008:0);}
- if(menu){this.camera.position.set(17+Math.sin(this.clock*.016)*1.2,4.4,46);this.camera.lookAt(0,6.1,2);this.hands.visible=false;this.clock+=dt;}
+ if(menu){this.updateCellarView(true);this.camera.position.set(17+Math.sin(this.clock*.016)*1.2,4.4,46);this.camera.lookAt(0,6.1,2);this.hands.visible=false;this.clock+=dt;}
  this.composer.render(dt);
  }
 }

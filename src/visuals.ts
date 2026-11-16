@@ -1,3 +1,4 @@
+import {cellarGroundOpenings} from './cellar';
 import * as T from 'three';
 import {BALCONY,buildUpstairs,STAIR,UPPER_FLOOR} from './upstairs';
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
@@ -37,7 +38,13 @@ function windowDetail(e:Estate,x:number,y:number,z:number,w=1.8,h=2.4,solid:bool
  for(const side of[-1,1])box(.045,h,.07,x+side*w/4,y,z+.085,dark);
 }
 export function landscape(e:Estate){
- e.box(220,.2,220,0,-.18,0,e.mats.grass,e.scene,false);
+ const holes=cellarGroundOpenings();
+ const xs=[-110,...holes.flatMap(h=>[h.left,h.right]).sort((a,b)=>a-b),110];
+ for(let i=0;i<xs.length-1;i++){
+  const a=xs[i],b=xs[i+1],x=(a+b)/2,h=holes.find(h=>x>h.left&&x<h.right);
+  for(const [near,far] of h?[[-110,h.near],[h.far,110]]:[[-110,110]])
+   e.box(b-a,.2,far-near,x,-.18,(near+far)/2,e.mats.grass,e.scene,false);
+ }
  // A compacted-earth approach keeps the entrance court from reading as a bed
  // of coarse stone. Fine, low-contrast grain breaks up the surface at a distance.
  const earthCanvas=document.createElement('canvas');earthCanvas.width=earthCanvas.height=512;
@@ -173,7 +180,11 @@ export function normalized(source:T.Object3D,height:number){
  // Preserve the imported scene transform. Position the wrapper, not the GLTF root.
  const anchor=new T.Group();anchor.add(content);anchor.scale.setScalar(scale);anchor.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);const root=new T.Group();root.add(anchor);return root;
 }
-export function staticBatch(e:Estate,source:T.Object3D,positions:[number,number,number,number][],height:number){const model=normalized(source,height);model.updateMatrixWorld(true);model.traverse(obj=>{if(!(obj instanceof T.Mesh))return;const geo=obj.geometry.clone();geo.applyMatrix4(obj.matrixWorld);const material=Array.isArray(obj.material)?obj.material.map(m=>m.clone()):obj.material.clone();for(const m of(Array.isArray(material)?material:[material])){if(m instanceof T.MeshStandardMaterial){m.envMapIntensity=.8;if(m.alphaTest>0){m.alphaTest=.25;m.alphaToCoverage=true;m.side=T.DoubleSide;}if(m.map)m.map.anisotropy=4;}}
+export function staticBatch(e:Estate,source:T.Object3D,positions:[number,number,number,number][],height:number){
+ const openings=cellarGroundOpenings();
+ positions=positions.filter(([x,z])=>!openings.some(h=>x>h.left-2&&x<h.right+2&&z>h.near-2&&z<h.far+2));
+ if(!positions.length)return;
+ const model=normalized(source,height);model.updateMatrixWorld(true);model.traverse(obj=>{if(!(obj instanceof T.Mesh))return;const geo=obj.geometry.clone();geo.applyMatrix4(obj.matrixWorld);const material=Array.isArray(obj.material)?obj.material.map(m=>m.clone()):obj.material.clone();for(const m of(Array.isArray(material)?material:[material])){if(m instanceof T.MeshStandardMaterial){m.envMapIntensity=.8;if(m.alphaTest>0){m.alphaTest=.25;m.alphaToCoverage=true;m.side=T.DoubleSide;}if(m.map)m.map.anisotropy=4;}}
  const inst=new T.InstancedMesh(geo,material,positions.length),matrix=new T.Matrix4(),q=new T.Quaternion();positions.forEach(([x,z,s,angle],i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),angle);matrix.compose(new T.Vector3(x,e.groundHeight(x,z)-.03,z),q,new T.Vector3(s,s,s));inst.setMatrixAt(i,matrix)});inst.name='Grounded planting';inst.castShadow=true;inst.receiveShadow=true;e.scene.add(inst);});}
 export async function sceneryAssets(e:Estate){const loader=new GLTFLoader();
  const load=async(name:string)=>{try{return (await loader.loadAsync(base+'models/'+name+'.glb')).scene}catch(err){console.warn('Scenery asset unavailable:',name,err);return null}};
