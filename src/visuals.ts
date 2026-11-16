@@ -1,3 +1,4 @@
+import {wallSocket} from './detail';
 import {cellarGroundOpenings,HALL_BULKHEAD} from './cellar';
 import * as T from 'three';
 import {BALCONY,buildUpstairs,STAIR,UPPER_FLOOR} from './upstairs';
@@ -12,7 +13,7 @@ export function materials(e:Estate):Promise<unknown>[] {
  const pending:Promise<unknown>[]=[];
  const texture=(name:string,color=false)=>{let finish:()=>void=()=>{};pending.push(new Promise<void>(r=>finish=r));const tex=new T.TextureLoader().load(base+'materials/'+name,finish,undefined,()=>{console.warn('Material unavailable:',name);finish()});tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.anisotropy=Math.min(8,e.renderer.capabilities.getMaxAnisotropy());if(color)tex.colorSpace=T.SRGBColorSpace;return tex;};
  const pbr=(name:string,tint:number,normal=.5)=>new T.MeshStandardMaterial({map:texture(name+'-color.jpg',true),normalMap:texture(name+'-normal.jpg'),roughnessMap:texture(name+'-roughness.jpg'),normalScale:new T.Vector2(normal,normal),color:tint,roughness:1});
- e.mats.stone=pbr('ashlar',0xd7cfbb,.32);e.mats.ashlar=pbr('ashlar',0xe3ded2,.38);e.mats.trim=e.mats.ashlar;
+ e.mats.stone=pbr('ashlar',0xd7cfbb,.52);e.mats.stone.userData.masonryUV=true;e.mats.ashlar=pbr('ashlar',0xe3ded2,.38);e.mats.trim=e.mats.ashlar;
  e.mats.wood=pbr('oak',0x817365,.3);e.mats.panel=pbr('oak',0x8a7156,.16);e.mats.grass=pbr('lawn',0x91b879,.16);
  e.mats.gravel=pbr('gravel',0xc1bbac,.7);e.mats.slate=pbr('slate',0x8b9395,.65);e.mats.plaster=new T.MeshStandardMaterial({color:0xc9c5ad,roughness:.95,normalMap:texture('plaster-normal.jpg'),normalScale:new T.Vector2(.035,.035)});
  e.mats.leather=pbr('leather',0x483026,.3);e.mats.dark.color.setHex(0x242c28);e.mats.gold.color.setHex(0x9f8253);e.mats.gold.roughness=.45;
@@ -159,6 +160,7 @@ function tube(e:Estate,points:T.Vector3[],r:number,mat:T.Material,parent:T.Objec
 export function interiorDetail(e:Estate){
  // Walnut trim and picture rails frame the exposed brick.
  const panel=e.mats.panel,paint=e.mat(0xd7d0bd,.9);
+ for(const side of [-1,1])for(const z of [-6.1,.8,8.1])wallSocket(e,side*6.795,.46,z,-side*Math.PI/2);
  for(const x of[-20.64,-7.22,-6.78,6.78,7.22,20.64])for(let z=-8.8;z<11;z+=1.5){if(Math.abs(x)<8&&z>2.2&&z<7.1)continue;const toward=x<0?1:-1;const face=x+toward*.035;
  for(const zz of[-.64,.64])e.box(.05,1.4,.045,face+toward*.03,.8,z+zz,panel);for(const y of[.14,1.43,1.55,3.68,4.57])e.box(.12,y===1.55?.1:.06,1.5,face,y,z,y>3?paint:panel);
  }
@@ -194,7 +196,7 @@ export function staticBatch(e:Estate,source:T.Object3D,positions:[number,number,
  positions=positions.filter(([x,z])=>!openings.some(h=>x>h.left-2&&x<h.right+2&&z>h.near-2&&z<h.far+2));
  if(!positions.length)return;
  const model=normalized(source,height);model.updateMatrixWorld(true);model.traverse(obj=>{if(!(obj instanceof T.Mesh))return;const geo=obj.geometry.clone();geo.applyMatrix4(obj.matrixWorld);const material=Array.isArray(obj.material)?obj.material.map(m=>m.clone()):obj.material.clone();for(const m of(Array.isArray(material)?material:[material])){if(m instanceof T.MeshStandardMaterial){m.envMapIntensity=.8;if(m.alphaTest>0){m.alphaTest=.25;m.alphaToCoverage=true;m.side=T.DoubleSide;}if(m.map)m.map.anisotropy=4;}}
- const inst=new T.InstancedMesh(geo,material,positions.length),matrix=new T.Matrix4(),q=new T.Quaternion();positions.forEach(([x,z,s,angle],i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),angle);matrix.compose(new T.Vector3(x,e.groundHeight(x,z)-.03,z),q,new T.Vector3(s,s,s));inst.setMatrixAt(i,matrix)});inst.name='Grounded planting';inst.castShadow=true;inst.receiveShadow=true;e.scene.add(inst);});}
+ const inst=new T.InstancedMesh(geo,material,positions.length),matrix=new T.Matrix4(),q=new T.Quaternion();positions.forEach(([x,z,s,angle],i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),angle);matrix.compose(new T.Vector3(x,e.groundHeight(x,z)-.03,z),q,new T.Vector3(s,s,s));inst.setMatrixAt(i,matrix);if(height>5)inst.setColorAt(i,new T.Color().setHSL(.16+(i%4)*.024,.15+(i%3)*.032,.72+(i%5)*.051))});inst.name='Grounded planting';inst.castShadow=true;inst.receiveShadow=true;e.scene.add(inst);});}
 export async function sceneryAssets(e:Estate){const loader=new GLTFLoader();
  const load=async(name:string)=>{try{return (await loader.loadAsync(base+'models/'+name+'.glb')).scene}catch(err){console.warn('Scenery asset unavailable:',name,err);return null}};
  const shrub=await load('shrub');if(shrub){const positions:[number,number,number,number][]=[];for(const x of[-12,12])for(let z=-32.6;z<=-25.5;z+=1.15)positions.push([x,z,.65+seeded()*.2,seeded()*6.28]);for(const x of[-25.5,25.5])for(let z=-16;z<=12;z+=2.2)positions.push([x,z,1+seeded()*.4,seeded()*6.28]);for(const side of[-1,1])for(let i=0;i<35;i++)positions.push([side*(31+seeded()*25),-45+seeded()*100,1+seeded()*1.3,seeded()*6.28]);staticBatch(e,shrub,positions,1.35);}

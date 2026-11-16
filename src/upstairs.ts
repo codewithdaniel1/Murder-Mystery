@@ -1,3 +1,4 @@
+import {wovenFabric} from './detail';
 import * as T from 'three';
 import type {Estate} from './world';
 
@@ -77,7 +78,7 @@ export function buildUpstairs(e:Estate){
  const frontWing=(42-BALCONY.doorWidth)/2;
  for(const side of [-1,1])solid(frontWing,.56,side*(BALCONY.doorWidth+frontWing)/2,12);
 
- const blue=e.mat(0x344d5b,.94),green=e.mat(0x3e554a,.95),linen=e.mat(0xd8cbb2,.97),rose=e.mat(0x743d41,.95);
+ const blue=wovenFabric(e,0x344d5b),green=wovenFabric(e,0x3e554a),linen=wovenFabric(e,0xd8cbb2),rose=wovenFabric(e,0x743d41);
  const item=(w:number,h:number,d:number,x:number,y:number,z:number,m:T.Material)=>e.box(w,h,d,x,UPPER_FLOOR+y,z,m);
  const rug=(x:number,z:number,w:number,d:number,m:T.Material)=>{
   item(w,.025,d,x,.015,z,gold);item(w-.14,.025,d-.14,x,.023,z,m);
@@ -89,7 +90,9 @@ export function buildUpstairs(e:Estate){
    item(3.25,.11,.68,x,y,z,wood);
    if(i<4)for(let j=0;j<13;j++){
     const h=.22+(j%4)*.055;
-    item(.14+(j%3)*.022,h,.23,x-1.32+j*.21,y+.055+h/2,z+.28,[rose,green,blue,linen][(i+j)%4]);
+    const bx=x-1.32+j*.21;
+    item(.14+(j%3)*.022,h,.23,bx,y+.055+h/2,z+.28,[rose,green,blue,linen][(i+j)%4]);
+    for(const mark of [.19,.76])item(.075,.014,.015,bx,y+.055+h*mark,z+.401,gold);
    }
   }
  };
@@ -100,15 +103,32 @@ export function buildUpstairs(e:Estate){
    for(const dx of [-.48,.48])item(.13,.07,.07,x+dx,y,z+.41,gold);
   }
  };
+ const upholstered=(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material)=>
+  e.round(w,h,d,x,UPPER_FLOOR+y,z,mat,e.scene);
  const seat=(x:number,z:number,m:T.Material)=>{
-  solid(1.5,1,x,z);item(1.5,.55,1,x,.33,z,m);item(1.5,.62,.19,x,.83,z-.4,m);
-  for(const dx of [-.63,.63])item(.22,.27,.85,x+dx,.65,z,m);
+  solid(1.5,1,x,z);
+  upholstered(1.38,.28,.9,x,.33,z,panel);upholstered(1.26,.19,.78,x,.51,z+.025,m);
+  upholstered(1.45,.72,.24,x,.82,z-.39,m).rotation.x=-.08;
+  for(const dx of [-.61,.61]){
+   upholstered(.24,.31,.86,x+dx,.65,z,m);
+   for(const dz of [-.32,.32])item(.105,.23,.11,x+dx,.12,z+dz,panel);
+  }
+  for(const dx of [-.42,-.14,.14,.42])for(const dy of [.78,.96])
+   e.sphere(.023,x+dx,UPPER_FLOOR+dy,z-.255,m);
  };
  for(const x of [-16,14]){
   const z=-12.2;solid(2.24,3.24,x,z);
   item(2.23,.31,3.22,x,.36,z,panel);item(2.2,1.25,.17,x,.67,z-1.54,panel);
-  item(2.06,.28,3.03,x,.59,z,linen);item(2.1,.12,2.12,x,.77,z+.46,x<0?blue:green);
-  for(const dx of [-.51,.51])item(.83,.16,.54,x+dx,.82,z-1.04,linen);
+  upholstered(2.06,.28,3.03,x,.59,z,linen);
+  const quilt=x<0?blue:green;
+  upholstered(2.14,.125,2.12,x,.77,z+.46,quilt);
+  for(const dx of [-.79,-.4,0,.4,.79])upholstered(.017,.024,1.92,x+dx,.827,z+.46,quilt);
+  upholstered(2.12,.075,.17,x,.84,z-.52,linen);
+  for(const dx of [-.51,.51]){
+   const pillow=upholstered(.83,.18,.54,x+dx,.82,z-1.04,linen);pillow.rotation.y=dx*.16;
+  }
+  for(const dx of [-1,1])for(const dz of [-1.42,1.42])item(.13,.31,.13,x+dx,.155,z+dz,panel);
+  for(const dx of [-.76,0,.76])item(.18,.51,.065,x+dx,.89,z-1.435,wood);
   chest(x+3.1,-14);rug(x,-9.5,3.2,1.65,x<0?blue:green);
  }
  for(const x of [-17,-12,-8.7])bookcase(x,.1);

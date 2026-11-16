@@ -1,3 +1,4 @@
+import {gardenBench,gardenGroundDetail} from './detail';
 import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -44,7 +45,9 @@ export class Estate {
  loaded.push(sceneryAssets(this),loadCharacters(this));batchDetail(this);this.ready=Promise.all(loaded).then(()=>{});addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));});
  }
  mat(c:number,roughness=.75,metalness=0){return new T.MeshStandardMaterial({color:c,roughness,metalness});}
- box(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,shadow=true){const geo=new T.BoxGeometry(w,h,d);const uv=geo.attributes.uv,pos=geo.attributes.position,n=geo.attributes.normal;for(let i=0;i<uv.count;i++){const nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i));uv.setXY(i,(nx>.5?pos.getZ(i):pos.getX(i))/2,(ny>.5?pos.getZ(i):pos.getY(i))/2);}const m=new T.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=shadow;m.receiveShadow=true;parent.add(m);return m;}
+ box(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,shadow=true){const geo=new T.BoxGeometry(w,h,d);const uv=geo.attributes.uv,pos=geo.attributes.position,n=geo.attributes.normal;for(let i=0;i<uv.count;i++){const nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i)),brick=mat.userData.masonryUV;
+ const px=pos.getX(i)+(brick?x:0),py=pos.getY(i)+(brick?y:0),pz=pos.getZ(i)+(brick?z:0);
+ uv.setXY(i,(nx>.5?pz:px)/2,(ny>.5?pz:py)/2);}const m=new T.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=shadow;m.receiveShadow=true;parent.add(m);return m;}
  round(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D){const m=new T.Mesh(new RoundedBoxGeometry(w,h,d,2,Math.min(w,h,d)*.15),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  cyl(rt:number,rb:number,h:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,seg=16){const geo=new T.CylinderGeometry(rt,rb,h,seg);if(mat===this.mats.stone){const uv=geo.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*Math.PI*(rt+rb)/2,uv.getY(i)*h/2);}const m=new T.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  sphere(rad:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,sx=1,sy=1,sz=1){const m=new T.Mesh(new T.SphereGeometry(rad,24,18),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;parent.add(m);return m;}
@@ -105,7 +108,7 @@ export class Estate {
  table(x:number,z:number,w=2,d=1,h=.92){
   const g=new T.Group();g.position.set(x,0,z);const wood=this.mats.panel,edge=this.mats.wood,gold=this.mats.gold;
   // Layered top, fine perimeter inlay and softened overhanging edge.
-  this.box(w,.12,d,0,h,0,edge,g);this.box(w+.07,.045,d+.07,0,h+.075,0,wood,g);
+  this.box(w,.12,d,0,h,0,edge,g);this.round(w+.07,.052,d+.07,0,h+.075,0,wood,g);
   for(const side of[-1,1]){
    this.box(w-.16,.018,.025,0,h+.1,side*(d/2-.1),gold,g);
    this.box(.025,.018,d-.16,side*(w/2-.1),h+.1,0,gold,g);
@@ -114,15 +117,20 @@ export class Estate {
    const drawers=Math.max(1,Math.min(4,Math.floor((w-.35)/.72)));
    for(let i=0;i<drawers;i++){
     const dw=(w-.48-(drawers-1)*.04)/drawers,dx=-(w-.48)/2+dw/2+i*(dw+.04);
-    this.box(dw,.19,.035,dx,h-.13,z+side*.04,this.mats.wood,g);
+    this.round(dw,.19,.05,dx,h-.13,z+side*.045,this.mats.wood,g);
+    this.round(dw-.15,.118,.018,dx,h-.13,z+side*.073,edge,g);
     for(const sx of[-1,1])this.box(.025,.15,.018,dx+sx*(dw/2-.035),h-.13,z+side*.065,gold,g);
     this.box(dw-.08,.025,.018,dx,h-.045,z+side*.065,gold,g);
-    this.cyl(.027,.027,.075,dx,h-.13,z+side*.095,gold,g,14).rotation.x=Math.PI/2;
+    this.cyl(.027,.027,.05,dx,h-.13,z+side*.092,gold,g,14).rotation.x=Math.PI/2;
+    const pull=new T.Mesh(new T.TorusGeometry(.034,.006,7,16),gold);
+    pull.position.set(dx,h-.15,z+side*.12);g.add(pull);
    }
   }
   for(const a of[-1,1])for(const b of[-1,1]){
    const lx=a*(w/2-.17),lz=b*(d/2-.15);
-   this.box(.15,h-.13,.15,lx,h/2,lz,edge,g);
+   this.round(.175,.245,.175,lx,h-.19,lz,edge,g);
+   this.cyl(.057,.078,h-.34,lx,(h-.16)/2,lz,edge,g,16);
+   this.cyl(.086,.079,.057,lx,.24,lz,wood,g,16);
    for(const yy of[.12,.2,h-.22])this.cyl(.09,.1,.045,lx,yy,lz,gold,g,12);
    this.box(.11,.12,.11,lx,.06,lz,wood,g);
   }
@@ -162,9 +170,20 @@ export class Estate {
  const finial=this.sphere(.25,0,1.9,-30,this.mats.gold);
  this.barrier(0,-30,6.2,6.2);this.target(finial,'fountain','The garden fountain','Visit');
  this.fountainWater=new FountainWater(this.scene);
+ const fountainWet=this.mats.stone.clone();fountainWet.color.multiplyScalar(.58);fountainWet.roughness=.62;
+ this.cyl(3.19,3.22,.12,0,.015,-30,this.mats.stone,this.scene,56);
+ this.cyl(3.153,3.18,.055,0,.17,-30,fountainWet,this.scene,56);
+ for(const [r,y] of [[.71,.21],[.68,.32],[.54,1.44],[1.02,1.49]]){
+  const band=new T.Mesh(new T.TorusGeometry(r,.038,8,40),stone);
+  band.rotation.x=Math.PI/2;band.position.set(0,y,-30);band.receiveShadow=true;this.scene.add(band);
+ }
+ for(let i=0;i<14;i++){
+  const a=i*Math.PI/7,flute=this.sphere(.074,Math.sin(a)*.71,.5,Math.cos(a)*.71-30,stone,this.scene,.75,3.2,.75);
+  flute.rotation.z=-Math.sin(a)*.13;flute.rotation.x=Math.cos(a)*.13;
+ }
  for(const x of[-12,12]){this.barrier(x,-29,2.2,8.2);}for(let i=0;i<6;i++){const x=-16+i*6;this.floor(4,.32,2,x,.1,-40,this.mats.stone);this.barrier(x,-40,4,2);}
  const flowers=new T.InstancedMesh(new T.SphereGeometry(.07,5,4),this.mat(0xddbd98),480),stems=new T.InstancedMesh(new T.CylinderGeometry(.018,.025,.45,4),this.mats.leaf,480);const m=new T.Matrix4();for(let i=0;i<480;i++){const x=-18+rnd()*36,z=-39.2-rnd()*1.5,y=.4+rnd()*.4;m.makeTranslation(x,y,z);flowers.setMatrixAt(i,m);m.makeTranslation(x,y-.2,z);stems.setMatrixAt(i,m);}this.scene.add(flowers,stems);
- for(const x of[-7,7]){this.barrier(x,-36,2.8,.9);this.box(2.6,.12,.65,x,.55,-36,this.mats.wood);this.box(2.68,.035,.72,x,.63,-36,this.mats.panel);this.box(2.6,.6,.12,x,.95,-36.3,this.mats.wood);for(let i=0;i<7;i++)this.box(.055,.43,.045,x-.78+i*.26,.96,-36.22,this.mats.panel);for(const a of[-1,1]){this.box(.1,.6,.55,x+a,.22,-36,this.mats.dark);this.box(.17,.09,.66,x+a,.59,-36,this.mats.panel);for(const z of[-.24,.24])this.box(.15,.09,.13,x+a,.08,-36+z,this.mats.gold);}this.box(2.35,.3,.12,x,.28,-35.72,this.mats.panel);}
+ for(const x of [-7,7])gardenBench(this,x,-36);
  // Matching front and rear greenhouse entries connect both garden paths.
  const glass=this.mats.glass,metal=this.mats.dark;this.floor(10,.15,8,26,0,-29,this.mat(0x8e9277));for(const x of[21,31]){this.box(.1,3.5,8,x,1.75,-29,glass,this.scene,false);this.barrier(x,-29,.2,8);}
  for(const z of[-25,-33]){for(const x of[22.8,29.2]){this.box(3.6,3.5,.1,x,1.75,z,glass,this.scene,false);this.barrier(x,z,3.6,.2);}for(const x of[24.6,27.4])this.box(.08,3.6,.09,x,1.8,z,metal);this.box(2.8,.1,.09,26,3.52,z,metal);}
@@ -172,7 +191,7 @@ export class Estate {
  for(const x of[21,31])for(let z=-33;z<=-25;z+=2)this.box(.09,3.6,.08,x,1.8,z,metal);
  for(const x of[23.5,28.5]){const roof=this.box(5.5,.04,8.2,x,4.15,-29,glass,this.scene,false);roof.rotation.z=x<26?.24:-.24;}this.box(.09,.09,8.3,26,4.85,-29,metal);
  this.table(28.8,-30,2.8,1.2,.8);for(let i=0;i<6;i++){const x=22+rnd()*1.2,z=-26-i;this.cyl(.3,.22,.5,x,.3,z,this.mat(0xa66e4d));}
- const tray=new T.Group();tray.position.set(28.8,.93,-30);this.box(1.2,.2,.7,0,0,0,this.mats.wood,tray);this.box(1,.08,.6,0,.13,0,this.mat(0x514335),tray);this.scene.add(tray);this.target(tray,'falcon','Disturbed potting tray','Search');
+ const tray=new T.Group();tray.position.set(28.8,.93,-30);this.box(1.2,.2,.7,0,0,0,this.mats.wood,tray);this.box(1,.08,.6,0,.13,0,this.mat(0x514335),tray);this.scene.add(tray);this.target(tray,'falcon','Disturbed potting tray','Search');gardenGroundDetail(this);
 
  }
  addActor(id:PersonId,x:number,z:number,color:number,skin:number,female:boolean){const root=new T.Group();root.position.set(x,.13,z);const coat=this.mat(color),skinMat=this.mat(skin),trousers=this.mat(0x343936),boot=this.mats.black;this.round(.45,.72,.27,0,1.04,0,coat,root);this.round(.5,.3,.28,0,1.35,0,coat,root);if(female)this.cyl(.23,.34,.64,0,.65,0,coat,root);this.box(.1,.4,.015,0,1.29,.16,this.mats.cream,root);this.box(.04,.29,.02,0,1.25,.18,this.mats.dark,root);const head=new T.Group();head.position.y=1.65;this.sphere(.17,0,0,0,skinMat,head,.86,1.2,.91);this.sphere(.17,0,.07,-.025,this.mat(id==='mara'||id==='june'?0x8a8374:0x4c3c30),head,.92,.8,.96);this.sphere(.045,0,-.015,.15,skinMat,head,.6,1,.8);for(const a of[-1,1])this.sphere(.014,a*.065,.015,.147,this.mats.black,head,1,.7,.5);this.box(.05,.009,.01,0,-.08,.15,this.mat(0x815d4d),head);if(id==='tomas'||id==='jonah'){this.cyl(.2,.2,.08,0,.18,0,coat,head);this.box(.32,.025,.14,0,.145,.14,coat,head);}root.add(head);

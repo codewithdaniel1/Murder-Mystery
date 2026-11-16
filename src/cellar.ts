@@ -119,10 +119,12 @@ export function buildCellar(e:Estate){
   const rack=new T.Group();rack.position.set(x,CELLAR_FLOOR,z);
   rack.rotation.y=sideWall?Math.PI/2:Math.PI;e.scene.add(rack);
   e.box(6.4,2.65,.09,0,1.325,-.34,wood,rack);
+  e.round(6.48,.11,.76,0,2.66,0,e.mats.panel,rack);
   for(let i=0;i<8;i++)e.box(.07,2.65,.7,-3.2+i*6.4/7,1.325,0,wood,rack);
   for(let shelf=0;shelf<5;shelf++){
    const y=.23+shelf*.51;
    e.box(6.4,.075,.7,0,y,0,wood,rack);
+   e.round(6.42,.042,.045,0,y+.017,.35,e.mats.panel,rack);
    for(let i=0;i<32;i++)if((i+shelf*3)%13!==0){
     bottlePositions.push(rack.localToWorld(new T.Vector3(-3+i*.19,y+.0375,0)));
    }
@@ -140,16 +142,21 @@ export function buildCellar(e:Estate){
   const bottles=new T.InstancedMesh(part.shape,part.mat,bottlePositions.length),matrix=new T.Matrix4();
   for(const [i,p] of bottlePositions.entries()){
    bottles.setMatrixAt(i,matrix.makeTranslation(p.x,p.y+part.y,p.z));
-   if(part===bottleParts[0])bottles.setColorAt(i,new T.Color([0xffffff,0xbec491,0xb9b298][i%3]));
+   const palette=part===bottleParts[4]?[0xf7e9d4,0xdfd1b2,0xe8cba0,0xffffff]:
+    part===bottleParts[3]?[0xffffff,0xd18263,0xc7956b,0x9c5b53]:[0xffffff,0xbec491,0xb9b298,0xeeeeaf];
+   bottles.setColorAt(i,new T.Color(palette[i%palette.length]));
   }
   bottles.receiveShadow=true;bottles.instanceMatrix.needsUpdate=true;e.scene.add(bottles);
  }
  for(const x of [-9.7,-8.2,-6.7]){
   const z=-5.25;
   solid(1.14,1.14,x,z);
-  e.cyl(.49,.51,1.04,x,CELLAR_FLOOR+.52,z,wood,e.scene,20);
-  for(const y of [.13,.52,.91])e.cyl(.518,.518,.07,x,CELLAR_FLOOR+y,z,iron,e.scene,20);
-  e.cyl(.055,.055,.023,x,CELLAR_FLOOR+1.052,z,brass);
+  const barrel=new T.LatheGeometry([new T.Vector2(.435,0),new T.Vector2(.46,.08),new T.Vector2(.51,.32),new T.Vector2(.53,.52),new T.Vector2(.51,.74),new T.Vector2(.46,.96),new T.Vector2(.435,1.04)],30);
+  const body=new T.Mesh(barrel,wood);body.position.set(x,CELLAR_FLOOR,z);body.castShadow=true;body.receiveShadow=true;e.scene.add(body);
+  for(const [y,r] of [[.115,.47],[.3,.514],[.74,.517],[.925,.471]])e.cyl(r,r,.05,x,CELLAR_FLOOR+y,z,iron,e.scene,30);
+  e.cyl(.439,.439,.045,x,CELLAR_FLOOR+1.018,z,e.mats.panel,e.scene,30);
+  for(const dx of [-.21,-.07,.07,.21])e.box(.009,.005,.77,x+dx,CELLAR_FLOOR+1.043,z,iron);
+  e.cyl(.043,.043,.023,x,CELLAR_FLOOR+1.052,z,brass);
  }
  for(const [x,z] of [[8.8,-11.95],[9.3,-7],[5.2,-4.2],[8.4,-4.2]]){
   solid(1.45,1.1,x,z);

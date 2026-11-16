@@ -50,7 +50,8 @@ export class FountainWater {
 
  constructor(parent:T.Object3D){
   this.group.position.set(0,0,-30);parent.add(this.group);
-  const poolMaterial=new T.MeshStandardMaterial({map:this.surface,color:0xa7d3cf,roughness:.23,metalness:.08,transparent:true,opacity:.92,depthWrite:false,side:T.DoubleSide});
+  const poolMaterial=new T.MeshPhysicalMaterial({map:this.surface,bumpMap:this.surface,bumpScale:.22,color:0x8eb5ad,
+   roughness:.2,clearcoat:.65,clearcoatRoughness:.16,envMapIntensity:1.1,transparent:true,opacity:.87,depthWrite:false,side:T.DoubleSide});
   for(const [radius,y] of [[2.78,LOWER_WATER_Y],[1.08,UPPER_WATER_Y]]){
    const pool=new T.Mesh(new T.CircleGeometry(radius,64),poolMaterial);
    pool.rotation.x=-Math.PI/2;pool.position.y=y;pool.receiveShadow=true;
@@ -73,7 +74,7 @@ export class FountainWater {
    makeStream(new T.CubicBezierCurve3(
     new T.Vector3(c*1.2,1.76,s*1.2),new T.Vector3(c*1.28,1.53,s*1.28),
     new T.Vector3(c*1.46,.58,s*1.46),new T.Vector3(c*1.59,LOWER_WATER_Y+.015,s*1.59)
-   ),.028);
+   ),.014+(i%4)*.005);
   }
   const ringGeometry=new T.RingGeometry(.075,.092,32);
   for(let i=0;i<8;i++){
