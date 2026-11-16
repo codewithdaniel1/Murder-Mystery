@@ -57,6 +57,8 @@ describe('walkable surfaces and physical obstacles',()=>{
   e.move(16,0,s);expect(e.pose().x).toBeCloseTo(-10.5);
   // The west stair leads straight to the wine vault without crossing the hub.
   e.move(3.05,0,s);e.move(0,3.9,s);expect(e.pose().z).toBeCloseTo(-15.4);
+  e.move(0,6.4,s);e.move(5.45,0,s);expect(e.pose().x).toBeCloseTo(-2);
+  e.move(-5.45,0,s);e.move(0,-6.4,s);
   e.move(0,-3.9,s);e.move(-3.05,0,s);
   e.move(0,2,s);e.move(10.5,0,s);expect(e.pose().x).toBeCloseTo(0);
   e.move(0,-20,s);

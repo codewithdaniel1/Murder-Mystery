@@ -114,14 +114,18 @@ export function buildCellar(e:Estate){
  portal(0,-19.94,3.05,false,bunkerBrick);
 
  const bottlePositions:T.Vector3[]=[];
- for(const z of [-14,-3.05]){
-  solid(6.4,.7,-7,z);
-  item(6.4,2.65,.09,-7,1.325,z+(z<-8?-.34:.34),wood);
-  for(let i=0;i<8;i++)item(.07,2.65,.7,-10.2+i*6.4/7,1.325,z,wood);
+ for(const [x,z,sideWall] of [[-10.4,-11.7,true],[-7,-3.05,false]] as const){
+  solid(sideWall?.7:6.4,sideWall?6.4:.7,x,z);
+  const rack=new T.Group();rack.position.set(x,CELLAR_FLOOR,z);
+  rack.rotation.y=sideWall?Math.PI/2:Math.PI;e.scene.add(rack);
+  e.box(6.4,2.65,.09,0,1.325,-.34,wood,rack);
+  for(let i=0;i<8;i++)e.box(.07,2.65,.7,-3.2+i*6.4/7,1.325,0,wood,rack);
   for(let shelf=0;shelf<5;shelf++){
    const y=.23+shelf*.51;
-   item(6.4,.075,.7,-7,y,z,wood);
-   for(let i=0;i<32;i++)if((i+shelf*3)%13!==0)bottlePositions.push(new T.Vector3(-10+i*.19,CELLAR_FLOOR+y+.0375,z));
+   e.box(6.4,.075,.7,0,y,0,wood,rack);
+   for(let i=0;i<32;i++)if((i+shelf*3)%13!==0){
+    bottlePositions.push(rack.localToWorld(new T.Vector3(-3+i*.19,y+.0375,0)));
+   }
   }
  }
  // Shared meshes keep hundreds of bottles inexpensive to render.
@@ -140,11 +144,12 @@ export function buildCellar(e:Estate){
   }
   bottles.receiveShadow=true;bottles.instanceMatrix.needsUpdate=true;e.scene.add(bottles);
  }
- for(const z of [-11.7,-9.7,-7.7]){
-  solid(1.14,1.14,-9.7,z);
-  e.cyl(.49,.51,1.04,-9.7,CELLAR_FLOOR+.52,z,wood,e.scene,20);
-  for(const y of [.13,.52,.91])e.cyl(.518,.518,.07,-9.7,CELLAR_FLOOR+y,z,iron,e.scene,20);
-  e.cyl(.055,.055,.023,-9.7,CELLAR_FLOOR+1.052,z,brass);
+ for(const x of [-9.7,-8.2,-6.7]){
+  const z=-5.25;
+  solid(1.14,1.14,x,z);
+  e.cyl(.49,.51,1.04,x,CELLAR_FLOOR+.52,z,wood,e.scene,20);
+  for(const y of [.13,.52,.91])e.cyl(.518,.518,.07,x,CELLAR_FLOOR+y,z,iron,e.scene,20);
+  e.cyl(.055,.055,.023,x,CELLAR_FLOOR+1.052,z,brass);
  }
  for(const [x,z] of [[8.8,-11.95],[9.3,-7],[5.2,-4.2],[8.4,-4.2]]){
   solid(1.45,1.1,x,z);
