@@ -82,7 +82,7 @@ export const WITNESSES={
   first:'Most afternoons. I keep the paths clear and try to leave the rabbits some cover.',
   reply:'I heard the hatch bang yesterday and thought someone was coming up. The wind had caught my empty barrow and tipped it against the stone.'},
  cartwright:{name:'Mabel Cartwright',role:'Estate cook',initials:'MC',template:'mara',level:'ground',coat:0x645653,hair:0x7b6650,
-  route:[[-10,-13.35],[-7.1,-13.35],[-9.4,-12.7]],question:'When did you clear supper?',
+  route:[[-15.6,-13.4],[-17.45,-13.25],[-16.9,-11.65]],question:'When did you clear supper?',
   first:'Mind the kitchen passage. The last batch of tea went to the lodge, and I’ve yet to get my tray back.',
   reply:'We stacked the supper plates at about quarter past eight, well before the half-hour chime. I remember because the grocer’s van had only just left.'},
  foster:{name:'Lucy Foster',role:'Attic maid',initials:'LF',template:'june',level:'attic',coat:0x69616d,hair:0x4c3b2e,
@@ -218,7 +218,7 @@ export class Yard {
    if(!w.motion)continue;
    const spec=WITNESSES[w.id];
    const route=w.id==='cartwright'&&state.flags.deliveryParked?[
-    [-10,-13.35],[-7.1,-13.35],[-9.4,-12.7],[-12,-13.38],[-17.5,-13.38],[-12,-13.38]
+    [-15.6,-13.4],[-17.45,-13.25],[-16.9,-11.65],[-14.5,-13.38],[-7.5,-13.38],[-14.5,-13.38]
    ]:spec.route;
    const [tx,tz]=route[w.index],p=w.root.position;
    const near=e.staffLevel()===spec.level&&Math.hypot(player.x-p.x,player.z-p.z)<2.65;

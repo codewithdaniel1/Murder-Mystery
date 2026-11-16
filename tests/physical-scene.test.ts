@@ -18,12 +18,15 @@ describe('walkable surfaces and physical obstacles',()=>{
  it('connects the drive to the gatehouse and the kitchen to the scullery',()=>{
   const e=furnishedEstate(),s=freshState();landscape(e);buildWartimeEstate(e);
   e.setPose({x:-6.5,z:44.5,yaw:0,pitch:0});e.move(-5.5,0,s);
-  expect(e.pose().x).toBeGreaterThan(-9.7);
-  s.doors.gatehouse=true;e.doors.get('gatehouse')!.pivot.rotation.y=-Math.PI/2;
-  e.move(-12-e.pose().x,0,s);expect(e.pose().x).toBeCloseTo(-12);
+  expect(e.pose().x).toBeCloseTo(-12);
   e.setPose({x:-9.2,z:-8.6,yaw:0,pitch:0});e.move(0,-4.75,s);
   expect(e.pose().z).toBeCloseTo(-13.35);
   e.move(-8.5,0,s);expect(e.pose().x).toBeCloseTo(-17.7);
+  e.scene.updateMatrixWorld(true);
+  const partitionHits=(height:number)=>new T.Raycaster(new T.Vector3(-12.9,height,-13.38),new T.Vector3(-1,0,0),0,1).intersectObjects(e.walls);
+  expect(partitionHits(1.65)).toHaveLength(0);
+  expect(partitionHits(4.7).length).toBeGreaterThan(0);
+  expect(e.targets.find(t=>t.id==='kitchen-wireless')!.root.position.x).toBeLessThan(e.pose().x);
  });
  it('stops the delivery van for the player and restores a completed delivery',()=>{
   const e=furnishedEstate(),s=freshState();e.dog=new T.Group();

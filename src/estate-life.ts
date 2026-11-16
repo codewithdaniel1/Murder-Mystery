@@ -1,8 +1,10 @@
 import * as T from 'three';
 import type {Estate} from './world';
 import type {GameState} from './state';
+import {UPPER_FLOOR} from './upstairs';
 export const VAN={x:-2.2,start:71,parked:47,length:4.55};
-export const KITCHEN_RADIO={x:-6.1,z:-15.05};
+export const KITCHEN_RADIO={x:-20.1,z:-11.75};
+const PANTRY_DELIVERY={x:-6.05,z:-14.9};
 export const deliveryZ=(progress:number)=>T.MathUtils.lerp(VAN.start,VAN.parked,T.MathUtils.smoothstep(progress,0,1));
 export function advanceDelivery(progress:number,dt:number,people:{x:number;z:number}[]){
  const next=Math.min(1,progress+dt/14),from=deliveryZ(progress),to=deliveryZ(next);
@@ -71,7 +73,7 @@ export class EstateDelivery {
    for(const y of[-.13,.13])e.box(.67,.065,.455,x,y,0,e.mats.panel,this.crates);
   }
   this.crates.visible=false;e.scene.add(this.crates);
-  this.pantry=new T.Group();this.pantry.position.set(-19.05,.3,-14.88);
+  this.pantry=new T.Group();this.pantry.position.set(PANTRY_DELIVERY.x,.3,PANTRY_DELIVERY.z);
   e.box(.61,.44,.47,0,0,0,e.mats.wood,this.pantry);
   for(const z of[-.17,.11])e.box(.64,.023,.055,0,.23,z,e.mats.panel,this.pantry);
   this.pantry.visible=false;e.scene.add(this.pantry);
@@ -94,7 +96,7 @@ export class EstateDelivery {
  loadObstacles(){
   const boxes=[];
   if(this.crates.visible)boxes.push({x:-11.8,z:46.84,w:1.42,d:.455});
-  if(this.pantry.visible)boxes.push({x:-19.05,z:-14.88,w:.64,d:.47});
+  if(this.pantry.visible)boxes.push({...PANTRY_DELIVERY,w:.64,d:.47});
   return boxes;
  }
 }
@@ -114,7 +116,7 @@ export function buildWartimeEstate(e:Estate){
  e.wall(.28,2.8,4.8,gx-2.8,1.4,gz,stone);
  for(const side of[-1,1])e.wall(.28,2.8,1.45,gx+2.8,1.4,gz+side*1.675,stone);
  e.wall(.28,.57,1.9,gx+2.8,2.515,gz,stone);
- e.addDoor('gatehouse',gx+2.8,gz-.9,-Math.PI/2,false,floor,1.8,2.15,'Gatehouse door');
+ e.addDoor('gatehouse',gx+2.8,gz-.9,-Math.PI/2,true,floor,1.8,2.15,'Gatehouse door');
  for(const x of[-.83,0,.83])e.box(.065,1.06,.07,gx+x,1.72,gz+2.6,panel);
  for(const y of[1.21,1.72,2.24])e.box(1.74,.067,.08,gx,y,gz+2.6,panel);
  for(const side of[-1,1]){
@@ -127,16 +129,22 @@ export function buildWartimeEstate(e:Estate){
  e.target(phone(e,gx-1.64,1.12,gz-.62),'gate-phone','Gatehouse telephone','Use');
  e.target(e.paper('VEHICLE LOG',['Yesterday · 8.12 pm','Grocer’s van · pantry call','Saloon: no entry at that time'],gx-1.52,1.041,gz+.5,true),'vehicle-log','Gatehouse vehicle log','Read');
 
- // Two rooms in the mansion’s west service passage, with a serving opening between them.
+ // The scullery is off the passage, with the kitchen around the corner.
+ // Build the partition to the underside of the upstairs slab.
  const wallX=-13.4,doorZ=-13.38;
- e.wall(.26,3.5,1.7,wallX,1.75,-15.16,e.mats.plaster);
- e.wall(.26,3.5,1.37,wallX,1.75,-10.85,e.mats.plaster);
- e.wall(.26,1.07,1.85,wallX,2.97,doorZ,e.mats.plaster);
- e.box(.5,.11,1.98,wallX,2.42,doorZ,panel);
- e.box(.35,.93,1.02,wallX,.47,-11.87,e.mats.plaster);
- e.box(.47,.12,1.14,wallX,.99,-11.87,wood);e.barrier(wallX,-11.87,.4,1.1);
- e.box(.33,.92,1.02,wallX,2.34,-11.87,e.mats.plaster);
- const rangeX=-10.9,rangeZ=-15.02;
+ const ceiling=UPPER_FLOOR-.25;
+ const partition=(z0:number,z1:number,y0=0,y1=ceiling)=>
+  e.wall(.26,y1-y0,z1-z0,wallX,(y0+y1)/2,(z0+z1)/2,e.mats.plaster);
+ const doorNear=doorZ-.97,doorFar=doorZ+.97,hatchNear=-12.25,hatchFar=-11.27;
+ partition(-16,doorNear);
+ partition(doorNear,doorFar,2.47);
+ partition(doorFar,hatchNear);
+ partition(hatchNear,hatchFar,0,.99);
+ partition(hatchNear,hatchFar,1.92);
+ partition(hatchFar,-10);
+ e.box(.5,.11,1.98,wallX,2.445,doorZ,panel);
+ e.box(.47,.12,hatchFar-hatchNear+.12,wallX,.99,(hatchNear+hatchFar)/2,wood);
+ const rangeX=-14.95,rangeZ=-15.02;
  e.box(2.22,.92,.94,rangeX,.54,rangeZ,iron);e.barrier(rangeX,rangeZ,2.22,.94);
  for(const x of[-.62,.02,.61]){
   e.cyl(.252,.252,.037,rangeX+x,1.018,rangeZ, dark,e.scene,18);
@@ -145,32 +153,35 @@ export function buildWartimeEstate(e:Estate){
  }
  e.box(.19,2,.22,rangeX-.79,1.9,rangeZ-.21,iron);
  e.cyl(.18,.19,.24,rangeX+.61,1.15,rangeZ,enamel);
- e.table(-7.6,-14.91,3.1,1.06);
- e.target(radio(e,KITCHEN_RADIO.x,1.18,KITCHEN_RADIO.z),'kitchen-wireless','Kitchen wireless','Tune');
- e.target(e.paper('RATION BOOK',['SUGAR · TEA · BUTTER','Household coupons'], -8.05,1.04,-14.91,true),'ration-book','Household ration book','Read');
- const mending=new T.Group();mending.position.set(-8.75,1.031,-14.89);e.scene.add(mending);
+ // Keep the counter outside the round corner tower's footprint.
+ e.table(-19.15,-11.7,2.62,.84);
+ const wireless=radio(e,KITCHEN_RADIO.x,1.185,KITCHEN_RADIO.z);wireless.rotation.y=Math.PI;
+ e.target(wireless,'kitchen-wireless','Kitchen wireless','Tune');
+ e.target(e.paper('RATION BOOK',['SUGAR · TEA · BUTTER','Household coupons'],-19.25,1.04,-11.7,true),'ration-book','Household ration book','Read');
+ const mending=new T.Group();mending.position.set(-18.38,1.031,-11.69);e.scene.add(mending);
  const cloth=e.mat(0x777d58,.96),patch=e.mat(0x62694d,.98);
  e.round(.39,.05,.32,0,.018,0,cloth,mending);
  e.box(.14,.007,.097,-.056,.046,.045,patch,mending);
  for(let i=0;i<6;i++)e.box(.012,.005,.006,-.117+i*.025,.051,.087,cream,mending);
  e.cyl(.035,.035,.07,.23,.046,-.077,wood,mending,9).rotation.z=Math.PI/2;
  e.target(mending,'mended-clothes','Mended work shirt','Inspect');
- e.box(2.7,.82,.79,-16.4,.48,-15.24,wood);e.barrier(-16.4,-15.24,2.7,.79);
- e.box(1.22,.19,.72,-16.45,.955,-15.21,enamel);
- e.box(.98,.034,.49,-16.45,1.054,-15.2,iron);
- e.cyl(.026,.041,.26,-16.45,1.13,-15.48,gold);
- e.box(.047,.045,.19,-16.45,1.253,-15.4,gold);
- for(const z of[-14.25,-13.14,-12.03]){
-  e.box(.64,2.16,1.04,-20.36,1.16,z,panel);e.barrier(-20.36,z,.64,1.04);
-  e.box(.06,1.9,.78,-20.01,1.18,z,wood);
-  e.sphere(.046,-19.96,1.14,z+.22,gold);
+ const sinkX=-10.75;
+ e.box(2.5,.82,.79,sinkX,.48,-15.24,wood);e.barrier(sinkX,-15.24,2.5,.79);
+ e.box(1.22,.19,.72,sinkX,.955,-15.21,enamel);
+ e.box(.98,.034,.49,sinkX,1.054,-15.2,iron);
+ e.cyl(.026,.041,.26,sinkX,1.13,-15.48,gold);
+ e.box(.047,.045,.19,sinkX,1.253,-15.4,gold);
+ for(const x of[-8.62,-7.78,-6.94]){
+  e.box(.8,2.16,.64,x,1.16,-15.3,panel);e.barrier(x,-15.3,.8,.64);
+  e.box(.64,1.9,.06,x,1.18,-14.95,wood);
+  e.sphere(.046,x+.2,1.14,-14.9,gold);
  }
  for(let i=0;i<5;i++){
-  const x=-16.2+i*.48;
+  const x=sinkX-.96+i*.48;
   e.box(.32,.09,.11,x,2.19,-15.69,wood);
   e.cyl(.07,.137,.15,x,2.05,-15.56,gold,e.scene,12);
  }
- for(const x of[-8.3,-7.55,-6.8])e.box(.64,1.24,.028,x,2.82,-15.66,dark);
+ for(const x of[-19.9,-19.15,-18.4])e.box(.64,1.24,.028,x,2.82,-10.19,dark);
 
  // Productive garden beneath the lodge windows, with the fountain visible beyond.
  const leaf=e.mats.leaf,bean=e.mat(0x697649,.96);
