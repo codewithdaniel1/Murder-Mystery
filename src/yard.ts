@@ -76,7 +76,7 @@ export const WITNESSES={
  mercer:{name:'Agnes Mercer',role:'Lodge keeper',initials:'AM',template:'june',level:'ground',coat:0x655344,hair:0x514a43,
   route:[[-4.7,-57.2],[-4.7,-64.1],[-5.65,-62]],question:'Where do the cellar stairs lead?',
   first:'I’m airing the sitting room. It gets cold here before the main house does.',
-  reply:'Go out the back door and take the path around the hatch. The stairs at the far end lead back under the garden to the mansion cellar.'},
+  reply:'Follow the gravel from the back door, across the woodland path. The hatch is a little way past it. The stairs lead under the garden to the mansion cellar.'},
  hayes:{name:'Albert Hayes',role:'Woodland groundskeeper',initials:'AH',template:'tomas',level:'ground',coat:0x5b6551,hair:0x69594b,
   route:[[8,-72.5],[11,-75.2],[7.3,-75.6]],question:'Do you often work behind the lodge?',
   first:'Most afternoons. I keep the paths clear and try to leave the rabbits some cover.',

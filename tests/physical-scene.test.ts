@@ -67,10 +67,11 @@ describe('walkable surfaces and physical obstacles',()=>{
    e.move(-x,0,s);
   }
   e.move(0,-10.1,s);expect(e.pose().z).toBeCloseTo(-70.1);
+  e.move(0,-8.9,s);expect(e.pose().z).toBeCloseTo(-79);
   for(const x of[-3.1,3.1]){
-   e.setPose({x:0,z:-70.1,yaw:0,pitch:0});
-   e.move(x,0,s);e.move(0,-5.6,s);e.move(-x,0,s);
-   e.move(0,-2.3,s);expect(e.pose().z).toBeCloseTo(-78);expect(e.pose().x).toBeCloseTo(0);
+   e.setPose({x:0,z:-81.6,yaw:0,pitch:0});
+   e.move(x,0,s);e.move(0,-5.4,s);e.move(-x,0,s);
+   expect(e.pose().z).toBeCloseTo(-87);expect(e.pose().x).toBeCloseTo(0);
   }
   const entry=BULKHEADS[1];
   s.doors[entry.id]=true;e.syncBulkheads(s);

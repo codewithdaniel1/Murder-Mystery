@@ -6,7 +6,7 @@ const CEILING=-1.05;
 const tunnelHalf=1.65;
 export const BULKHEADS=[
  {id:'cellar-mansion',label:'Mansion cellar doors',x:-26.5,top:-10.5,bottom:-18,direction:-1,underpass:false},
- {id:'cellar-garden',label:'Lodge cellar doors',x:0,top:-74.5,bottom:-68.5,direction:1,underpass:false},
+ {id:'cellar-garden',label:'Lodge cellar doors',x:0,top:-86,bottom:-80,direction:1,underpass:false},
  {id:'cellar-hall',label:'Hall cellar doors',x:-.65,top:-5.7,bottom:-13.2,direction:-1,underpass:true}
 ] as const;
 export const LODGE_BULKHEAD=BULKHEADS[1];

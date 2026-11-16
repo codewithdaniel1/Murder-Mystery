@@ -18,6 +18,21 @@ async function character(name:string){
 }
 
 describe('NPC animation stability',()=>{
+ it('keeps the cellar lantern in the moving hand and hanging upright',async()=>{
+  const {actor,motion,frame,hand}=await character('harper');
+  const lantern=new T.Group();motion.lantern=lantern;actor.add(lantern);
+  actor.position.set(-5,-4.8,-43);actor.rotation.y=1.4;
+  const first=new T.Vector3(),point=new T.Vector3();
+  for(let i=0;i<90;i++){
+   frame(i<60,null);lantern.getWorldPosition(point);
+   const finger=motion.bones.get('index_01_r')!.getWorldPosition(new T.Vector3());
+   expect(point.distanceTo(hand())).toBeLessThan(.15);
+   expect(point.distanceTo(finger)).toBeLessThan(.065);
+   expect(new T.Vector3(0,1,0).applyQuaternion(lantern.getWorldQuaternion(new T.Quaternion())).y).toBeCloseTo(1);
+   if(i===0)first.copy(point);
+   if(i===35)expect(point.distanceTo(first)).toBeGreaterThan(.005);
+  }
+ });
  for(const name of ['harper','jordan'])it(name+' keeps hand poses stable over repeated idle cycles and smooth interruptions',async()=>{
   const {motion,frame,hand}=await character(name);
   for(let i=0;i<720;i++)frame();const expected=hand(),pose=motion.bones.get('lowerarm_r')!.quaternion.clone();

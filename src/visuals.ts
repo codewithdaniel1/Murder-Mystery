@@ -91,6 +91,7 @@ function woodland(){
  let seed=89173;
  const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
  const trees:PlantPose[]=[],scrub:PlantPose[]=[];
+ const hatch=cellarGroundOpenings()[1];
  for(let z=-174;z<=183;z+=21)for(let x=-177;x<=177;x+=21){
   const xx=x+(rand()-.5)*12,zz=z+(rand()-.5)*12;
   if(Math.abs(xx)<51&&zz>-53&&zz<61)continue;
@@ -98,6 +99,7 @@ function woodland(){
   if(Math.abs(Math.abs(xx)-66)<4&&zz>lodge.loop-5&&zz<99)continue;
   if((Math.abs(zz-lodge.loop)<4||Math.abs(zz-94.3)<4)&&Math.abs(xx)<70)continue;
   if(Math.abs(xx)<lodge.halfWidth+6&&zz>lodge.loop-3&&zz<lodge.front+6)continue;
+  if(Math.abs(xx)<6&&zz>hatch.near-4&&zz<lodge.loop)continue;
   if(Math.hypot(xx-98,zz-48)<21||Math.hypot(xx+99,zz+75)<23||rand()<.29)continue;
   trees.push([xx,zz,.73+rand()*.52,rand()*Math.PI*2]);
   if(rand()>.25)scrub.push([xx+(rand()-.5)*1.6,zz+(rand()-.5)*1.6,.75+rand()*.5,rand()*Math.PI*2]);
@@ -113,10 +115,10 @@ export function buildGardenLodge(e:Estate){
   e.floor(Math.abs(x),.04,3,x/2,-.032,-52,gravel);
  }
  e.floor(5.35,.04,3,-5.175,-.032,-35,gravel);
- const hatch=cellarGroundOpenings()[1],courtBack=hatch.near-.6,courtFront=hatch.far+.55;
- for(const x of[-3.1,3.1])e.floor(1.65,.04,back-courtBack,x,-.043,(back+courtBack)/2,gravel);
+ const hatch=cellarGroundOpenings()[1],courtBack=hatch.near-1.5,courtFront=hatch.far+.55;
+ for(const x of[-3.1,3.1])e.floor(1.65,.04,courtFront-courtBack,x,-.043,(courtFront+courtBack)/2,gravel);
  e.floor(4.55,.04,back-courtFront,0,-.043,(back+courtFront)/2,gravel);
- e.floor(4.55,.04,courtBack-loop-1.7,0,-.043,(courtBack+loop+1.7)/2,gravel);
+ e.floor(4.55,.04,1.5,0,-.043,courtBack+.75,gravel);
  e.floor(24,.16,depth,0,-.005,mid,wood);
  const h=4.1,opening=3,doorH=2.8;
  for(const [z,id,yaw] of [[front,'lodge-front',Math.PI],[back,'lodge-rear',0]] as const){

@@ -11,7 +11,7 @@ function updateRig(root:T.Object3D){root.updateWorldMatrix(true,false);root.upda
 const WALK_STANCE=.60,WALK_STRIDE=.52;
 export interface CharacterMotion {
  mixer:T.AnimationMixer;idle:T.AnimationAction;root:T.Object3D;
- bones:Map<string,T.Bone>;basePose:Map<string,T.Quaternion>;basePositions:Map<string,T.Vector3>;book:T.Group;
+ bones:Map<string,T.Bone>;basePose:Map<string,T.Quaternion>;basePositions:Map<string,T.Vector3>;book:T.Group;lantern?:T.Group;
  soleSamples:{mesh:T.SkinnedMesh;point:T.Vector3;index:number}[];footRest:Map<'l'|'r',T.Vector3>;baseY:number;groundOffset:number|null;walkWeight:number;stridePhase:number;activityWeights:Record<Activity,number>;
 }
 export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],book:T.Group):CharacterMotion{
@@ -31,6 +31,30 @@ export function createCharacterMotion(model:T.Object3D,clips:T.AnimationClip[],b
  const step=Math.max(1,Math.floor(low.length/96));for(let i=0;i<low.length;i+=step)soleSamples.push({mesh:o,index:low[i].index,point:low[i].point});
  });
  return {mixer,idle,root:model,bones,basePose,basePositions,book,soleSamples,footRest,baseY:model.position.y,groundOffset:null,walkWeight:0,stridePhase:0,activityWeights:{read:0,tidy:0,garden:0,car:0,look:0}};
+}
+function stormLantern(e:Estate){
+ const lamp=new T.Group(),iron=e.mat(0x303a34,.6,.38),brass=e.mats.gold;
+ lamp.name='Cellar storm lantern';
+ const globe=e.mat(0xffbc68,.32);globe.emissive.setHex(0xffa343);globe.emissiveIntensity=1.15;
+ e.cyl(.072,.083,.046,0,-.33,0,iron,lamp,16);
+ e.cyl(.047,.055,.128,0,-.239,0,globe,lamp,16);
+ e.cyl(.034,.073,.045,0,-.156,0,iron,lamp,16);
+ e.cyl(.024,.033,.023,0,-.123,0,brass,lamp,12);
+ for(const x of[-.061,.061])for(const z of[-.029,.029])e.cyl(.007,.009,.17,x,-.24,z,iron,lamp,6);
+ const handle=new T.Mesh(new T.TorusGeometry(.066,.006,6,16,Math.PI),iron);
+ handle.position.y=-.106;handle.scale.y=1.6;lamp.add(handle);
+ for(const x of[-.066,.066])e.cyl(.006,.006,.07,x,-.136,0,iron,lamp,6);
+ const glow=new T.PointLight(0xffb375,3,2.35,2);glow.position.y=-.226;lamp.add(glow);
+ return lamp;
+}
+export function alignLantern(motion:CharacterMotion,actor:T.Group){
+ const {lantern,bones}=motion;if(!lantern)return;
+ const hand=bones.get('hand_r'),knuckle=bones.get('index_01_r'),finger=bones.get('middle_02_r')??bones.get('index_02_r');
+ if(!hand)return;
+ const grip=(knuckle??hand).getWorldPosition(new T.Vector3());
+ if(finger)grip.lerp(finger.getWorldPosition(new T.Vector3()),.55);
+ // Attach at the top of the handle but keep the lamp upright as the wrist turns.
+ lantern.position.copy(actor.worldToLocal(grip));
 }
 export async function loadCharacters(e:Estate){
  const loader=new GLTFLoader();
@@ -59,6 +83,10 @@ export async function loadCharacters(e:Estate){
   dressCharacter(id,model,{coat:spec.coat,hair:spec.hair,
    ...(id==='mara'?{skirt:0x465b56}:id==='june'?{skirt:spec.level==='attic'?0x524750:0x394751}:{}),
    ...(id==='jonah'?{hat:undefined}:{})});
+  if(spec.level==='cellar'){
+   const lantern=stormLantern(e);witness.root.add(lantern);witness.motion.lantern=lantern;
+   alignLantern(witness.motion,witness.root);
+  }
  }
  e.dogMotion=rigDog(dog.scene);e.dog.clear();e.dog.add(e.dogMotion.root);
 }
@@ -99,8 +127,8 @@ export function animateCharacter(e:MotionScene,id:PersonId,moving:boolean,dt:num
   target.y+=lift*a.walkWeight;
   plantFoot(a.bones,actor,side,target);
  }
- turn('upperarm_l',right,left*.19*a.walkWeight);turn('upperarm_r',right,-left*.19*a.walkWeight);
- turn('lowerarm_l',right,-.11*a.walkWeight);turn('lowerarm_r',right,-.11*a.walkWeight);
+ turn('upperarm_l',right,left*.19*a.walkWeight);turn('upperarm_r',right,-left*(a.lantern?.055:.19)*a.walkWeight);
+ turn('lowerarm_l',right,-.11*a.walkWeight);turn('lowerarm_r',right,a.lantern?-.32:-.11*a.walkWeight);
  turn('spine_01',up,left*.035*a.walkWeight);
  const pelvis=a.bones.get('pelvis');if(pelvis)pelvis.position.y+=Math.cos(a.stridePhase*2)*.004*a.walkWeight;
  const read=a.activityWeights.read,work=a.activityWeights.tidy+a.activityWeights.car+a.activityWeights.garden;
@@ -117,6 +145,7 @@ export function animateCharacter(e:MotionScene,id:PersonId,moving:boolean,dt:num
   a.root.position.y+=a.groundOffset;updateRig(a.root);
  }
  if(id==='ada')updateAdaLegCover(a.root);
+ alignLantern(a,actor);
  const l=a.bones.get('hand_l'),r=a.bones.get('hand_r');
  const li=a.bones.get('index_01_l'),ri=a.bones.get('index_01_r');
  if(read>.8&&!moving&&l&&r&&li&&ri){
