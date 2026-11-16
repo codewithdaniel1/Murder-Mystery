@@ -71,7 +71,12 @@ export function landscape(e:Estate){
  for(const x of[-4.2,4.2])e.box(.19,.09,60,x,-.01,45,e.mats.trim);
  for(const z of[12.8,21.2])for(const x of[-14,14])e.box(19,.09,.18,x,-.01,z,e.mats.trim);
  // Fine iron boundary railings with stone gate piers.
- for(const x of[-8.8,8.8]){e.barrier(x,40,.09,32);for(let z=24;z<56;z+=.55){e.cyl(.018,.018,1.12,x,.56,z,e.mats.dark,e.scene,6);mesh(e,new T.ConeGeometry(.045,.12,5),e.mats.dark,x,1.17,z);}for(const y of[.3,.91])e.box(.045,.045,32,x,y,40,e.mats.dark);}
+ for(const x of[-8.8,8.8])for(const [start,end] of x<0?[[24,43.35],[45.65,56]]:[[24,56]]){
+  const length=end-start,center=(start+end)/2;
+  e.barrier(x,center,.09,length);
+  for(let z=start;z<=end;z+=.55){e.cyl(.018,.018,1.12,x,.56,z,e.mats.dark,e.scene,6);mesh(e,new T.ConeGeometry(.045,.12,5),e.mats.dark,x,1.17,z);}
+  for(const y of[.3,.91])e.box(.045,.045,length,x,y,center,e.mats.dark);
+ }
  for(const x of[-5.7,5.7]){e.barrier(x,49,.95,.95);e.box(.95,2.1,.95,x,1.05,49,e.mats.stone);mould(e,1,.08,1,x,2.15,49);e.cyl(.17,.3,.45,x,2.46,49,e.mats.trim,e.scene,24);e.sphere(.18,x,2.77,49,e.mats.trim);}
  // Defined planting beds anchor foliage to the landscape, instead of random blades.
  const soil=e.mat(0x463e2d);for(const side of[-1,1]){

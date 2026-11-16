@@ -12,8 +12,31 @@ import {decodeSave,encodeSave} from '../src/state';
 import {ATTIC_FLOOR,ATTIC_STAIR} from '../src/attic';
 import {buildShed,SHED,WITNESSES,Yard} from '../src/yard';
 import {buildCellar,BULKHEADS,bulkheadGate,CELLAR_FLOOR} from '../src/cellar';
+import {buildWartimeEstate,EstateDelivery,VAN} from '../src/estate-life';
 
 describe('walkable surfaces and physical obstacles',()=>{
+ it('connects the drive to the gatehouse and the kitchen to the scullery',()=>{
+  const e=furnishedEstate(),s=freshState();landscape(e);buildWartimeEstate(e);
+  e.setPose({x:-6.5,z:44.5,yaw:0,pitch:0});e.move(-5.5,0,s);
+  expect(e.pose().x).toBeGreaterThan(-9.7);
+  s.doors.gatehouse=true;e.doors.get('gatehouse')!.pivot.rotation.y=-Math.PI/2;
+  e.move(-12-e.pose().x,0,s);expect(e.pose().x).toBeCloseTo(-12);
+  e.setPose({x:-9.2,z:-8.6,yaw:0,pitch:0});e.move(0,-4.75,s);
+  expect(e.pose().z).toBeCloseTo(-13.35);
+  e.move(-8.5,0,s);expect(e.pose().x).toBeCloseTo(-17.7);
+ });
+ it('stops the delivery van for the player and restores a completed delivery',()=>{
+  const e=furnishedEstate(),s=freshState();e.dog=new T.Group();
+  const delivery=new EstateDelivery(e);delivery.reset(s);expect(delivery.obstacle()).toBeNull();
+  s.flags.deliveryRequested=true;e.setPose({x:VAN.x,z:VAN.start-3,yaw:0,pitch:0});
+  delivery.update(2,s,e);expect(delivery.van.position.z).toBe(VAN.start);
+  e.setPose({x:4,z:VAN.start-3,yaw:0,pitch:0});
+  delivery.update(14,s,e);expect(delivery.van.position.z).toBe(VAN.parked);
+  expect(s.flags.deliveryParked).toBe(true);
+  delivery.update(8,s,e);expect(s.flags.deliveryStocked).toBe(true);
+  delivery.reset(decodeSave(encodeSave(s,e.pose()))!);
+  expect(delivery.obstacle()?.z).toBe(VAN.parked);
+ });
  it('lets the player enter and leave the three tunnel rooms without changing floors',()=>{
   const e=furnishedEstate(),s=freshState();buildCellar(e);
   e.setPose({x:0,z:-23,elevation:CELLAR_FLOOR,yaw:0,pitch:0});
@@ -104,7 +127,8 @@ describe('walkable surfaces and physical obstacles',()=>{
   expect(s.evidence).toEqual([]);
  });
  it('places staff on their assigned levels with unobstructed routes and local collision',()=>{
-  const e=furnishedEstate(),s=freshState();buildShed(e);buildGardenLodge(e);buildCellar(e);e.yard=new Yard(e);
+  const e=furnishedEstate(),s=freshState();landscape(e);buildShed(e);buildGardenLodge(e);buildCellar(e);buildWartimeEstate(e);e.yard=new Yard(e);
+  for(const id of ['gatehouse','lodge-front']){s.doors[id]=true;e.doors.get(id)!.pivot.rotation.y=-Math.PI/2;}
   for(const w of e.yard.witnesses){
    const spec=WITNESSES[w.id],level=spec.level;
    const solid=level==='ground'?[...e.collisionBarriers(s),...e.stairBarriers]:

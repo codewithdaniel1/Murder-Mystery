@@ -45,6 +45,7 @@ export class EstateAudio {
  effect(type:string,pos?:Position){
  if(type==='phone'){this.phone=this.playClip('telephone-ring',.25,pos);if(this.phone)this.phone.source.stop(this.context!.currentTime+1.2);return}
  if(type==='bark'){const now=this.context?.currentTime??0;if(now-this.lastBark<8)return;this.lastBark=now;this.playClip('dog-bark',.45,pos);return}
+ if(type==='knock'){this.playClip('step-wood-2',.5,pos,.71);return}
  const mapping:Record<string,[string,number]>={paper:[Math.random()<.5?'paper-1':'paper-2',.48],door:['door-open',.65],'door-close':['door-close',.6],clue:['paper-1',.22],fountain:['fountain',.15]};const item=mapping[type];if(item)this.playClip(item[0],item[1],pos,.97+Math.random()*.06);
  }
  update(dt:number,p:{x:number;y:number;z:number},yaw:number,moving:boolean,inside:boolean,dog:Position,car:Position|null){const c=this.context;if(!c||this.paused)return;const l=c.listener;
@@ -56,6 +57,24 @@ export class EstateAudio {
  if(this.distance>1.15){this.distance%=1.15;const surface=surfaceAt(p.x,p.z,p.y);this.stepIndex++;const n=this.stepIndex%2+1;const file=surface==='carpet'||surface==='wood'?'step-wood-'+n:surface==='grass'?'step-grass-'+n:surface==='stone'?'step-stone-1':'step-gravel-1';this.playClip(file,surface==='carpet'?.17:.48,undefined,.94+Math.random()*.12);}
  this.barkAt-=dt;if(this.barkAt<0){this.barkAt=24+Math.random()*22;if(Math.hypot(p.x-dog[0],p.z-dog[2])<12)this.effect('bark',dog)}
 
+ }
+ wireless(on:boolean,position:Position){
+  const context=this.context;if(!context||this.paused)return;
+  if(on&&!this.buffers.has('wireless')){
+   // A short original instrumental phrase with the thin bandwidth of a small radio.
+   const rate=12000,beat=.34,notes=[60,64,67,69,67,64,62,67,65,62,59,62,60,64,67,60];
+   const buffer=context.createBuffer(1,Math.ceil(rate*beat*notes.length),rate);
+   const samples=buffer.getChannelData(0);
+   let seed=425;
+   for(let i=0;i<samples.length;i++){
+    const t=i/rate,k=Math.min(notes.length-1,Math.floor(t/beat)),u=t-k*beat,hz=440*2**((notes[k]-69)/12);
+    const envelope=Math.min(1,u/.02)*Math.exp(-u*7)*Math.min(1,(beat-u)/.035);
+    seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+    samples[i]=envelope*(Math.sin(2*Math.PI*hz*u)+.24*Math.sin(4*Math.PI*hz*u))*.14+(seed/4294967296-.5)*.016;
+   }
+   this.buffers.set('wireless',buffer);
+  }
+  if(on||this.loops.has('wireless'))this.loop('wireless',on?.36:0,position,1800);
  }
  updateActors(dt:number,actors:{id:string;x:number;z:number;moving:boolean}[],player:{x:number;z:number}){if(this.paused)return;for(const a of actors){let time=(this.npcSteps.get(a.id)??.3)-dt;if(a.moving&&time<=0&&Math.hypot(a.x-player.x,a.z-player.z)<11){const surface=surfaceAt(a.x,a.z);const file=surface==='carpet'||surface==='wood'?'step-wood-1':surface==='grass'?'step-grass-1':surface==='stone'?'step-stone-1':'step-gravel-1';this.playClip(file,surface==='carpet'?.09:.22,[a.x,.1,a.z],.95+Math.random()*.1);time=.58+Math.random()*.1;}this.npcSteps.set(a.id,Math.max(time,-.1));}}
  pause(){this.stopVoice();for(const clip of [...this.active])if(!clip.source.loop)this.stop(clip);this.paused=true;this.lastPosition=null;this.distance=0;if(this.context)void this.context.suspend()}

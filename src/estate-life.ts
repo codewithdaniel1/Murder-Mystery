@@ -1,0 +1,207 @@
+import * as T from 'three';
+import type {Estate} from './world';
+import type {GameState} from './state';
+export const VAN={x:-2.2,start:71,parked:47,length:4.55};
+export const KITCHEN_RADIO={x:-6.1,z:-15.05};
+export const deliveryZ=(progress:number)=>T.MathUtils.lerp(VAN.start,VAN.parked,T.MathUtils.smoothstep(progress,0,1));
+export function advanceDelivery(progress:number,dt:number,people:{x:number;z:number}[]){
+ const next=Math.min(1,progress+dt/14),from=deliveryZ(progress),to=deliveryZ(next);
+ return people.some(p=>Math.abs(p.x-VAN.x)<1.48&&p.z>to-2.8&&p.z<from+2.8)?progress:next;
+}
+export function makeSuitcase(e:Estate){
+ const root=new T.Group(),leather=e.mats.leather??e.mats.wood;
+ e.round(.62,.38,.24,0,-.24,0,leather,root);
+ for(const x of[-.21,.21]){
+  e.box(.045,.389,.249,x,-.24,0,e.mats.dark,root);
+  e.box(.045,.058,.017,x,-.115,.133,e.mats.gold,root);
+ }
+ e.box(.2,.036,.04,0,-.007,0,e.mats.dark,root);
+ for(const x of[-.087,.087])e.box(.033,.083,.033,x,-.045,0,e.mats.dark,root);
+ return root;
+}
+function radio(e:Estate,x:number,y:number,z:number){
+ const root=new T.Group();root.position.set(x,y,z);e.scene.add(root);
+ e.round(.65,.37,.29,0,0,0,e.mats.panel,root);
+ e.box(.41,.18,.016,-.046,.04,.153,e.mats.cream,root);
+ for(let i=0;i<8;i++)e.box(.39,.008,.015,-.046,-.03+i*.019,.164,e.mats.dark,root);
+ for(const dx of[-.18,.19])e.cyl(.032,.032,.027,dx,-.108,.162,e.mats.gold,root,10).rotation.x=Math.PI/2;
+ return root;
+}
+function phone(e:Estate,x:number,y:number,z:number){
+ const g=new T.Group();g.position.set(x,y,z);e.scene.add(g);
+ e.round(.4,.12,.34,0,0,0,e.mats.black,g);
+ e.cyl(.115,.115,.031,0,.072,.02,e.mats.gold,g,16);
+ e.round(.37,.066,.08,0,.16,-.08,e.mats.black,g);
+ for(const x of[-.16,.16])e.sphere(.059,x,.14,-.08,e.mats.black,g);
+ return g;
+}
+function makeVan(e:Estate){
+ const van=new T.Group(),paint=e.mat(0x586052,.58,.22),glass=e.mat(0x76887d,.28,.33),black=e.mats.black;
+ van.name='Grocer’s van';e.round(1.88,.46,4.45,0,.69,0,paint,van);
+ e.round(1.78,1.38,2.53,0,1.47,.82,paint,van);
+ e.round(1.61,.85,1.15,0,1.34,-.99,paint,van);
+ e.round(1.52,.41,.94,0,1.055,-1.76,paint,van);
+ e.box(1.34,.39,.035,0,1.55,-1.58,glass,van);
+ for(const x of[-.821,.821])e.box(.035,.32,.64,x,1.53,-.99,glass,van);
+ e.box(.79,.35,.03,0,.88,-2.241,black,van);
+ for(let i=0;i<8;i++)e.box(.032,.31,.03,-.33+i*.094,.88,-2.259,e.mats.gold,van);
+ for(const x of[-.76,.76]){
+  e.sphere(.13,x,.94,-2.16,e.mats.cream,van,1,1,.35);
+  e.box(.72,.82,.035,x/2,1.4,2.097,e.mats.wood,van);
+  const fender=e.box(.29,.1,1.11,x*1.36,.81,-1.41,paint,van);fender.castShadow=false;
+  for(const z of[-1.43,1.37]){
+   e.cyl(.37,.37,.22,x*1.165,.375,z,black,van,16).rotation.z=Math.PI/2;
+   e.cyl(.17,.17,.23,x*1.18,.375,z,paint,van,14).rotation.z=Math.PI/2;
+  }
+ }
+ e.box(1.88,.1,.15,0,.51,-2.21,e.mats.dark,van);
+ return van;
+}
+export class EstateDelivery {
+ van:T.Group;
+ private t=0;
+ private unload=0;
+ private crates:T.Group;
+ private pantry:T.Group;
+ constructor(e:Estate){
+  this.van=makeVan(e);this.van.visible=false;e.scene.add(this.van);
+  this.crates=new T.Group();this.crates.position.set(-11.8,.18,46.84);
+  for(const x of[-.37,.37]){
+   e.box(.65,.38,.44,x,0,0,e.mats.wood,this.crates);
+   for(const y of[-.13,.13])e.box(.67,.065,.455,x,y,0,e.mats.panel,this.crates);
+  }
+  this.crates.visible=false;e.scene.add(this.crates);
+  this.pantry=new T.Group();this.pantry.position.set(-19.05,.3,-14.88);
+  e.box(.61,.44,.47,0,0,0,e.mats.wood,this.pantry);
+  for(const z of[-.17,.11])e.box(.64,.023,.055,0,.23,z,e.mats.panel,this.pantry);
+  this.pantry.visible=false;e.scene.add(this.pantry);
+ }
+ reset(s:GameState){this.t=s.flags.deliveryParked?1:0;this.unload=0;this.pose(s);}
+ private pose(s:GameState){
+  this.van.visible=!!s.flags.deliveryRequested;this.van.position.set(VAN.x,-.055,deliveryZ(this.t));
+  this.crates.visible=!!s.flags.deliveryParked&&!s.flags.deliveryStocked;
+  this.pantry.visible=!!s.flags.deliveryStocked;
+ }
+ update(dt:number,s:GameState,e:Estate){
+  if(s.flags.deliveryRequested&&!s.flags.deliveryParked){
+   const player=e.inCellar()||e.staffLevel()!=='ground'?[]:[e.camera.position];
+   this.t=advanceDelivery(this.t,dt,[...player,e.dog.position]);
+   if(this.t===1)s.flags.deliveryParked=true;
+  }else if(s.flags.deliveryParked&&!s.flags.deliveryStocked&&(this.unload+=dt)>=7)s.flags.deliveryStocked=true;
+  this.pose(s);
+ }
+ obstacle(){return this.van.visible?{x:VAN.x,z:this.van.position.z,w:2.12,d:VAN.length}:null;}
+ loadObstacles(){
+  const boxes=[];
+  if(this.crates.visible)boxes.push({x:-11.8,z:46.84,w:1.42,d:.455});
+  if(this.pantry.visible)boxes.push({x:-19.05,z:-14.88,w:.64,d:.47});
+  return boxes;
+ }
+}
+
+export function buildWartimeEstate(e:Estate){
+ const {stone,trim,wood,panel,slate,glass,cream,dark,gold}=e.mats;
+ const iron=e.mat(0x393d3b,.74,.28),enamel=e.mat(0xb3b8a1,.44),soil=e.mat(0x49412e,.98);
+ // The gatehouse is offset from the carriage lane; the pedestrian gap leads to its side door.
+ const gx=-12.5,gz=44.5,floor=.075;
+ e.floor(5.6,.16,4.8,gx,-.005,gz,stone);
+ e.floor(2.3,.04,1.9,-8.55,-.065,gz,e.mats.gravel);
+ e.wall(5.6,2.8,.28,gx,1.4,gz-2.4,stone);
+ for(const side of[-1,1])e.wall(2,2.8,.28,gx+side*1.8,1.4,gz+2.4,stone);
+ e.wall(1.6,1.25,.28,gx,.625,gz+2.4,stone);
+ e.wall(1.6,.61,.28,gx,2.495,gz+2.4,stone);
+ e.wall(1.6,.94,.034,gx,1.72,gz+2.4,glass);
+ e.wall(.28,2.8,4.8,gx-2.8,1.4,gz,stone);
+ for(const side of[-1,1])e.wall(.28,2.8,1.45,gx+2.8,1.4,gz+side*1.675,stone);
+ e.wall(.28,.57,1.9,gx+2.8,2.515,gz,stone);
+ e.addDoor('gatehouse',gx+2.8,gz-.9,-Math.PI/2,false,floor,1.8,2.15,'Gatehouse door');
+ for(const x of[-.83,0,.83])e.box(.065,1.06,.07,gx+x,1.72,gz+2.6,panel);
+ for(const y of[1.21,1.72,2.24])e.box(1.74,.067,.08,gx,y,gz+2.6,panel);
+ for(const side of[-1,1]){
+  e.cyl(.024,.024,.88,gx+side*.61,2.27,gz+2.21,wood).rotation.z=Math.PI/2;
+  for(let i=0;i<6;i++)e.cyl(.036,.043,1.04,gx+side*(.58+i*.043),1.72,gz+2.2,dark,e.scene,7);
+ }
+ for(const side of[-1,1])e.box(5.95,.14,2.87,gx,3.05,gz+side*1.28,slate).rotation.x=side*.27;
+ e.box(.61,1.1,.63,gx-1.6,3.16,gz-.86,stone);
+ e.table(gx-1.65,gz,1.23,1.9);
+ e.target(phone(e,gx-1.64,1.12,gz-.62),'gate-phone','Gatehouse telephone','Use');
+ e.target(e.paper('VEHICLE LOG',['Yesterday · 8.12 pm','Grocer’s van · pantry call','Saloon: no entry at that time'],gx-1.52,1.041,gz+.5,true),'vehicle-log','Gatehouse vehicle log','Read');
+
+ // Two rooms in the mansion’s west service passage, with a serving opening between them.
+ const wallX=-13.4,doorZ=-13.38;
+ e.wall(.26,3.5,1.7,wallX,1.75,-15.16,e.mats.plaster);
+ e.wall(.26,3.5,1.37,wallX,1.75,-10.85,e.mats.plaster);
+ e.wall(.26,1.07,1.85,wallX,2.97,doorZ,e.mats.plaster);
+ e.box(.5,.11,1.98,wallX,2.42,doorZ,panel);
+ e.box(.35,.93,1.02,wallX,.47,-11.87,e.mats.plaster);
+ e.box(.47,.12,1.14,wallX,.99,-11.87,wood);e.barrier(wallX,-11.87,.4,1.1);
+ e.box(.33,.92,1.02,wallX,2.34,-11.87,e.mats.plaster);
+ const rangeX=-10.9,rangeZ=-15.02;
+ e.box(2.22,.92,.94,rangeX,.54,rangeZ,iron);e.barrier(rangeX,rangeZ,2.22,.94);
+ for(const x of[-.62,.02,.61]){
+  e.cyl(.252,.252,.037,rangeX+x,1.018,rangeZ, dark,e.scene,18);
+  e.box(.45,.37,.067,rangeX+x,.63,rangeZ+.497,dark);
+  e.box(.23,.047,.073,rangeX+x,.72,rangeZ+.543,gold);
+ }
+ e.box(.19,2,.22,rangeX-.79,1.9,rangeZ-.21,iron);
+ e.cyl(.18,.19,.24,rangeX+.61,1.15,rangeZ,enamel);
+ e.table(-7.6,-14.91,3.1,1.06);
+ e.target(radio(e,KITCHEN_RADIO.x,1.18,KITCHEN_RADIO.z),'kitchen-wireless','Kitchen wireless','Tune');
+ e.target(e.paper('RATION BOOK',['SUGAR · TEA · BUTTER','Household coupons'], -8.05,1.04,-14.91,true),'ration-book','Household ration book','Read');
+ const mending=new T.Group();mending.position.set(-8.75,1.031,-14.89);e.scene.add(mending);
+ const cloth=e.mat(0x777d58,.96),patch=e.mat(0x62694d,.98);
+ e.round(.39,.05,.32,0,.018,0,cloth,mending);
+ e.box(.14,.007,.097,-.056,.046,.045,patch,mending);
+ for(let i=0;i<6;i++)e.box(.012,.005,.006,-.117+i*.025,.051,.087,cream,mending);
+ e.cyl(.035,.035,.07,.23,.046,-.077,wood,mending,9).rotation.z=Math.PI/2;
+ e.target(mending,'mended-clothes','Mended work shirt','Inspect');
+ e.box(2.7,.82,.79,-16.4,.48,-15.24,wood);e.barrier(-16.4,-15.24,2.7,.79);
+ e.box(1.22,.19,.72,-16.45,.955,-15.21,enamel);
+ e.box(.98,.034,.49,-16.45,1.054,-15.2,iron);
+ e.cyl(.026,.041,.26,-16.45,1.13,-15.48,gold);
+ e.box(.047,.045,.19,-16.45,1.253,-15.4,gold);
+ for(const z of[-14.25,-13.14,-12.03]){
+  e.box(.64,2.16,1.04,-20.36,1.16,z,panel);e.barrier(-20.36,z,.64,1.04);
+  e.box(.06,1.9,.78,-20.01,1.18,z,wood);
+  e.sphere(.046,-19.96,1.14,z+.22,gold);
+ }
+ for(let i=0;i<5;i++){
+  const x=-16.2+i*.48;
+  e.box(.32,.09,.11,x,2.19,-15.69,wood);
+  e.cyl(.07,.137,.15,x,2.05,-15.56,gold,e.scene,12);
+ }
+ for(const x of[-8.3,-7.55,-6.8])e.box(.64,1.24,.028,x,2.82,-15.66,dark);
+
+ // Productive garden beneath the lodge windows, with the fountain visible beyond.
+ const leaf=e.mats.leaf,bean=e.mat(0x697649,.96);
+ for(const x of[-16,-20.2,-24.4]){
+  e.floor(2.95,.14,7,x,-.03,-58,soil);
+  for(const dx of[-1.45,1.45])e.box(.12,.17,7,x+dx,-.006,-58,wood);
+  for(let j=0;j<5;j++){
+   const z=-60.7+j*1.3;
+   for(const side of[-1,1]){
+    const cane=e.cyl(.024,.031,2.14,x+side*.46,1.04,z,wood,e.scene,6);cane.rotation.z=side*.31;
+    for(let k=0;k<4;k++){
+     const group=e.sphere(.16,x+side*(.65-k*.12),.34+k*.37,z+.04*(k%2),k%2?leaf:bean,e.scene,1.5,.25,.92);
+     group.rotation.z=side*.42;group.castShadow=false;
+    }
+   }
+  }
+ }
+ e.table(-16.5,-52.7,1.75,.85,.88);
+ for(const dx of[-.49,0,.46])e.cyl(.18,.126,.28,-16.5+dx,1.08,-52.7,soil,e.scene,12);
+ e.box(2.45,.13,.65,-18.45,.45,-50.9,panel);
+ e.box(2.45,.53,.132,-18.45,.76,-51.2,wood);
+ for(const dx of[-.94,.94])e.box(.15,.46,.55,-18.45+dx,.22,-50.9,iron);
+ e.barrier(-18.45,-50.9,2.45,.69);
+ const tools=new T.Group();tools.position.set(-17.28,.38,-53.3);e.scene.add(tools);
+ const shaft=e.cyl(.027,.028,1.06,0,.2,0,wood,tools,8);shaft.rotation.z=.24;
+ e.box(.23,.27,.045,.12,-.28,0,iron,tools);
+ e.target(tools,'garden-tools','Mended garden spade','Inspect');
+ e.table(-6.65,-50.65,1.24,.59,.67);
+ e.box(.52,.034,.3,-6.65,.786,-50.65,panel);
+ for(const x of[-6.81,-6.55]){
+  e.cyl(.049,.038,.076,x,.84,-50.64,enamel,e.scene,10);
+  e.cyl(.064,.064,.01,x,.81,-50.64,cream,e.scene,12);
+ }
+}

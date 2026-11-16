@@ -70,17 +70,21 @@ export const WITNESSES={
   first:'I’m waiting for Mrs Bell to send me to the village. Last night she sent me to the potting shed.',
   reply:'The parcel was full of seed envelopes. I took it round before the bell. My coat was Father’s; it’s much too big for me.'},
  briggs:{name:'Elsie Briggs',role:'Gatekeeper',initials:'EB',template:'june',level:'ground',coat:0x605649,hair:0x766557,
-  route:[[-6.6,36],[-6.6,41],[-5.2,39]],question:'Could anyone have heard the bell from here?',
+  route:[[-6.6,43],[-6.6,44.5],[-11,44.5],[-6.6,44.5]],question:'Could anyone have heard the bell from here?',
   first:'I keep a tally of cars on the drive. Foot traffic is another matter, especially after the lamps come down for blackout.',
   reply:'Yes. I heard the half-hour chime from right here. I couldn’t see the tower or who was in it.'},
  mercer:{name:'Agnes Mercer',role:'Lodge keeper',initials:'AM',template:'june',level:'ground',coat:0x655344,hair:0x514a43,
-  route:[[-4.7,-57.2],[-4.7,-64.1],[-5.65,-62]],question:'Where do the cellar stairs lead?',
+  route:[[-4.7,-61.1],[0,-61.1],[0,-51.5],[-5.6,-51.5],[0,-51.5],[0,-61.1]],question:'Where do the cellar stairs lead?',
   first:'I’m airing the sitting room. It gets cold here before the main house does.',
   reply:'Follow the gravel from the back door, across the woodland path. The hatch is a little way past it. The stairs lead under the garden to the mansion cellar.'},
  hayes:{name:'Albert Hayes',role:'Woodland groundskeeper',initials:'AH',template:'tomas',level:'ground',coat:0x5b6551,hair:0x69594b,
-  route:[[8,-72.5],[11,-75.2],[7.3,-75.6]],question:'Do you often work behind the lodge?',
+  route:[[-14,-55],[-14,-62.5],[-14,-70],[-16,-70],[-14,-62.5]],question:'Do you often work behind the lodge?',
   first:'Most afternoons. I keep the paths clear and try to leave the rabbits some cover.',
   reply:'I heard the hatch bang yesterday and thought someone was coming up. The wind had caught my empty barrow and tipped it against the stone.'},
+ cartwright:{name:'Mabel Cartwright',role:'Estate cook',initials:'MC',template:'mara',level:'ground',coat:0x645653,hair:0x7b6650,
+  route:[[-10,-13.35],[-7.1,-13.35],[-9.4,-12.7]],question:'When did you clear supper?',
+  first:'Mind the kitchen passage. The last batch of tea went to the lodge, and I’ve yet to get my tray back.',
+  reply:'We stacked the supper plates at about quarter past eight, well before the half-hour chime. I remember because the grocer’s van had only just left.'},
  foster:{name:'Lucy Foster',role:'Attic maid',initials:'LF',template:'june',level:'attic',coat:0x69616d,hair:0x4c3b2e,
   route:[[9,-.8],[9,-5.55],[10.5,-5.4]],question:'What’s kept up here?',
   first:'Spare linen and old trunks, mostly. I’ve been airing out the little bedroom.',
@@ -201,13 +205,22 @@ export class Yard {
   const e=this.e,player=e.camera.position;
   if(playing)this.time+=dt;
   const people=[...e.actors.values()].filter(a=>a.root.visible).map(a=>({x:a.root.position.x,z:a.root.position.z,w:.42,d:.42}));
+  if(playing)for(const w of this.witnesses){
+   const p=w.root.position;
+   if(w.id==='mercer'&&Math.abs(p.x)<.7&&Math.abs(p.z+54)<1.7)state.doors['lodge-front']=true;
+   if(w.id==='briggs'&&state.flags.deliveryParked&&Math.abs(p.x+9.7)<1.65&&Math.abs(p.z-44.5)<.65)state.doors.gatehouse=true;
+  }
   const ground=[...e.collisionBarriers(state),...e.stairBarriers];
   const levels:Record<StaffLevel,readonly {x:number;z:number;w:number;d:number;door?:string}[]>={
    ground:[...ground,...people],cellar:e.cellarBarriers??[],upper:e.collisionBarriers(state,true),attic:e.atticBarriers
   };
   for(const w of this.witnesses){
    if(!w.motion)continue;
-   const spec=WITNESSES[w.id],route=spec.route,[tx,tz]=route[w.index],p=w.root.position;
+   const spec=WITNESSES[w.id];
+   const route=w.id==='cartwright'&&state.flags.deliveryParked?[
+    [-10,-13.35],[-7.1,-13.35],[-9.4,-12.7],[-12,-13.38],[-17.5,-13.38],[-12,-13.38]
+   ]:spec.route;
+   const [tx,tz]=route[w.index],p=w.root.position;
    const near=e.staffLevel()===spec.level&&Math.hypot(player.x-p.x,player.z-p.z)<2.65;
    let distance=0,angle=w.root.rotation.y;
    if(active===w.id||near)angle=Math.atan2(player.x-p.x,player.z-p.z);

@@ -5,13 +5,13 @@ export type Activity='tidy'|'read'|'look'|'garden'|'car';
 export interface Stop extends Point {seconds:number;face:number;activity:Activity;label:string}
 export const HALL_CLOCK={x:2.5,z:-7.4};
 export const ROUTINES:Record<PersonId,Stop[]>={
- june:[{x:2,z:6,seconds:8,face:0,activity:'look',label:'Waiting to greet the detective'},{x:HALL_CLOCK.x,z:HALL_CLOCK.z+1,seconds:9,face:Math.PI,activity:'tidy',label:'Dusting the grandfather clock'},{x:3,z:3,seconds:6,face:2.5,activity:'look',label:'Checking the entrance hall'}],
+ june:[{x:2,z:6,seconds:8,face:0,activity:'look',label:'Waiting to greet the detective'},{x:HALL_CLOCK.x,z:HALL_CLOCK.z+1,seconds:9,face:Math.PI,activity:'tidy',label:'Dusting the grandfather clock'},{x:-7.1,z:-13.45,seconds:12,face:Math.PI,activity:'tidy',label:'Checking the kitchen'},{x:3,z:3,seconds:6,face:2.5,activity:'look',label:'Checking the entrance hall'}],
  rook:[{x:-14.2,z:1.5,seconds:10,face:Math.PI,activity:'read',label:'Reviewing the estate accounts'},{x:-16,z:10.3,seconds:6,face:0,activity:'look',label:'Looking out over the drive'},{x:-18,z:6.2,seconds:7,face:-1.6,activity:'read',label:'Consulting his notebook'}],
  mara:[{x:13,z:-7.8,seconds:8,face:Math.PI,activity:'read',label:'Browsing the library shelves'},{x:14.4,z:3,seconds:12,face:1.57,activity:'read',label:'Comparing archive references'},{x:10,z:5,seconds:6,face:0,activity:'look',label:'Taking a break from her research'}],
  ada:[{x:-9,z:-20,seconds:8,face:Math.PI,activity:'look',label:'Taking in the garden'},{x:-7,z:-33.9,seconds:9,face:0,activity:'read',label:'Reading beside the garden bench'},{x:-7,z:-23,seconds:6,face:1.5,activity:'look',label:'Watching the fountain'}],
  tomas:[{x:23,z:-23,seconds:8,face:Math.PI,activity:'garden',label:'Tending the border plants'},{x:27.6,z:-28.7,seconds:10,face:2.4,activity:'garden',label:'Working at the potting bench'},{x:26,z:-23,seconds:5,face:-1.5,activity:'look',label:'Checking the glasshouse'}],
  beatrice:[{x:2,z:4,seconds:9,face:1.5,activity:'look',label:'Inspecting the entrance hall'},{x:-10,z:6,seconds:10,face:-1.5,activity:'read',label:'Reading Elias’s correspondence'},{x:2,z:1,seconds:8,face:0,activity:'look',label:'Considering the investigation'}],
- jonah:[{x:4,z:20.6,seconds:10,face:0,activity:'car',label:'Polishing the radiator grille'},{x:6,z:25,seconds:8,face:-1.57,activity:'car',label:'Checking the luggage straps'},{x:6,z:22.5,seconds:7,face:-1.57,activity:'look',label:'Waiting beside the driver’s door'}]
+ jonah:[{x:6.05,z:26.85,seconds:4,face:-1.57,activity:'car',label:'Unloading the boot'},{x:6.95,z:23.25,seconds:5,face:0,activity:'look',label:'Setting down the suitcase'},{x:4,z:20.6,seconds:10,face:0,activity:'car',label:'Polishing the radiator grille'},{x:6,z:22.5,seconds:7,face:-1.57,activity:'look',label:'Waiting beside the driver’s door'}]
 };
 interface Memory {index:number;remaining:number;path:Point[];replan:number;started:boolean;speed:number}
 export interface RoutineResult {position:Point;moving:boolean;face:number;activity:Activity|null;label:string}

@@ -160,6 +160,7 @@ export function buildCellar(e:Estate){
    item(1.15,.16,4.8,workX,.98,z,wood);
    for(const dz of[-2.18,2.18])for(const dx of[-.4,.4])item(.17,.9,.18,workX+dx,.46,z+dz,wood);
    item(.34,.24,.48,workX-.34,1.18,z-1.55,iron);
+   e.target(item(.24,.063,.36,workX-.38,1.102,z+.63,wood),'workshop-bench','Hinge on the workbench','Inspect');
    item(.52,.054,.92,workX,1.1,z,canvas);
    for(const dz of[-.6,-.37,-.15,.07])item(.34,.053,.08,workX+.04,1.14,z+dz,brass);
    item(.16,2.1,3.8,8.82,1.63,z,wood);
@@ -249,7 +250,14 @@ export function buildCellar(e:Estate){
  item(.89,.52,.43,9.2,1.21,-14.5,iron);
  item(.75,.34,.04,9.2,1.23,-14.26,wood);
  for(const dx of [-.25,.25])e.cyl(.06,.06,.045,9.2+dx,CELLAR_FLOOR+1.15,-14.224,brass).rotation.x=Math.PI/2;
- item(.62,.075,.32,9.97,.995,-14.26,e.mats.paper);
+ const kettle=e.mat(0xc6c5ac,.42);
+ item(.41,.025,.38,8.38,.962,-14.4,iron);
+ e.sphere(.16,8.38,CELLAR_FLOOR+1.125,-14.4,kettle,e.scene,1,.82,.92);
+ e.cyl(.045,.061,.023,8.38,CELLAR_FLOOR+1.264,-14.4,iron,e.scene,10);
+ const handle=new T.Mesh(new T.TorusGeometry(.119,.012,6,15,Math.PI),iron);
+ handle.position.set(8.38,CELLAR_FLOOR+1.146,-14.4);e.scene.add(handle);
+ e.target(e.paper('SHELTER REGISTER',['All clear noted by June.','Blankets and spare batteries','Return kettle to the shelter.'],9.88,CELLAR_FLOOR+1.043,-14.26,true),'shelter-register','Shelter visitors’ register','Read');
+ for(const x of[6.2,9.1])for(let i=0;i<3;i++)item(.6,.09,1,x+.55,.77+i*.074,-18.2,canvas);
  for(const x of [5.1,6.2]){
   solid(.88,.61,x,-19.35);item(.88,1.95,.61,x,.975,-19.35,iron);
   item(.045,.22,.05,x+.24,1,-19.02,brass);

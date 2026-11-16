@@ -1,6 +1,7 @@
 import {buildShed,Yard,type StaffLevel,type WitnessId} from './yard';
 import {withinGrounds} from './grounds';
 import type {bakeCellarLighting} from './cellar-lighting';
+import {buildWartimeEstate,EstateDelivery,makeSuitcase} from './estate-life';
 import {ATTIC_FLOOR,atticStairHeight,inAtticStair,onAtticDeck} from './attic';
 import {gardenBench,gardenGroundDetail} from './detail';
 import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarOpeningEnd,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
@@ -32,6 +33,10 @@ export class Estate {
  upperBarriers:Barrier[]=[];atticBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
  cellarLighting?:ReturnType<typeof bakeCellarLighting>;
+ delivery?:EstateDelivery;
+ private carBoot?:T.Group;
+ private suitcase?:T.Group;
+ private luggageLifted=false;
  cellarDoors=new Map<string,{leaves:T.Group[];amount:number}>();
  yard:Yard;
  ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;fountainWater?:FountainWater;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
@@ -42,10 +47,15 @@ export class Estate {
  this.scene.add(new T.HemisphereLight(0xc7def0,0x615241,.42));this.sun=new T.DirectionalLight(0xffe7c7,3.2);this.sun.position.set(-28,38,26);this.sun.castShadow=true;this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-44,right:44,top:44,bottom:-44,near:1,far:115});this.sun.shadow.bias=-.00008;this.sun.shadow.normalBias=.025;this.sun.shadow.radius=2;this.scene.add(this.sun);
  this.mats={dark:this.mat(0x26302a),gold:this.mat(0xaa8c51,.4,.7),black:this.mat(0x171c1a,.6),cream:this.mat(0xcdbfa3),leaf:this.mat(0x3c5631),red:this.mat(0x472d2c),paper:this.mat(0xe4d5b6),glass:this.mat(0xbac7c4)};
  const loaded=materials(this);
- this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();buildGardenLodge(this);buildCellar(this);buildShed(this);this.yard=new Yard(this);
+ this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();buildGardenLodge(this);buildCellar(this);buildShed(this);buildWartimeEstate(this);this.yard=new Yard(this);
  this.addActor('june',2,6,0x3b4943,0xd1b39c,true);this.addActor('rook',-12,3,0x3f3e47,0xc2a48a,false);this.addActor('mara',13,1,0x7d6045,0xd2b7a1,true);this.addActor('ada',-9,-20,0x537b72,0xd7b79e,true);this.addActor('tomas',23,-21,0x66704b,0xc6a182,false);this.addActor('beatrice',4,20,0x664d56,0xd8b59b,true);this.addActor('jonah',7,24,0x3c4853,0xc7a085,false);
  this.actors.get('beatrice')!.root.visible=false;this.actors.get('jonah')!.root.visible=false;
  this.car=this.makeCar();this.car.position.set(4,0,56);this.car.visible=false;this.scene.add(this.car);
+ const boot=new T.Group();boot.position.set(0,1.17,1.43);
+ this.round(1.62,.11,.91,0,0,.455,this.mat(0x253c35,.28,.6),boot);
+ this.box(.16,.055,.03,0,.02,.915,this.mats.gold,boot);this.car.add(boot);this.carBoot=boot;
+ this.suitcase=makeSuitcase(this);this.suitcase.visible=false;this.scene.add(this.suitcase);
+ this.delivery=new EstateDelivery(this);
  this.dog=this.makeDog();this.dog.position.set(11,.1,3);this.scene.add(this.dog);this.target(this.dog,'pip','Pip','Greet');
  this.hands=this.makeHands();this.camera.add(this.hands);this.scene.add(this.camera);this.camera.position.set(0,6.2,38);this.camera.lookAt(0,3,0);
  this.composer=new EffectComposer(this.renderer);this.composer.addPass(new RenderPass(this.scene,this.camera));this.ao=new GTAOPass(this.scene,this.camera,innerWidth,innerHeight);this.ao.blendIntensity=.35;this.ao.updateGtaoMaterial({radius:.45,distanceExponent:1.5,thickness:1,scale:1});this.composer.addPass(this.ao);this.composer.addPass(new OutputPass());this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));
@@ -69,7 +79,11 @@ export class Estate {
    const yaw=d.frame.rotation.y+d.pivot.rotation.y,leafWidth=3.1*d.pivot.scale.x,leafDepth=.34;
    list.push({x:center.x,z:center.z,w:Math.abs(Math.cos(yaw))*leafWidth+Math.abs(Math.sin(yaw))*leafDepth,d:Math.abs(Math.sin(yaw))*leafWidth+Math.abs(Math.cos(yaw))*leafDepth});
   }
-  if(!upper&&(s.arrival==='arriving'||s.arrival==='present'))list.push({x:4,z:s.arrival==='present'?24:this.car.position.z,w:2.45,d:5.25});return list;
+  if(!upper&&(s.arrival==='arriving'||s.arrival==='present'))list.push({x:4,z:s.arrival==='present'?24:this.car.position.z,w:2.45,d:5.25});
+  const van=!upper&&this.delivery?.obstacle();if(van)list.push(van);
+  if(!upper&&this.delivery)list.push(...this.delivery.loadObstacles());
+  if(!upper&&s.flags.luggageSet&&s.arrival==='present')list.push({x:7.25,z:23.85,w:.66,d:.32});
+  return list;
  }
  advanceArrival(progress:number,dt:number,s:GameState){const next=Math.min(1,progress+dt/15),from=56-32*T.MathUtils.smoothstep(progress,0,1),to=56-32*T.MathUtils.smoothstep(next,0,1);const people=[this.camera.position,...[...this.actors.values()].filter(a=>a.root.visible).map(a=>a.root.position),this.dog.position];if(people.some(p=>Math.abs(p.x-4)<1.65&&p.z>to-3.1&&p.z<from+3.1))return progress;return next}
  barrier(x:number,z:number,w:number,d:number,door?:string){this.barriers.push({x,z,w,d,door});}
@@ -262,6 +276,22 @@ export class Estate {
   return this.inCellar()?'cellar':y>ATTIC_FLOOR-.25?'attic':y>UPPER_FLOOR-.25?'upper':'ground';
  }
  onGroundLevel(){return !this.inCellar()&&(this.playerElevation??0)<1.2}
+ resetEstateLife(s:GameState){this.delivery?.reset(s);this.luggageLifted=false;if(this.carBoot)this.carBoot.rotation.x=0;}
+ private updateLuggage(dt:number,s:GameState){
+  const jonah=this.actors.get('jonah'),boot=this.carBoot,bag=this.suitcase;
+  if(!jonah||!boot||!bag)return;
+  bag.visible=s.arrival==='present';if(!bag.visible)return;
+  const p=jonah.root.position,atBoot=Math.hypot(p.x-6.05,p.z-26.85)<.45;
+  const opening=!s.flags.luggageSet&&atBoot;
+  boot.rotation.x=T.MathUtils.damp(boot.rotation.x,opening?-1.06:0,5,dt);
+  if(opening&&boot.rotation.x<-.84)this.luggageLifted=true;
+  if(this.luggageLifted&&Math.hypot(p.x-6.95,p.z-23.25)<.45)s.flags.luggageSet=true;
+  if(s.flags.luggageSet){bag.position.set(7.25,this.groundHeight(7.25,23.85)+.45,23.85);bag.rotation.y=.17;}
+  else if(this.luggageLifted){
+   const hand=this.characterMotion.get('jonah')?.bones.get('index_01_r');
+   if(hand){hand.getWorldPosition(bag.position);bag.rotation.y=jonah.root.rotation.y;}
+  }else{bag.position.set(4,this.car.position.y+1.5,26.04);bag.rotation.y=0;bag.visible=boot.rotation.x<-.3;}
+ }
  private updateCellarView(menu=false){
   const depth=menu?0:Math.max(0,-(this.playerElevation??0));
   if(this.cellarInterior)this.cellarInterior.visible=!menu&&(depth>.15||
@@ -325,6 +355,7 @@ export class Estate {
  }
 
  this.car.visible=s.arrival!=='absent'&&s.arrival!=='queued';if(s.arrival==='arriving')this.car.position.z=56-32*T.MathUtils.smoothstep(arrivalT,0,1);if(s.arrival==='present')this.car.position.z=24;this.car.position.y=this.groundHeight(this.car.position.x,this.car.position.z)-.03;
+ if(playing){this.delivery?.update(dt,s,this);this.updateLuggage(dt,s);}
  if(playing){
  const target=s.dog==='walking'?(this.onGroundLevel()?this.camera.position:this.dog.position):this.actors.get('mara')!.root.position;
  const follow=this.dogFollower.update(this.dog.position,this.dog.rotation.y,target,dt,solid,s.doors,false);
