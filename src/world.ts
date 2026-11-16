@@ -219,7 +219,7 @@ export class Estate {
   // Above the buried part of the stair, the ground surface is still intact.
   if(stairs&&(from<-.15||(z-cellarOpeningEnd(stairs))*stairs.direction<0)){
    const height=cellarStairHeight(stairs,z);
-   return stairs.indoors&&from===CELLAR_FLOOR&&height> -2.8?CELLAR_FLOOR:height;
+   return stairs.underpass&&from===CELLAR_FLOOR&&height> -2.8?CELLAR_FLOOR:height;
   }
   if(from<-.15)return cellarContains(x,z)?CELLAR_FLOOR:this.groundHeight(x,z);
   if(inStair(x,z))return stairHeight(z);

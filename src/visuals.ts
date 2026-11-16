@@ -107,14 +107,18 @@ function woodland(){
 export function buildGardenLodge(e:Estate){
  const {front,back,halfWidth,loop}=lodge,mid=(front+back)/2,depth=front-back;
  const {stone,trim,wood,panel,slate,gravel,gold}=e.mats;
- // The two garden branches leave the cellar hatch and its stair approach open.
+ // Garden paths meet at the front door, well clear of the flower beds.
  for(const x of[-7,5]){
   e.floor(1.8,.04,17,x,-.032,-43.5,gravel);
   e.floor(Math.abs(x),.04,3,x/2,-.032,-52,gravel);
  }
  e.floor(5.35,.04,3,-5.175,-.032,-35,gravel);
  e.floor(3.4,.04,8.9,0,-.043,(back+loop+.1)/2,gravel);
- e.floor(24,.16,depth,0,-.005,mid,wood);
+ const hole=cellarGroundOpenings()[1];
+ for(const [x0,x1,z0,z1] of [
+  [-halfWidth,hole.left,back,front],[hole.right,halfWidth,back,front],
+  [hole.left,hole.right,back,hole.near],[hole.left,hole.right,hole.far,front]
+ ])e.floor(x1-x0,.16,z1-z0,(x0+x1)/2,-.005,(z0+z1)/2,wood);
  const h=4.1,opening=3,doorH=2.8;
  for(const [z,id,yaw] of [[front,'lodge-front',Math.PI],[back,'lodge-rear',0]] as const){
   for(const side of[-1,1]){
@@ -149,7 +153,7 @@ export function buildGardenLodge(e:Estate){
   e.box(.94,2.3,.86,x,5.65,mid,stone);
   mould(e,1,.13,1,x,6.81,mid);
   // Interior partitions leave a wide opening from the central hall to each room.
-  const divider=Math.sign(x)*2.5;
+  const divider=Math.sign(x)*3.3;
   for(const dz of[-5,5])e.wall(.24,3.9,5,divider,2,mid+dz,e.mats.plaster);
   e.wall(.24,1.1,5,divider,3.5,mid,e.mats.plaster);
   if(x<0){

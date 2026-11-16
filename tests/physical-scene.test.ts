@@ -23,12 +23,20 @@ describe('walkable surfaces and physical obstacles',()=>{
   }
   e.move(0,-4,s);expect(e.pose().z).toBeGreaterThan(-54);
   for(const id of ['lodge-front','lodge-rear']){s.doors[id]=true;e.doors.get(id)!.pivot.rotation.y=-Math.PI/2;}
-  e.move(0,-61.5-e.pose().z,s);expect(e.pose().z).toBeCloseTo(-61.5);
+  e.move(0,-60-e.pose().z,s);expect(e.pose().z).toBeCloseTo(-60);
   for(const x of[-5,5]){
    e.move(x,0,s);expect(e.pose().x).toBeCloseTo(x);
    e.move(-x,0,s);
   }
-  e.move(0,-16.5,s);expect(e.pose().z).toBeCloseTo(-78);
+  e.move(2.5,0,s);e.move(0,-6.5,s);e.move(-2.5,0,s);
+  e.move(0,-11.5,s);expect(e.pose().z).toBeCloseTo(-78);
+  const entry=BULKHEADS[1];
+  s.doors[entry.id]=true;e.syncBulkheads(s);
+  e.setPose({x:entry.x,z:entry.top-1,yaw:0,pitch:0});
+  e.move(0,11,s);expect(e.pose().elevation).toBe(CELLAR_FLOOR);
+  e.move(0,-11,s);expect(e.pose().z).toBeCloseTo(entry.top-1);expect(e.inCellar()).toBe(false);
+  e.setPose({x:0,z:-50,yaw:0,pitch:0});
+  e.move(0,6,s);expect(e.pose().z).toBeCloseTo(-44);expect(e.inCellar()).toBe(false);
  });
  it('keeps the shed entrance walkable and its back and sides solid',()=>{
   const e=furnishedEstate(),s=freshState();buildShed(e);
@@ -116,7 +124,7 @@ describe('walkable surfaces and physical obstacles',()=>{
    e.move(0,-entry.direction*4,s);expect(e.inCellar()).toBe(false);
   }
  });
- it('connects both exterior stairways through the cellar and bunker',()=>{
+ it('connects the mansion and lodge stairs through the cellar and bunker',()=>{
   const e=furnishedEstate(),s=freshState();landscape(e);buildCellar(e);
   const [corner,garden,hall]=BULKHEADS;
   for(const d of BULKHEADS)s.doors[d.id]=true;
@@ -140,7 +148,7 @@ describe('walkable surfaces and physical obstacles',()=>{
   e.move(0,-20,s);
   const saved=decodeSave(encodeSave(s,e.pose()))!;
   e.setPose(s.pose);e.setPose(saved.pose);expect(e.inCellar()).toBe(true);
-  e.move(0,-12,s);expect(e.pose().z).toBeLessThan(garden.top);expect(e.inCellar()).toBe(false);
+  e.move(0,garden.top-1-e.pose().z,s);expect(e.pose().z).toBeLessThan(garden.top);expect(e.inCellar()).toBe(false);
   e.move(0,-14.6-e.pose().z,s);e.move(2,0,s);e.move(0,5.6,s);
   expect(e.pose().z).toBeCloseTo(-9);
   e.move(-2,0,s);

@@ -5,10 +5,13 @@ export const CELLAR_FLOOR=-4.8;
 const CEILING=-1.05;
 const tunnelHalf=1.65;
 export const BULKHEADS=[
- {id:'cellar-mansion',label:'Mansion cellar doors',x:-26.5,top:-10.5,bottom:-18,direction:-1,indoors:false},
- {id:'cellar-garden',label:'Garden cellar doors',x:0,top:-48,bottom:-42,direction:1,indoors:false},
- {id:'cellar-hall',label:'Hall cellar doors',x:-.65,top:-5.7,bottom:-13.2,direction:-1,indoors:true}
+ {id:'cellar-mansion',label:'Mansion cellar doors',x:-26.5,top:-10.5,bottom:-18,direction:-1,underpass:false},
+ {id:'cellar-garden',label:'Lodge cellar doors',x:0,top:-65,bottom:-59,direction:1,underpass:false},
+ {id:'cellar-hall',label:'Hall cellar doors',x:-.65,top:-5.7,bottom:-13.2,direction:-1,underpass:true}
 ] as const;
+export const LODGE_BULKHEAD=BULKHEADS[1];
+const tunnelEnd=LODGE_BULKHEAD.bottom,tunnelMouth=-20;
+const tunnelLength=tunnelMouth-tunnelEnd,tunnelCenter=(tunnelMouth+tunnelEnd)/2;
 const HALF=1.65, OPEN=3.6;
 export function bulkheadGate(s:typeof BULKHEADS[number],below:boolean){
  const distance=below?(s.bottom-s.top)*s.direction*.34:0;
@@ -23,7 +26,7 @@ export function cellarStairHeight(s:typeof BULKHEADS[number],z:number){
  return T.MathUtils.lerp(-.08,CELLAR_FLOOR,(z-s.top)/(s.bottom-s.top));
 }
 export const cellarContains=(x:number,z:number)=>
- (Math.abs(x)<11&&z>-20&&z<-2)||(Math.abs(x)<tunnelHalf&&z>=-42&&z<=-20)||
+ (Math.abs(x)<11&&z>-20&&z<-2)||(Math.abs(x)<tunnelHalf&&z>=tunnelEnd&&z<=tunnelMouth)||
  (x>=-28.15&&x<=-11&&z>=-21.3&&z<=-18);
 export const HALL_BULKHEAD=BULKHEADS[2];
 export const cellarOpeningEnd=(s:typeof BULKHEADS[number])=>s.top+s.direction*OPEN;
@@ -57,7 +60,7 @@ export function buildCellar(e:Estate){
   [hall.x-HALF,hall.x+HALF,-20,hall.bottom],
   [hall.x-HALF,hall.x+HALF,hall.top,-2]
  ])e.walls.push(e.box(x1-x0,.25,z1-z0,(x0+x1)/2,CEILING+.125,(z0+z1)/2,stone));
- slab(3.75,22,-31);slab(17.5,3.3,-19.65,-19.65);
+ slab(3.75,tunnelLength,tunnelCenter);slab(17.5,3.3,-19.65,-19.65);
  wall(.35,18,11,-11);wall(.35,16,-11,-10);
  wall(.3,3.3,-28.15,-19.65);wall(17.3,.28,-19.5,-21.3);
  wall(13.85,.28,-17.925,-18);
@@ -67,7 +70,7 @@ export function buildCellar(e:Estate){
  const wing=11-tunnelHalf;
  for(const side of [-1,1]){
   wall(wing,.35,side*(tunnelHalf+wing/2),-20,bunkerBrick);
-  wall(.3,22,side*tunnelHalf,-31);
+  wall(.3,tunnelLength,side*tunnelHalf,tunnelCenter);
  }
 
  const item=(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material,parent=e.scene)=>
@@ -197,8 +200,8 @@ export function buildCellar(e:Estate){
   e.sphere(.092,x,y-.12,z,bulb,e.scene,1,.68,1);
   const lamp=new T.PointLight(0xffc58a,power*.38,8,2);lamp.position.set(x,y-.38,z);e.scene.add(lamp);
  };
- for(const [x,z,power] of [[0,-5,65],[0,-14.3,100],[-7,-8,110],[7,-8,90],[-9.6,-18.5,110],[-7.45,-15.65,74],[7.6,-16.8,82],[0,-19,115],[0,-24,68],[0,-30,70],[0,-36,70],[0,-40,55],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
- for(const z of [-21,-25,-29,-33,-37]){
+ for(const [x,z,power] of [[0,-5,65],[0,-14.3,100],[-7,-8,110],[7,-8,90],[-9.6,-18.5,110],[-7.45,-15.65,74],[7.6,-16.8,82],[0,-19,115],[0,-24,68],[0,-30,70],[0,-36,70],[0,-42,55],[0,-48,55],[0,-54,55],[0,-58,55],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
+ for(let z=-21;z>tunnelEnd+1;z-=4){
   for(const side of [-1,1])e.box(.16,3.7,.23,side*(tunnelHalf-.07),CELLAR_FLOOR+1.85,z,stone);
   e.box(3,.23,.23,0,CEILING-.11,z,stone);
  }
@@ -220,7 +223,7 @@ export function buildCellar(e:Estate){
   }
   for(const side of [-1,1]){
    const edge=s.x+side*HALF;
-   if(s.indoors){
+   if(s.underpass){
     // Leave a walkable cross passage under the upper half of the hall steps.
     for(let i=0;i<count;i++){
      const z=s.top+s.direction*(i+.5)*depth/count,y=cellarStairHeight(s,z);
@@ -228,7 +231,7 @@ export function buildCellar(e:Estate){
     }
    }else e.box(.24,4.7,depth,edge,-2.41,(s.top+s.bottom)/2,stone);
    e.box(.33,.42,OPEN+.18,edge,.12,s.top+s.direction*OPEN/2,frame);
-   const wallTop=s.indoors?s.top+s.direction*4.35:s.top;
+   const wallTop=s.underpass?s.top+s.direction*4.35:s.top;
    e.cellarBarriers.push({x:edge,z:(wallTop+s.bottom)/2,w:.24,d:Math.abs(s.bottom-wallTop)});
    e.barrier(edge,s.top+s.direction*OPEN/2,.24,OPEN);
    const leaf=new T.Group();leaf.position.x=side*HALF;
@@ -246,6 +249,6 @@ export function buildCellar(e:Estate){
   for(const z of [s.top,back])e.box(3.3,.41,.15,s.x,.115,z,frame);
   e.barrier(s.x,back,3.3,.21);
   // Low roof over the buried part leaves headroom below the ground opening.
-  if(!s.indoors)e.box(3.3,.24,depth-OPEN,s.x,-.29,(back+s.bottom)/2,stone);
+  if(!s.underpass)e.box(3.3,.24,depth-OPEN,s.x,-.29,(back+s.bottom)/2,stone);
  }
 }
