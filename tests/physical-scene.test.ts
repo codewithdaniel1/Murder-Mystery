@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import * as T from 'three';
 import {furnishedEstate} from './estate-fixture';
 import {freshState} from '../src/state';
-import {normalized,landscape} from '../src/visuals';
+import {normalized,landscape,buildGardenLodge} from '../src/visuals';
 import {createCharacterMotion,animateCharacter} from '../src/characters';
 import {loadModel} from './model-fixture';
 import type {Estate} from '../src/world';
@@ -14,6 +14,22 @@ import {buildShed,SHED,WITNESSES,Yard} from '../src/yard';
 import {buildCellar,BULKHEADS,bulkheadGate,CELLAR_FLOOR} from '../src/cellar';
 
 describe('walkable surfaces and physical obstacles',()=>{
+ it('connects the garden through the lodge and out to the woodland loop',()=>{
+  const e=furnishedEstate(),s=freshState();landscape(e);buildGardenLodge(e);buildCellar(e);
+  for(const x of[-7,5]){
+   e.setPose({x,z:-35,yaw:0,pitch:0});
+   e.move(0,-17,s);e.move(-x,0,s);expect(e.pose().x).toBeCloseTo(0);
+   expect(e.pose().z).toBeCloseTo(-52);
+  }
+  e.move(0,-4,s);expect(e.pose().z).toBeGreaterThan(-54);
+  for(const id of ['lodge-front','lodge-rear']){s.doors[id]=true;e.doors.get(id)!.pivot.rotation.y=-Math.PI/2;}
+  e.move(0,-61.5-e.pose().z,s);expect(e.pose().z).toBeCloseTo(-61.5);
+  for(const x of[-5,5]){
+   e.move(x,0,s);expect(e.pose().x).toBeCloseTo(x);
+   e.move(-x,0,s);
+  }
+  e.move(0,-16.5,s);expect(e.pose().z).toBeCloseTo(-78);
+ });
  it('keeps the shed entrance walkable and its back and sides solid',()=>{
   const e=furnishedEstate(),s=freshState();buildShed(e);
   e.setPose({x:SHED.x,z:SHED.z+4,yaw:0,pitch:0});

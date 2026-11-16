@@ -8,6 +8,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import type {Estate} from './world';
 const base=import.meta.env.BASE_URL;
+const lodge={front:-54,back:-69,halfWidth:12,loop:-78};
 const seeded=(()=>{let a=9102;return()=>{a=(a*1664525+1013904223)>>>0;return a/4294967296}})();
 
 export function materials(e:Estate):Promise<unknown>[] {
@@ -65,8 +66,8 @@ export function landscape(e:Estate){
  // A walk beyond the gate branches around both sides of the house and garden.
  const path=e.mats.gravel;
  e.floor(3.4,.02,11.9,0,-.085,90.45,path);
- for(const x of[-66,66])e.floor(3.4,.02,161,x,-.085,15.5,path);
- for(const z of[-63.3,94.3])e.floor(128.6,.02,3.4,0,-.085,z,path);
+ for(const x of[-66,66])e.floor(3.4,.02,94.3-lodge.loop+3.4,x,-.085,(94.3+lodge.loop)/2,path);
+ for(const z of[lodge.loop,94.3])e.floor(128.6,.02,3.4,0,-.085,z,path);
  for(const x of[-4.2,4.2])e.box(.19,.09,60,x,-.01,45,e.mats.trim);
  for(const z of[12.8,21.2])for(const x of[-14,14])e.box(19,.09,.18,x,-.01,z,e.mats.trim);
  // Fine iron boundary railings with stone gate piers.
@@ -94,13 +95,97 @@ function woodland(){
   const xx=x+(rand()-.5)*12,zz=z+(rand()-.5)*12;
   if(Math.abs(xx)<51&&zz>-53&&zz<61)continue;
   if(Math.abs(xx)<6&&zz>=55&&zz<98)continue;
-  if(Math.abs(Math.abs(xx)-66)<4&&zz>-68&&zz<99)continue;
-  if((Math.abs(zz+63.3)<4||Math.abs(zz-94.3)<4)&&Math.abs(xx)<70)continue;
+  if(Math.abs(Math.abs(xx)-66)<4&&zz>lodge.loop-5&&zz<99)continue;
+  if((Math.abs(zz-lodge.loop)<4||Math.abs(zz-94.3)<4)&&Math.abs(xx)<70)continue;
+  if(Math.abs(xx)<lodge.halfWidth+6&&zz>lodge.loop-3&&zz<lodge.front+6)continue;
   if(Math.hypot(xx-98,zz-48)<21||Math.hypot(xx+99,zz+75)<23||rand()<.29)continue;
   trees.push([xx,zz,.73+rand()*.52,rand()*Math.PI*2]);
   if(rand()>.25)scrub.push([xx+(rand()-.5)*1.6,zz+(rand()-.5)*1.6,.75+rand()*.5,rand()*Math.PI*2]);
  }
  return {trees,scrub};
+}
+export function buildGardenLodge(e:Estate){
+ const {front,back,halfWidth,loop}=lodge,mid=(front+back)/2,depth=front-back;
+ const {stone,trim,wood,panel,slate,gravel,gold}=e.mats;
+ // The two garden branches leave the cellar hatch and its stair approach open.
+ for(const x of[-7,5]){
+  e.floor(1.8,.04,17,x,-.032,-43.5,gravel);
+  e.floor(Math.abs(x),.04,3,x/2,-.032,-52,gravel);
+ }
+ e.floor(5.35,.04,3,-5.175,-.032,-35,gravel);
+ e.floor(3.4,.04,8.9,0,-.043,(back+loop+.1)/2,gravel);
+ e.floor(24,.16,depth,0,-.005,mid,wood);
+ const h=4.1,opening=3,doorH=2.8;
+ for(const [z,id,yaw] of [[front,'lodge-front',Math.PI],[back,'lodge-rear',0]] as const){
+  for(const side of[-1,1]){
+   const wy=2.08,ww=1.32,wh=1.95,low=wy-wh/2,high=wy+wh/2;
+   let edge=opening/2;
+   for(const center of[5.4,9.3]){
+    const left=center-ww/2,right=center+ww/2,wx=side*center;
+    e.wall(left-edge,h,.48,side*(edge+left)/2,h/2,z,stone);
+    e.wall(ww,low,.48,wx,low/2,z,stone);
+    e.wall(ww,h-high,.48,wx,(h+high)/2,z,stone);
+    e.wall(ww,wh,.04,wx,wy,z,e.mats.glass);
+    for(const face of[-1,1]){
+     const frame=new T.Group();frame.position.set(wx,wy,z+face*.245);frame.rotation.y=face>0?0:Math.PI;e.scene.add(frame);
+     windowDetail(e,0,0,0,ww,wh,null,frame);
+    }
+    edge=right;
+   }
+   e.wall(halfWidth-edge,h,.48,side*(edge+halfWidth)/2,h/2,z,stone);
+   e.box(.29,h,.17,side*1.62,h/2,z+(z===front?.27:-.27),trim);
+  }
+  e.wall(opening,h-doorH,.48,0,(h+doorH)/2,z,stone);
+  const hinge=yaw===0?-opening/2:opening/2;
+  e.addDoor(id,hinge,z,yaw,false,.075,opening,doorH-.075,z===front?'Garden lodge entrance':'Garden lodge rear door');
+  mould(e,3.65,.13,.69,0,doorH+.13,z);
+ }
+ for(const x of[-halfWidth,halfWidth])e.wall(.48,h,depth,x,h/2,mid,stone);
+ const eaves=4.15;
+ roof(e,0,eaves,mid,25,depth+1.1,2.5);
+ e.box(24,.18,depth,0,4.01,mid,e.mats.plaster);
+ for(const z of[front,back])e.box(24.8,.22,.7,0,4.13,z,trim);
+ for(const x of[-7.7,7.7]){
+  e.box(.94,2.3,.86,x,5.65,mid,stone);
+  mould(e,1,.13,1,x,6.81,mid);
+  // Interior partitions leave a wide opening from the central hall to each room.
+  const divider=Math.sign(x)*2.5;
+  for(const dz of[-5,5])e.wall(.24,3.9,5,divider,2,mid+dz,e.mats.plaster);
+  e.wall(.24,1.1,5,divider,3.5,mid,e.mats.plaster);
+  if(x<0){
+   e.table(x,mid,1.7,1,.54);e.lamp(x,.64,mid);
+   const fabric=e.mats.leather??e.mats.red;
+   for(const z of[mid-2.6,mid+2.6]){
+    const g=new T.Group(),side=Math.sign(z-mid);e.scene.add(g);
+    e.round(2.65,.18,.79,x,.48,z,fabric,g);
+    e.round(2.65,.64,.22,x,.79,z+side*.31,fabric,g);
+    for(const dx of[-1.23,1.23]){
+     e.round(.21,.25,.77,x+dx,.64,z,fabric,g);
+     e.box(.15,.32,.57,x+dx,.24,z,wood,g);
+    }
+    e.barrier(x,z,2.65,.83);
+   }
+  }else{
+   e.table(x,mid,2.8,1.3);
+   for(const dx of[-.73,.73])for(const dz of[-1.27,1.27]){
+    e.box(.48,.1,.47,x+dx,.49,mid+dz,wood);
+    e.box(.48,.53,.1,x+dx,.76,mid+dz+Math.sign(dz)*.2,panel);
+    for(const ax of[-.17,.17])for(const az of[-.17,.17])e.box(.065,.47,.065,x+dx+ax,.235,mid+dz+az,wood);
+    e.barrier(x+dx,mid+dz,.48,.49);
+   }
+  }
+  for(const z of[front-2,back+2]){
+   e.box(3,.15,.65,x,.47,z,panel);
+   e.box(3,.54,.16,x,.79,z+Math.sign(z-mid)*.26,wood);
+   for(const dx of[-1.15,1.15])e.box(.16,.45,.53,x+dx,.26,z,wood);
+   e.barrier(x,z,3,.65);
+  }
+  if(x>0)e.box(2.45,.015,.31,x,1.035,mid,slate);
+ }
+ const light=new T.PointLight(0xffdb9e,26,12);light.position.set(0,3.35,mid);e.scene.add(light);
+ e.cyl(.028,.028,.42,0,3.73,mid,gold);
+ e.cyl(.12,.37,.17,0,3.47,mid,gold);
+ e.sphere(.115,0,3.36,mid,e.mats.cream);
 }
 export function castle(e:Estate){
  const {stone,trim}=e.mats;

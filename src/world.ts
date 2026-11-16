@@ -5,7 +5,7 @@ import {gardenBench,gardenGroundDetail} from './detail';
 import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarOpeningEnd,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import {materials,landscape,castle,interiorDetail,sceneryAssets,batchDetail,grandfatherClock} from './visuals';
+import {materials,landscape,castle,buildGardenLodge,interiorDetail,sceneryAssets,batchDetail,grandfatherClock} from './visuals';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
@@ -40,7 +40,7 @@ export class Estate {
  this.scene.add(new T.HemisphereLight(0xc7def0,0x615241,.42));this.sun=new T.DirectionalLight(0xffe7c7,3.2);this.sun.position.set(-28,38,26);this.sun.castShadow=true;this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-44,right:44,top:44,bottom:-44,near:1,far:115});this.sun.shadow.bias=-.00008;this.sun.shadow.normalBias=.025;this.sun.shadow.radius=2;this.scene.add(this.sun);
  this.mats={dark:this.mat(0x26302a),gold:this.mat(0xaa8c51,.4,.7),black:this.mat(0x171c1a,.6),cream:this.mat(0xcdbfa3),leaf:this.mat(0x3c5631),red:this.mat(0x472d2c),paper:this.mat(0xe4d5b6),glass:this.mat(0xbac7c4)};
  const loaded=materials(this);
- this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();buildCellar(this);buildShed(this);this.yard=new Yard(this);
+ this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();buildGardenLodge(this);buildCellar(this);buildShed(this);this.yard=new Yard(this);
  this.addActor('june',2,6,0x3b4943,0xd1b39c,true);this.addActor('rook',-12,3,0x3f3e47,0xc2a48a,false);this.addActor('mara',13,1,0x7d6045,0xd2b7a1,true);this.addActor('ada',-9,-20,0x537b72,0xd7b79e,true);this.addActor('tomas',23,-21,0x66704b,0xc6a182,false);this.addActor('beatrice',4,20,0x664d56,0xd8b59b,true);this.addActor('jonah',7,24,0x3c4853,0xc7a085,false);
  this.actors.get('beatrice')!.root.visible=false;this.actors.get('jonah')!.root.visible=false;
  this.car=this.makeCar();this.car.position.set(4,0,56);this.car.visible=false;this.scene.add(this.car);
@@ -76,7 +76,7 @@ export class Estate {
  sign(text:string,x:number,y:number,z:number,width=1.6,rotation=0,parent:T.Object3D=this.scene){const c=document.createElement('canvas');c.width=512;c.height=160;const ctx=c.getContext('2d')!;ctx.fillStyle='#243b32';ctx.fillRect(0,0,512,160);ctx.strokeStyle='#b9a673';ctx.lineWidth=4;ctx.strokeRect(10,10,492,140);ctx.fillStyle='#eadfbc';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='28px Georgia';ctx.fillText(text,256,81);const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;const m=new T.Mesh(new T.PlaneGeometry(width,width*.3125),new T.MeshStandardMaterial({map:tex,roughness:.8}));m.position.set(x,y,z);m.rotation.y=rotation;parent.add(m);return m;}
  landscape(){landscape(this)}
  castle(){castle(this)}
- addDoor(id:string,x:number,z:number,rotation:number,open=false,base=.12,width=3.1,height=3.15){
+ addDoor(id:string,x:number,z:number,rotation:number,open=false,base=.12,width=3.1,height=3.15,label?:string){
   const pivot=new T.Group();pivot.position.set(x,base,z);pivot.rotation.y=rotation;
   const door=new T.Group(),wood=this.mats.panel,trim=this.mats.wood,gold=this.mats.gold;
   this.box(3.1,3.15,.16,1.55,1.58,0,this.mats.dark,door);
@@ -104,7 +104,7 @@ export class Estate {
    this.cyl(.018,.018,.1,2.78,1.25,side*.19,gold,door,10).rotation.x=Math.PI/2;
   }
   door.scale.set(width/3.1,height/3.15,1);
-  pivot.add(door);this.scene.add(pivot);this.target(door,'door:'+id,id==='front'?'Entrance doors':id==='rear'?'Garden door':id==='study'?'Study door':id==='balcony'?'Balcony door':'Library door','Open / close');this.doors.set(id,{pivot:door,frame:pivot,angle:open?-Math.PI/2:0,open:open?1:0});door.rotation.y=open?-Math.PI/2:0;
+  pivot.add(door);this.scene.add(pivot);this.target(door,'door:'+id,label??(id==='front'?'Entrance doors':id==='rear'?'Garden door':id==='study'?'Study door':id==='balcony'?'Balcony door':'Library door'),'Open / close');this.doors.set(id,{pivot:door,frame:pivot,angle:open?-Math.PI/2:0,open:open?1:0});door.rotation.y=open?-Math.PI/2:0;
   const along=Math.abs(Math.sin(rotation))>.5;
   const blocker={x:x+Math.cos(rotation)*width/2,z:z-Math.sin(rotation)*width/2,w:along?.28:width,d:along?width:.28,door:id};
   (base>=UPPER_FLOOR?this.upperBarriers:this.barriers).push(blocker);
@@ -188,7 +188,7 @@ export class Estate {
  }
  for(const x of[-12,12]){this.barrier(x,-29,2.2,8.2);}for(let i=0;i<6;i++){const x=-16+i*6;this.floor(4,.32,2,x,.1,-40,this.mats.stone);this.barrier(x,-40,4,2);}
  const flowers=new T.InstancedMesh(new T.SphereGeometry(.07,5,4),this.mat(0xddbd98),480),stems=new T.InstancedMesh(new T.CylinderGeometry(.018,.025,.45,4),this.mats.leaf,480);const m=new T.Matrix4();for(let i=0;i<480;i++){const x=-18+rnd()*36,z=-39.2-rnd()*1.5,y=.4+rnd()*.4;m.makeTranslation(x,y,z);flowers.setMatrixAt(i,m);m.makeTranslation(x,y-.2,z);stems.setMatrixAt(i,m);}this.scene.add(flowers,stems);
- for(const x of [-7,7])gardenBench(this,x,-36);
+ for(const x of [-10,8])gardenBench(this,x,-36);
  // Matching front and rear greenhouse entries connect both garden paths.
  const glass=this.mats.glass,metal=this.mats.dark;this.floor(10,.15,8,26,0,-29,this.mat(0x8e9277));for(const x of[21,31]){this.box(.1,3.5,8,x,1.75,-29,glass,this.scene,false);this.barrier(x,-29,.2,8);}
  for(const z of[-25,-33]){for(const x of[22.8,29.2]){this.box(3.6,3.5,.1,x,1.75,z,glass,this.scene,false);this.barrier(x,z,3.6,.2);}for(const x of[24.6,27.4])this.box(.08,3.6,.09,x,1.8,z,metal);this.box(2.8,.1,.09,26,3.52,z,metal);}
