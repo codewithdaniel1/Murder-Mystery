@@ -1,4 +1,5 @@
 import {buildShed,Yard,type StaffLevel,type WitnessId} from './yard';
+import {withinGrounds} from './grounds';
 import {ATTIC_FLOOR,atticStairHeight,inAtticStair,onAtticDeck} from './attic';
 import {gardenBench,gardenGroundDetail} from './detail';
 import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarOpeningEnd,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
@@ -25,6 +26,7 @@ interface Actor {isWalking?:boolean;activity?:Activity|null;activityLabel?:strin
 const rnd=(()=>{let s=4217;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}})();
 export class Estate {
  scene=new T.Scene();camera=new T.PerspectiveCamera(65,innerWidth/innerHeight,.06,220);renderer:T.WebGLRenderer;
+ woodlandTrunks:{x:number;z:number;w:number;d:number}[]=[];
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
  upperBarriers:Barrier[]=[];atticBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
@@ -267,6 +269,7 @@ export class Estate {
  }
  move(dx:number,dz:number,s:GameState){
  const start=this.camera.position.clone(),ground=[...this.collisionBarriers(s),...(this.stairBarriers??[])];
+ for(const tree of this.woodlandTrunks??[])if(Math.abs(tree.x-start.x)<=Math.abs(dx)+1&&Math.abs(tree.z-start.z)<=Math.abs(dz)+1)ground.push(tree);
  for(const a of this.actors.values())if(a.root.visible)ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
  ground.push(...(this.yard?.staffObstacles('ground')??[]));
  let elevation=this.playerElevation??this.groundHeight(start.x,start.z);
@@ -279,7 +282,7 @@ export class Estate {
  const barriers=()=>elevation<-.15?cellar:elevation>ATTIC_FLOOR-.25?attic:elevation>UPPER_FLOOR-.25?upper:ground;
  let p=resolveOverlap(start,barriers(),s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
  const advance=(x:number,z:number)=>{
-  if(Math.abs(x)>=52||z>=53||z<=-49||!clearSegment(p,{x,z},barriers(),s.doors,.26))return;
+  if(!withinGrounds(x,z)||!clearSegment(p,{x,z},barriers(),s.doors,.26))return;
   const y=this.playerSurface(x,z,elevation);
   if(Math.abs(y-elevation)>.32)return;
   p={x,z};elevation=y;

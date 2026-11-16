@@ -1,4 +1,5 @@
 import {WITNESSES,type WitnessId} from './yard';
+import {rememberStory,storyNotes,storyTopics} from './stories';
 import './style.css';
 import {Estate} from './world';
 import {EstateAudio} from './audio';
@@ -60,7 +61,7 @@ if(id==='beatrice'){
  t.push({label:'Present my explanation.',reply:'Let us hear the evidence.',run:()=>notebook('Accusation')});
 }
 if(id==='jonah')t.push({label:'Where were you and Lady Beatrice?',reply:'On the road from eight, Detective. Here is the toll receipt. Her ladyship was beside me. The gatehouse sent us straight up when they heard your message.',run:()=>{interview();record('journey')}});
-return t;
+return [...t,...storyTopics(id,state).map(story=>({...story,run:()=>rememberStory(state,story.id)}))];
 }
 let currentTopics:Topic[]=[];
 function dialogue(id:PersonId,reply?:string){panel('dialogue');talking=id;sound.resume();const voicePosition=estate.actors.get(id)!.root.position;sound.vocal(id,[voicePosition.x,1.6,voicePosition.z]);const person=PEOPLE[id];currentTopics=topics(id);overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:${person.color}">${person.initials}</span><div><span class="eyebrow">${person.role}</span><h2>${person.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${reply??({june:'Good afternoon, Detective. Thank you for coming.',rook:'I trust this will not take long.',mara:'Oh, hello. Do mind Pip; he likes a new friend.',ada:'It is such a lovely day for something so awful.',tomas:'Afternoon. Looking for something?',beatrice:'Detective. Tell me what you need.',jonah:'At your service, Detective.'}[id])}”</p><div class="topics">${currentTopics.map((t,i)=>`<button data-topic="${i}"><span>${t.label}</span><span>↗</span></button>`).join('')}</div><small>Esc ends the conversation immediately.</small></section>`}
@@ -72,11 +73,14 @@ function inspect(id:string){
  const eid=(id==='lexicon'?'translation':id) as EvidenceId;if(!(eid in EVIDENCE))return;
  panel('inspect');record(eid);if(id==='ledger')record('receipts');estate.present(id);sound.effect('paper');const e=EVIDENCE[eid];overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">${e.source}</span><h1>${e.title}</h1><p>${e.text}</p>${id==='ledger'?`<div class="inset">${EVIDENCE.receipts.text}</div>`:''}<div class="recorded">✓ Recorded in your notebook</div><button class="primary" data-action="resume">Return to the investigation →</button><small>Use ← / → to turn the object.</small></section>`;
 }
-function witnessDialogue(id:WitnessId,followup=false){
+let witnessTopics:Topic[]=[];
+function witnessDialogue(id:WitnessId,reply?:string){
  panel('dialogue');talkingWitness=id;
  const w=WITNESSES[id],actor=estate.yard.witnesses.find(a=>a.id===id);
  if(actor){const p=actor.root.position;sound.vocal(w.template,[p.x,p.y+1.58,p.z]);}
- overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:#c2ad87">${w.initials}</span><div><span class="eyebrow">${w.role}</span><h2>${w.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${followup?w.reply:w.first}”</p><div class="topics">${followup?'<button data-action="resume">Thank you.</button>':`<button data-witness-followup="1">${w.question}</button>`}</div><small>Esc ends the conversation.</small></section>`;
+ const extras=storyTopics(id,state).map(story=>({...story,run:()=>rememberStory(state,story.id)}));
+ witnessTopics=[{label:w.question,reply:w.reply},...extras];
+ overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:#c2ad87">${w.initials}</span><div><span class="eyebrow">${w.role}</span><h2>${w.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${reply??w.first}”</p><div class="topics">${witnessTopics.map((t,i)=>`<button data-witness-topic="${i}">${t.label}</button>`).join('')}<button data-action="resume">End conversation</button></div><small>Esc ends the conversation.</small></section>`;
 }
 function interact(){if(mode!=='play')return;const t=estate.targetAt();if(!t)return;estate.gesture=1;if(t.id.startsWith('npc:'))dialogue(t.id.slice(4) as PersonId);else if(t.id.startsWith('witness:')){const id=t.id.slice(8) as WitnessId;if(WITNESSES[id].level===estate.staffLevel())witnessDialogue(id);}else if(t.id.startsWith('bulkhead:')){
  const opened=estate.toggleBulkhead(t.id.slice(9),state);
@@ -91,6 +95,10 @@ function notebook(next=tab){tab=next;panel('notebook');let content='';
  if(tab==='Connections')content=`<h1>Make the connections</h1><p class="page-intro">Evidence becomes useful when you can explain what it means.</p><div class="connection-list">${Object.entries(DEDUCTIONS).map(([id,d])=>{const done=state.deductions.includes(id as DeductionId),ready=d.needs.every(e=>has(state,e));return `<article><div class="page-heading"><h3>${d.title}</h3><span>${done?'✓ Established':d.needs.filter(e=>has(state,e)).length+' / '+d.needs.length+' clues'}</span></div><p class="clue-list">${d.needs.map(e=>has(state,e)?EVIDENCE[e].title:'Undiscovered evidence').join(' · ')}</p>${done?`<p>${d.text}</p>`:ready?d.options.map((o,i)=>`<button data-deduction="${id}" data-choice="${i}">${o}</button>`).join(''):'<p class="muted">Keep investigating to compare these clues.</p>'}</article>`}).join('')}</div>`;
  if(tab==='Map')content=`<h1>Estate plan</h1><p class="page-intro">Speak with the residents and follow the paths to explore.</p><div class="estate-map estate-plan" aria-hidden="true"><div class="plan-garden"><div class="plan-path"></div><div class="plan-fountain"></div><div class="plan-greenhouse"></div></div><div class="plan-passage"></div><div class="plan-rooms"><div></div><div></div><div></div></div><div class="plan-drive"></div></div>`;
  if(tab==='Accusation')content=`<h1>Present your explanation</h1><p class="page-intro">Name the person, the weapon, and the motive. Establish your supporting connections before making the case.</p><form id="accusation"><label>Who killed Elias Vale?<select name="person">${Object.entries(PEOPLE).map(([id,p])=>`<option value="${id}">${p.name}</option>`).join('')}</select></label><label>What was used?<select name="method"><option value="poison">Poison in a drink</option><option value="falcon">The bronze falcon</option><option value="fall">A fall from the tower</option></select></label><label>Why?<select name="motive"><option value="inheritance">To gain an inheritance</option><option value="funds">To conceal diverted restoration funds</option><option value="rivalry">A scholarly rivalry</option></select></label><button class="primary" type="submit">Explain the case →</button><p id="accusation-result" role="status"></p></form>`;
+ if(tab==='People'){
+  const notes=storyNotes(state);
+  if(notes.length)content+=`<h2>Conversation notes</h2><p class="page-intro">Accounts and stories to compare as you explore.</p><div class="evidence-grid">${notes.map(({speaker,note,cleared})=>`<article><span class="eyebrow">${cleared?'Followed up':'Conversation'}</span><h3>${(speaker in PEOPLE?PEOPLE[speaker as PersonId]:WITNESSES[speaker as WitnessId]).name}</h3><p>${note}</p></article>`).join('')}</div>`;
+ }
  overlay.innerHTML=`<section class="notebook-shell"><aside><span class="eyebrow">DETECTIVE’S</span><h2>Casebook</h2><span class="case-number">BRAMBLEWICK / 01</span><nav>${['Evidence','People','Connections','Map','Accusation'].map(t=>`<button class="${tab===t?'active':''}" data-tab="${t}">${t}</button>`).join('')}</nav><button data-action="resume">← Back to the estate</button><small>Progress is saved from the pause menu.</small></aside><div class="notebook-page">${content}</div></section>`;
 }
 function ending(){panel('ending');overlay.innerHTML=`<section class="panel ending-card"><span class="eyebrow">THE LAST BELL AT BRAMBLEWICK</span><h1>The truth,<br>at last.</h1><p>Edmund Rook diverted £120 from the restoration accounts. Elias discovered the deception and intended to tell Lady Beatrice.</p><p>The bronze falcon connects the attack to the study. Rook’s account of ringing the bell, and the evidence from the service passage, unravel his story.</p><p>Beatrice sends for the constable. Beyond the windows, Pip chases the afternoon light across the garden. Bramblewick can finally begin to recover.</p><div class="recorded">CASE EXPLAINED · ${state.evidence.length} pieces of evidence · ${state.deductions.length} connections</div><button class="primary" data-action="resume">Stay a little longer →</button><button data-action="save">Save this completed case</button></section>`}
@@ -100,7 +108,7 @@ app.addEventListener('click',e=>{const el=(e.target as HTMLElement).closest<HTML
  if(action==='menu'){overlay.innerHTML=`<section class="panel narrow"><h1>Leave the investigation?</h1><p>Unsaved progress will be lost when you begin or load another case.</p><button class="primary" data-action="save-title">Save and return to title</button><button data-action="title">Return without saving</button><button data-action="pause">Stay here</button></section>`}
  if(action==='save-title'){try{localStorage.setItem(SAVE_KEY,encodeSave(state,estate.pose()));mainMenu()}catch(e){toast((e as Error).message)}}
  if(action==='complete-call'){if(completeCall(state))toast('Message delivered. Lady Beatrice’s car will approach when you return.');play()}
- if(el.dataset.witnessFollowup&&talkingWitness)witnessDialogue(talkingWitness,true);
+ if(el.dataset.witnessTopic!==undefined&&talkingWitness){const t=witnessTopics[Number(el.dataset.witnessTopic)];t.run?.();witnessDialogue(talkingWitness,t.reply);}
  if(el.dataset.topic!==undefined&&talking){const id=talking,t=currentTopics[Number(el.dataset.topic)];t.run?.();if(mode==='dialogue')dialogue(id,t.reply);refreshHUD()}
  if(el.dataset.tab)notebook(el.dataset.tab);
  if(el.dataset.deduction){const ok=solveDeduction(state,el.dataset.deduction as DeductionId,Number(el.dataset.choice));if(ok){sound.effect('clue');notebook('Connections');refreshHUD()}else toast('That conclusion goes beyond what the evidence supports. Compare the clues again.')}

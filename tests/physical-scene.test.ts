@@ -141,6 +141,15 @@ describe('walkable surfaces and physical obstacles',()=>{
   e.move(-4.8+hall.x,0,s);e.move(0,-13.7-e.pose().z,s);
   e.move(0,9,s);expect(e.inCellar()).toBe(false);
  });
+ it('lets you walk past the old estate edge and save in the outer grounds',()=>{
+  const e=furnishedEstate(),s=freshState();landscape(e);
+  e.setPose({x:0,z:51,yaw:0,pitch:0});
+  e.move(0,43.3,s);e.move(66,0,s);e.move(0,-207,s);
+  expect(e.pose().x).toBeCloseTo(66);expect(e.pose().z).toBeCloseTo(-112.7);
+  expect(decodeSave(encodeSave(s,e.pose()))?.pose).toEqual(e.pose());
+  e.setPose({x:0,z:154.5,yaw:0,pitch:0});
+  e.move(0,2,s);expect(e.pose().z).toBeLessThan(155);
+ });
  it('keeps the rear passage walkable above the covered cellar stairs',()=>{
   const e=furnishedEstate(),s=freshState();landscape(e);buildCellar(e);
   e.setPose({x:-3.4,z:-11.8,yaw:0,pitch:0});

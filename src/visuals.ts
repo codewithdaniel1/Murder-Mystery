@@ -1,4 +1,5 @@
 import {wallSocket} from './detail';
+import {GROUNDS} from './grounds';
 import {cellarGroundOpenings,HALL_BULKHEAD} from './cellar';
 import * as T from 'three';
 import {BALCONY,buildUpstairs,STAIR,UPPER_FLOOR} from './upstairs';
@@ -40,15 +41,16 @@ function windowDetail(e:Estate,x:number,y:number,z:number,w=1.8,h=2.4,solid:bool
 }
 export function landscape(e:Estate){
  const holes=cellarGroundOpenings();
- const xs=[-110,...holes.flatMap(h=>[h.left,h.right]).sort((a,b)=>a-b),110];
+ const edgeOfTerrain=GROUNDS.terrainEdge;
+ const xs=[-edgeOfTerrain,...holes.flatMap(h=>[h.left,h.right]).sort((a,b)=>a-b),edgeOfTerrain];
  for(let i=0;i<xs.length-1;i++){
   const a=xs[i],b=xs[i+1],x=(a+b)/2;
-  let edge=-110;
+  let edge=-edgeOfTerrain;
   for(const hole of holes.filter(h=>x>h.left&&x<h.right).sort((a,b)=>a.near-b.near)){
    if(hole.near>edge)e.box(b-a,.2,hole.near-edge,x,-.18,(edge+hole.near)/2,e.mats.grass,e.scene,false);
    edge=Math.max(edge,hole.far);
   }
-  e.box(b-a,.2,110-edge,x,-.18,(edge+110)/2,e.mats.grass,e.scene,false);
+  e.box(b-a,.2,edgeOfTerrain-edge,x,-.18,(edge+edgeOfTerrain)/2,e.mats.grass,e.scene,false);
  }
  // A compacted-earth approach keeps the entrance court from reading as a bed
  // of coarse stone. Fine, low-contrast grain breaks up the surface at a distance.
@@ -60,6 +62,12 @@ export function landscape(e:Estate){
  // Stop the approach at the outside face of the mansion. The previous road
  // slab extended through the doorway and covered part of the interior floor.
  e.floor(8,.025,72.5,0,-.055,48.25,drive);e.floor(48,.025,8,0,-.05,17,drive);
+ // A walk beyond the gate branches around both sides of the house and garden.
+ const path=e.mats.gravel.clone();path.color.setHex(0x9a886d);
+ e.floor(3.4,.02,11.9,0,-.085,90.45,path);
+ for(const x of[-66,66])e.floor(3.4,.02,161,x,-.085,15.5,path);
+ for(const z of[-63.3,94.3])e.floor(128.6,.02,3.4,0,-.085,z,path);
+ woodland(e);
  for(const x of[-4.2,4.2])e.box(.19,.09,60,x,-.01,45,e.mats.trim);
  for(const z of[12.8,21.2])for(const x of[-14,14])e.box(19,.09,.18,x,-.01,z,e.mats.trim);
  // Fine iron boundary railings with stone gate piers.
@@ -76,6 +84,46 @@ export function landscape(e:Estate){
  for(const z of[-33.1,-24.9])e.box(2.2,.25,.12,side*12,.04,z,e.mats.trim);
  }
 
+}
+
+function woodland(e:Estate){
+ // A few large glades break up the trees. Use three shared geometries
+ // for the whole wood so crossing the estate doesn't multiply draw calls.
+ let seed=89173;
+ const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+ const trees:{x:number;z:number;s:number;angle:number}[]=[];
+ for(let z=-178;z<=185;z+=11)for(let x=-182;x<=182;x+=11){
+  const xx=x+(rand()-.5)*6,zz=z+(rand()-.5)*6;
+  if(Math.abs(xx)<51&&zz>-53&&zz<61)continue;
+  if(Math.abs(xx)<6&&zz>=55&&zz<98)continue;
+  if(Math.abs(Math.abs(xx)-66)<4&&zz>-68&&zz<99)continue;
+  if((Math.abs(zz+63.3)<4||Math.abs(zz-94.3)<4)&&Math.abs(xx)<70)continue;
+  if(Math.hypot(xx-98,zz-48)<21||Math.hypot(xx+99,zz+75)<23||rand()<.29)continue;
+  trees.push({x:xx,z:zz,s:.6+rand()*.72,angle:rand()*6.28});
+ }
+ const trunk=new T.InstancedMesh(new T.CylinderGeometry(.095,.24,5,7),e.mat(0x504335,.98),trees.length);
+ const boughs=new T.InstancedMesh(new T.IcosahedronGeometry(1,1),e.mat(0xffffff,.97),trees.length*4);
+ const scrub=new T.InstancedMesh(new T.IcosahedronGeometry(1,1),e.mat(0xffffff,.99),trees.length*2);
+ const transform=new T.Object3D(),color=new T.Color();
+ const place=(batch:T.InstancedMesh,index:number,x:number,y:number,z:number,sx:number,sy:number,sz:number,angle:number)=>{
+  transform.position.set(x,y,z);transform.rotation.y=angle;transform.scale.set(sx,sy,sz);transform.updateMatrix();batch.setMatrixAt(index,transform.matrix);
+ };
+ trees.forEach(({x,z,s,angle},i)=>{
+  const y=e.groundHeight(x,z);
+  place(trunk,i,x,y+2.5*s,z,s,s,s,angle);
+  for(let j=0;j<4;j++){
+   const a=angle+j*2.094,offset=j===3?0:1.36*s;
+   place(boughs,i*4+j,x+Math.cos(a)*offset,y+(j===3?6.25:4.65)*s,z+Math.sin(a)*offset,2.08*s,2.3*s,1.8*s,a);
+   boughs.setColorAt(i*4+j,color.setHSL(.18+rand()*.085,.26+rand()*.18,.23+rand()*.13));
+  }
+  for(let j=0;j<2;j++){
+   const a=angle+j*2.9;
+   place(scrub,i*2+j,x+Math.cos(a)*2*s,y+.24*s,z+Math.sin(a)*2*s,1.1*s,.57*s,.85*s,a);
+   scrub.setColorAt(i*2+j,color.setHSL(.19+rand()*.065,.28,.21+rand()*.12));
+  }
+  if(Math.abs(x)<GROUNDS.halfWidth&&z>GROUNDS.back&&z<GROUNDS.front)(e.woodlandTrunks??=[]).push({x,z,w:.48*s,d:.48*s});
+ });
+ for(const batch of [trunk,boughs,scrub]){batch.receiveShadow=true;e.scene.add(batch);}
 }
 export function castle(e:Estate){
  const {stone,trim}=e.mats;
@@ -187,21 +235,30 @@ export function interiorDetail(e:Estate){
 }
 
 export function normalized(source:T.Object3D,height:number){
- const content=source.clone(true);content.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(content),center=bounds.getCenter(new T.Vector3()),scale=height/bounds.getSize(new T.Vector3()).y;
+ const content=source.clone(true);content.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(content,true),center=bounds.getCenter(new T.Vector3()),scale=height/bounds.getSize(new T.Vector3()).y;
  // Preserve the imported scene transform. Position the wrapper, not the GLTF root.
  const anchor=new T.Group();anchor.add(content);anchor.scale.setScalar(scale);anchor.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);const root=new T.Group();root.add(anchor);return root;
 }
-export function staticBatch(e:Estate,source:T.Object3D,positions:[number,number,number,number][],height:number){
+type PlantPose=[number,number,number,number];
+function plantVariants(e:Estate,source:T.Object3D,positions:PlantPose[],height:number,rootDepth:number){
+ // These GLBs contain a row of separate variants, not one continuous plant.
+ // Seat each variant on the soil at its own location.
+ source.children.forEach((variant,index)=>{
+  const group=new T.Group();group.add(variant.clone(true));
+  staticBatch(e,group,positions.filter((_,i)=>i%source.children.length===index),height,rootDepth);
+ });
+}
+export function staticBatch(e:Estate,source:T.Object3D,positions:PlantPose[],height:number,rootDepth=.03){
  const openings=cellarGroundOpenings();
  positions=positions.filter(([x,z])=>!openings.some(h=>x>h.left-2&&x<h.right+2&&z>h.near-2&&z<h.far+2));
  if(!positions.length)return;
  const model=normalized(source,height);model.updateMatrixWorld(true);model.traverse(obj=>{if(!(obj instanceof T.Mesh))return;const geo=obj.geometry.clone();geo.applyMatrix4(obj.matrixWorld);const material=Array.isArray(obj.material)?obj.material.map(m=>m.clone()):obj.material.clone();for(const m of(Array.isArray(material)?material:[material])){if(m instanceof T.MeshStandardMaterial){m.envMapIntensity=.8;if(m.alphaTest>0){m.alphaTest=.25;m.alphaToCoverage=true;m.side=T.DoubleSide;}if(m.map)m.map.anisotropy=4;}}
- const inst=new T.InstancedMesh(geo,material,positions.length),matrix=new T.Matrix4(),q=new T.Quaternion();positions.forEach(([x,z,s,angle],i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),angle);matrix.compose(new T.Vector3(x,e.groundHeight(x,z)-.03,z),q,new T.Vector3(s,s,s));inst.setMatrixAt(i,matrix);if(height>5)inst.setColorAt(i,new T.Color().setHSL(.16+(i%4)*.024,.15+(i%3)*.032,.72+(i%5)*.051))});inst.name='Grounded planting';inst.castShadow=true;inst.receiveShadow=true;e.scene.add(inst);});}
+ const inst=new T.InstancedMesh(geo,material,positions.length),matrix=new T.Matrix4(),q=new T.Quaternion();positions.forEach(([x,z,s,angle],i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),angle);matrix.compose(new T.Vector3(x,e.groundHeight(x,z)-rootDepth*s,z),q,new T.Vector3(s,s,s));inst.setMatrixAt(i,matrix);if(height>5)inst.setColorAt(i,new T.Color().setHSL(.16+(i%4)*.024,.15+(i%3)*.032,.72+(i%5)*.051))});inst.name='Grounded planting';inst.castShadow=true;inst.receiveShadow=true;e.scene.add(inst);});}
 export async function sceneryAssets(e:Estate){const loader=new GLTFLoader();
  const load=async(name:string)=>{try{return (await loader.loadAsync(base+'models/'+name+'.glb')).scene}catch(err){console.warn('Scenery asset unavailable:',name,err);return null}};
- const shrub=await load('shrub');if(shrub){const positions:[number,number,number,number][]=[];for(const x of[-12,12])for(let z=-32.6;z<=-25.5;z+=1.15)positions.push([x,z,.65+seeded()*.2,seeded()*6.28]);for(const x of[-25.5,25.5])for(let z=-16;z<=12;z+=2.2)positions.push([x,z,1+seeded()*.4,seeded()*6.28]);for(const side of[-1,1])for(let i=0;i<35;i++)positions.push([side*(31+seeded()*25),-45+seeded()*100,1+seeded()*1.3,seeded()*6.28]);staticBatch(e,shrub,positions,1.35);}
- const flower=await load('shrub-flowering');if(flower){const poses:[number,number,number,number][]=[];for(const side of[-1,1])for(let i=0;i<16;i++)poses.push([side*(7+seeded()*14),22+seeded()*4,.55+seeded()*.3,seeded()*6]);for(let x=-17;x<19;x+=2)poses.push([x,-40,.6,seeded()*6]);staticBatch(e,flower,poses,1.7);}
- const fern=await load('fern');if(fern){const poses:[number,number,number,number][]=[];for(let i=0;i<35;i++)poses.push([(i%2?1:-1)*(25+seeded()*9),-20+seeded()*60,.6+seeded()*.5,seeded()*6]);staticBatch(e,fern,poses,.55);}
+ const shrub=await load('shrub');if(shrub){const positions:[number,number,number,number][]=[];for(const x of[-12,12])for(let z=-32.6;z<=-25.5;z+=1.15)positions.push([x,z,.65+seeded()*.2,seeded()*6.28]);for(const x of[-25.5,25.5])for(let z=-16;z<=12;z+=2.2)positions.push([x,z,1+seeded()*.4,seeded()*6.28]);for(const side of[-1,1])for(let i=0;i<35;i++)positions.push([side*(31+seeded()*25),-45+seeded()*100,1+seeded()*1.3,seeded()*6.28]);plantVariants(e,shrub,positions,1.2,.15);}
+ const flower=await load('shrub-flowering');if(flower){const poses:[number,number,number,number][]=[];for(const side of[-1,1])for(let i=0;i<16;i++)poses.push([side*(7+seeded()*14),22+seeded()*4,.55+seeded()*.3,seeded()*6]);for(let x=-17;x<19;x+=2)poses.push([x,-40,.6,seeded()*6]);plantVariants(e,flower,poses,1.7,.12);}
+ const fern=await load('fern');if(fern){const poses:[number,number,number,number][]=[];for(let i=0;i<35;i++)poses.push([(i%2?1:-1)*(25+seeded()*9),-20+seeded()*60,.6+seeded()*.5,seeded()*6]);plantVariants(e,fern,poses,.55,.075);}
  const tree=await load('garden-tree');if(tree){const poses:[number,number,number,number][]=[];
  for(const side of[-1,1])for(let z=-43;z<51;z+=10.5){const x=side*(33+(Math.round(z)%2?3:0));poses.push([x,z,.85+seeded()*.3,seeded()*6]);e.barrier(x,z,.7,.7);}
  for(let x=-42;x<=42;x+=9)poses.push([x,-49,.95+seeded()*.3,seeded()*6]);staticBatch(e,tree,poses,10);
