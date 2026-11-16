@@ -50,6 +50,9 @@ describe('walkable surfaces and physical obstacles',()=>{
   expect(e.pose().elevation).toBeLessThan(-1);expect(e.pose().elevation).toBeGreaterThan(CELLAR_FLOOR);
   e.move(0,-5.8,s);expect(e.pose().elevation).toBe(CELLAR_FLOOR);
   e.move(16,0,s);expect(e.pose().x).toBeCloseTo(-10.5);
+  // The west stair leads straight to the wine vault without crossing the hub.
+  e.move(3.05,0,s);e.move(0,3.9,s);expect(e.pose().z).toBeCloseTo(-15.4);
+  e.move(0,-3.9,s);e.move(-3.05,0,s);
   e.move(0,2,s);e.move(10.5,0,s);expect(e.pose().x).toBeCloseTo(0);
   e.move(0,-20,s);
   const saved=decodeSave(encodeSave(s,e.pose()))!;
@@ -65,6 +68,10 @@ describe('walkable surfaces and physical obstacles',()=>{
   const shaft=new T.Raycaster(new T.Vector3(hall.x,1,hall.top-1.8),new T.Vector3(0,-1,0),0,1.25);
   expect(shaft.intersectObjects(e.scene.children,true)).toEqual([]);
   e.move(0,-9,s);expect(e.pose().elevation).toBe(CELLAR_FLOOR);
+  // From the hall landing, the shelter branches off the approach to the tunnel.
+  e.move(-hall.x,0,s);e.move(0,-17.55-e.pose().z,s);
+  e.move(4.8,0,s);expect(e.pose().x).toBeGreaterThan(4.5);
+  e.move(-4.8+hall.x,0,s);e.move(0,-13.7-e.pose().z,s);
   e.move(0,9,s);expect(e.inCellar()).toBe(false);
  });
  it('connects both storeys through the stair and restores upstairs saves',()=>{

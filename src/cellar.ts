@@ -66,19 +66,49 @@ export function buildCellar(e:Estate){
   wall(.3,22,side*tunnelHalf,-31);
  }
 
- // A central aisle connects the wine vault, stores, bunker and escape passage.
- for(const x of [-3.1,3.1])for(const [a,b] of [[-15.4,-10.3],[-7.7,-2]]){
-  wall(.32,b-a,x,(a+b)/2);
- }
- for(const x of [-3.1,3.1]){
-  for(const z of [-10.3,-7.7])e.box(.53,2.58,.22,x,CELLAR_FLOOR+1.29,z,stone);
-  e.walls.push(e.box(.53,1.17,2.82,x,CEILING-.585,-9,stone));
- }
- for(const side of [-1,1])wall(9.7,.35,side*6.15,-15.4,concrete);
- e.walls.push(e.box(2.6,1,.44,0,CEILING-.5,-15.4,concrete));
  const item=(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material,parent=e.scene)=>
   e.box(w,h,d,x,CELLAR_FLOOR+y,z,mat,parent);
  const solid=(w:number,d:number,x:number,z:number)=>e.cellarBarriers.push({w,d,x,z});
+
+ // The hall stair and west passage both discharge into the open landing.
+ // The far arch is on axis with the garden tunnel; rooms branch from the landing.
+ const landingStone=e.mat(0x65594b,.96),wineStone=e.mat(0x76614c,.94);
+ const storeStone=e.mat(0x6d685b,.94),shelterStone=e.mat(0x59605a,.96);
+ item(13.35,.022,3.3,-3.85,.012,-18.2,landingStone);
+ item(3,.027,7.15,0,.016,-16.35,landingStone);
+ item(6.75,.02,14.25,-7.42,.012,-9.45,wineStone);
+ item(6.9,.02,10.55,7.38,.012,-7.65,storeStone);
+ item(6.92,.02,6.25,7.39,.012,-16.63,shelterStone);
+
+ // Wine vault: a wide entrance off the west landing and a second door by the hall.
+ for(const [a,b] of [[-11,-8.9],[-6,-3.8]])wall(b-a,.34,(a+b)/2,-16.55);
+ for(const [a,b] of [[-16.55,-10.25],[-7.75,-2]])wall(.34,b-a,-3.8,(a+b)/2);
+ // Stores and shelter have separate entrances off the east side of the main route.
+ for(const [a,b] of [[-20,-18.95],[-16.15,-10.25],[-7.75,-2]])
+  wall(.34,b-a,3.8,(a+b)/2,a<-12?concrete:stone);
+ wall(7.2,.38,7.4,-13,concrete);
+
+ // Recessed lintels and masonry voussoirs give each entrance a readable outline.
+ const portal=(x:number,z:number,width:number,turn=false,mat=stone)=>{
+  const g=new T.Group();g.position.set(x,CELLAR_FLOOR,z);
+  if(turn)g.rotation.y=Math.PI/2;e.scene.add(g);
+  const rise=2.33,r=width/2;
+  for(const side of [-1,1])for(let i=0;i<6;i++)
+   e.box(.23,.37,.56,side*(r+.11),.2+i*.38,0,mat,g);
+  const outer=r+.19;
+  for(let i=0;i<11;i++){
+   const angle=(i+.5)*Math.PI/11;
+   const block=e.box(.19,Math.PI*(r+.09)/11+.016,.58,
+    Math.cos(angle)*(r+.095),rise+Math.sin(angle)*(r+.095),0,mat,g);
+   block.rotation.z=angle;
+  }
+  // The rectangular stone backing closes the space over the decorative arch.
+  const crown=rise+outer,headroom=CEILING-CELLAR_FLOOR-crown;
+  if(headroom>.02)e.walls.push(e.box(width+.4,headroom,.4,0,crown+headroom/2,0,mat,g));
+ };
+ portal(-7.45,-16.55,2.9);portal(-3.8,-9,2.5,true);
+ portal(3.8,-9,2.5,true);portal(3.8,-17.55,2.8,true,concrete);
+ portal(0,-19.94,3.05,false,concrete);
 
  const bottlePositions:T.Vector3[]=[];
  for(const z of [-14,-3.05]){
@@ -113,7 +143,7 @@ export function buildCellar(e:Estate){
   for(const y of [.13,.52,.91])e.cyl(.518,.518,.07,-9.7,CELLAR_FLOOR+y,z,iron,e.scene,20);
   e.cyl(.055,.055,.023,-9.7,CELLAR_FLOOR+1.052,z,brass);
  }
- for(const [x,z] of [[8.8,-12.6],[9.3,-7],[5.2,-4.2],[8.4,-4.2]]){
+ for(const [x,z] of [[8.8,-11.95],[9.3,-7],[5.2,-4.2],[8.4,-4.2]]){
   solid(1.45,1.1,x,z);
   for(let i=0;i<2;i++){
    const y=.34+i*.69;
@@ -123,21 +153,21 @@ export function buildCellar(e:Estate){
   }
  }
  // The concrete shelter has canvas cots, a radio desk and supply lockers.
- for(const x of [-8.5,8.5]){
+ for(const x of [6.2,9.1]){
   solid(2.6,1.05,x,-18.2);
   item(2.6,.15,1.04,x,.57,-18.2,iron);
   item(2.47,.14,.94,x,.71,-18.2,canvas);
   item(.55,.12,.8,x-.88,.84,-18.2,e.mats.cream);
   for(const dx of [-1.15,1.15])for(const dz of [-.39,.39])item(.075,.58,.075,x+dx,.29,-18.2+dz,iron);
  }
- solid(2.4,.85,4,-18.9);
- item(2.4,.11,.85,4,.9,-18.9,wood);
- for(const dx of [-1,1])item(.095,.9,.62,4+dx,.45,-18.9,iron);
- item(.89,.52,.43,4,1.21,-19,iron);
- item(.75,.34,.04,4,1.23,-18.76,wood);
- for(const dx of [-.25,.25])e.cyl(.06,.06,.045,4+dx,CELLAR_FLOOR+1.15,-18.724,brass).rotation.x=Math.PI/2;
- item(.62,.075,.32,4.77,.995,-18.76,e.mats.paper);
- for(const x of [-5,-3.9]){
+ solid(2.4,.85,9.2,-14.4);
+ item(2.4,.11,.85,9.2,.9,-14.4,wood);
+ for(const dx of [-1,1])item(.095,.9,.62,9.2+dx,.45,-14.4,iron);
+ item(.89,.52,.43,9.2,1.21,-14.5,iron);
+ item(.75,.34,.04,9.2,1.23,-14.26,wood);
+ for(const dx of [-.25,.25])e.cyl(.06,.06,.045,9.2+dx,CELLAR_FLOOR+1.15,-14.224,brass).rotation.x=Math.PI/2;
+ item(.62,.075,.32,9.97,.995,-14.26,e.mats.paper);
+ for(const x of [5.1,6.2]){
   solid(.88,.61,x,-19.35);item(.88,1.95,.61,x,.975,-19.35,iron);
   item(.045,.22,.05,x+.24,1,-19.02,brass);
   for(const y of [1.51,1.62,1.73])item(.55,.035,.035,x,y,-19.02,e.mats.dark);
@@ -151,7 +181,7 @@ export function buildCellar(e:Estate){
   e.sphere(.092,x,y-.12,z,bulb,e.scene,1,.68,1);
   const lamp=new T.PointLight(0xffc58a,power*.38,8,2);lamp.position.set(x,y-.38,z);e.scene.add(lamp);
  };
- for(const [x,z,power] of [[0,-5,65],[0,-14.2,75],[-7,-8,125],[7,-8,105],[-5,-17.6,75],[5,-17.6,75],[0,-19,75],[0,-24,68],[0,-30,70],[0,-36,70],[0,-40,55],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
+ for(const [x,z,power] of [[0,-5,65],[0,-14.3,100],[-7,-8,110],[7,-8,90],[-9.6,-18.5,110],[-7.45,-15.65,74],[7.6,-16.8,82],[0,-19,115],[0,-24,68],[0,-30,70],[0,-36,70],[0,-40,55],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
  for(const z of [-21,-25,-29,-33,-37]){
   for(const side of [-1,1])e.box(.16,3.7,.23,side*(tunnelHalf-.07),CELLAR_FLOOR+1.85,z,stone);
   e.box(3,.23,.23,0,CEILING-.11,z,stone);
