@@ -185,10 +185,19 @@ export function buildGardenLodge(e:Estate){
   }
   if(x>0)e.box(2.45,.015,.31,x,1.035,mid,slate);
  }
- const light=new T.PointLight(0xffdb9e,26,12);light.position.set(0,3.35,mid);e.scene.add(light);
- e.cyl(.028,.028,.42,0,3.73,mid,gold);
- e.cyl(.12,.37,.17,0,3.47,mid,gold);
- e.sphere(.115,0,3.36,mid,e.mats.cream);
+ const bulb=e.mat(0xffe3b6,.58);
+ bulb.emissive.setHex(0xffcb80);bulb.emissiveIntensity=1.1;
+ const pendant=(x:number,z:number,power:number,range:number)=>{
+  const light=new T.PointLight(0xffdb9e,power,range);
+  light.position.set(x,3.25,z);e.scene.add(light);
+  e.cyl(.13,.15,.06,x,3.89,z,gold);
+  e.cyl(.028,.028,.42,x,3.73,z,gold);
+  e.cyl(.12,.37,.17,x,3.47,z,gold);
+  e.sphere(.115,x,3.36,z,bulb);
+ };
+ pendant(0,mid,26,12);
+ pendant(-7.7,mid,40,10);
+ pendant(7.7,mid,74,12);
 }
 export function castle(e:Estate){
  const {stone,trim}=e.mats;
