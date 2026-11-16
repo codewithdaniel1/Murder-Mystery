@@ -134,7 +134,7 @@ export function buildWartimeEstate(e:Estate){
  const wallX=-13.4,doorZ=-13.38;
  const ceiling=UPPER_FLOOR-.25;
  const partition=(z0:number,z1:number,y0=0,y1=ceiling)=>
-  e.wall(.26,y1-y0,z1-z0,wallX,(y0+y1)/2,(z0+z1)/2,e.mats.plaster);
+  e.wall(.26,y1-y0,z1-z0,wallX,(y0+y1)/2,(z0+z1)/2,stone);
  const doorNear=doorZ-.97,doorFar=doorZ+.97,hatchNear=-12.25,hatchFar=-11.27;
  partition(-16,doorNear);
  partition(doorNear,doorFar,2.47);
