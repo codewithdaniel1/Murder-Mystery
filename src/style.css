@@ -5,4 +5,13 @@
 
 #prompt small{display:block;font-size:10px;color:#ddd4bb;margin-top:7px}
 
+.notebook-shell aside{overflow:auto}
+.personal-notes{display:flex;flex-direction:column;min-height:100%}
+.note-pages{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:8px 0 14px}
+.note-pages label{display:flex;align-items:center;gap:8px;color:var(--ink)}
+.note-pages button,.note-pages select{color:var(--ink);background:#f8f4e9;border:1px solid #c9c6b2;font-size:12px;padding:8px 10px}
+.note-pages button:not(:disabled):hover{background:#dfdfca;border-color:#929779}
+#note-writing{flex:1;width:100%;min-height:230px;resize:vertical;padding:12px 16px;color:var(--ink);font:17px/28px Georgia,serif;border:1px solid #c9c6b2;border-radius:2px;background:#faf7ed repeating-linear-gradient(transparent 0 27px,#ddd9c7 27px 28px) 0 12px / 100% 100% local}
+#note-writing:focus-visible{outline:2px solid #777e5e;outline-offset:2px}
+
 .estate-plan{height:390px;max-width:460px;display:grid;grid-template-rows:1.1fr .16fr 1.3fr .55fr;gap:7px;padding:20px;background:#d4dac4}.plan-garden,.plan-rooms{display:grid;position:relative;background:#aeb99a;gap:7px;padding:8px}.plan-garden{grid-template-columns:1fr 1fr}.plan-rooms{grid-template-columns:1fr 1fr 1fr;background:#d1c9b3}.plan-rooms>div{background:#f1e9d5;border:2px solid #a1aa94}.plan-path{position:absolute;left:50%;top:0;bottom:0;width:12%;background:#c6b99a}.plan-fountain,.plan-greenhouse{z-index:1;align-self:center;justify-self:center;width:35px;height:35px;border:3px solid #8b9277;border-radius:50%;background:#a9bcb0}.plan-greenhouse{border-radius:2px;width:55px;height:32px;background:#b9c3a4}.plan-passage,.plan-drive{background:#b7bba3}.plan-drive{background:#c6b99a}

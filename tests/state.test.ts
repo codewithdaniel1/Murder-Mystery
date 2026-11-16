@@ -1,5 +1,14 @@
 import {describe,it,expect} from 'vitest';
 import {freshState,addEvidence,completeCall,canReport,solveDeduction,supportedCase,accuse,encodeSave,decodeSave,DEDUCTIONS} from '../src/state';
+
+it('restores notes on the first and last pages and opens older saves with blank pages',()=>{
+ const s=freshState();
+ s.notes[0]='First lead\nAsk June.';
+ s.notes[49]='Last page: check the clock < 8:30.';
+ expect(decodeSave(encodeSave(s,s.pose))?.notes).toEqual(s.notes);
+ const {notes:_,...oldSave}=s;
+ expect(decodeSave(JSON.stringify(oldSave))?.notes).toEqual(Array(50).fill(''));
+});
 import type {DeductionId} from '../src/state';
 function ready(){const s=freshState();s.flags.intro=true;addEvidence(s,'note');s.interviews.push('mara');s.flags.reported=true;return s}
 function caseState(route:DeductionId[]){const s=ready();s.arrival='present';for(const id of ['weapon','money',...route] as DeductionId[]){addEvidence(s,...DEDUCTIONS[id].needs);solveDeduction(s,id,DEDUCTIONS[id].correct)}addEvidence(s,'sighting');return s}
