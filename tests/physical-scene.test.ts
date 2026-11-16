@@ -41,16 +41,20 @@ describe('walkable surfaces and physical obstacles',()=>{
  });
  it('walks from the second floor to both attic rooms and back, and restores attic saves',()=>{
   const e=furnishedEstate(),s=freshState(),stair=ATTIC_STAIR;
-  e.setPose({x:stair.bottom+.48,z:stair.z,yaw:0,pitch:0,elevation:UPPER_FLOOR});
-  e.move(-2,0,s);expect(e.pose().elevation).toBeGreaterThan(UPPER_FLOOR);
-  e.move(-6.5,0,s);expect(e.pose().elevation).toBe(ATTIC_FLOOR);
-  e.move(0,-.85-e.pose().z,s);
+  e.setPose({x:stair.x,z:stair.bottom+.48,yaw:0,pitch:0,elevation:UPPER_FLOOR});
+  e.move(0,-2,s);expect(e.pose().elevation).toBeGreaterThan(UPPER_FLOOR);
+  e.move(0,-6.5,s);expect(e.pose().elevation).toBe(ATTIC_FLOOR);
+  const landing=stair.top-1;
+  e.move(0,landing-e.pose().z,s);
+  e.move(-5-e.pose().x,0,s);e.move(0,-.85-e.pose().z,s);
   e.move(-9-e.pose().x,0,s);expect(e.pose().x).toBeCloseTo(-9);
+  e.move(-5-e.pose().x,0,s);e.move(0,landing-e.pose().z,s);
+  e.move(6-e.pose().x,0,s);e.move(0,-.85-e.pose().z,s);
   e.move(9-e.pose().x,0,s);expect(e.pose().x).toBeCloseTo(9);
   const saved=decodeSave(encodeSave(s,e.pose()))!;
   e.setPose(s.pose);e.setPose(saved.pose);expect(e.camera.position.y).toBeCloseTo(ATTIC_FLOOR+1.65);
-  e.move(stair.top-1-e.pose().x,0,s);e.move(0,stair.z-e.pose().z,s);
-  e.move(9,0,s);expect(e.pose().elevation).toBe(UPPER_FLOOR);
+  e.move(6-e.pose().x,0,s);e.move(0,landing-e.pose().z,s);
+  e.move(stair.x-e.pose().x,0,s);e.move(0,9,s);expect(e.pose().elevation).toBe(UPPER_FLOOR);
  });
  it('starts all three bulkheads closed, seals their lids, and opens from beneath',()=>{
   const e=furnishedEstate(),s=freshState();buildCellar(e);

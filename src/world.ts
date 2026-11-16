@@ -211,7 +211,7 @@ export class Estate {
  }
  private playerSurface(x:number,z:number,from:number){
   if(from>ATTIC_FLOOR-.25&&onAtticDeck(x,z))return ATTIC_FLOOR;
-  if(from>UPPER_FLOOR-.25&&inAtticStair(x,z))return atticStairHeight(x);
+  if(from>UPPER_FLOOR-.25&&inAtticStair(x,z))return atticStairHeight(z);
   if(from>UPPER_FLOOR-.25&&onUpperDeck(x,z))return UPPER_FLOOR;
   const stairs=cellarStairAt(x,z);
   if(stairs){

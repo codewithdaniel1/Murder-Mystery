@@ -3,50 +3,50 @@ import type {Estate} from './world';
 import {wovenFabric} from './detail';
 
 export const ATTIC_FLOOR=8.8;
-export const ATTIC_STAIR={bottom:5.55,top:-1.45,z:-4,width:2.2,base:5.05};
-const S=ATTIC_STAIR,near=S.z-S.width/2,far=S.z+S.width/2;
+export const ATTIC_STAIR={bottom:3.4,top:-3.6,x:3.35,width:2.2,base:5.05};
+const S=ATTIC_STAIR,left=S.x-S.width/2,right=S.x+S.width/2;
 const mid=(a:number,b:number)=>(a+b)/2;
-export const inAtticStair=(x:number,z:number)=>x>S.top&&x<S.bottom&&z>near&&z<far;
-export const atticStairHeight=(x:number)=>T.MathUtils.lerp(S.base,ATTIC_FLOOR,
- T.MathUtils.clamp((S.bottom-x)/(S.bottom-S.top),0,1));
+export const inAtticStair=(x:number,z:number)=>z>S.top&&z<S.bottom&&x>left&&x<right;
+export const atticStairHeight=(z:number)=>T.MathUtils.lerp(S.base,ATTIC_FLOOR,
+ T.MathUtils.clamp((S.bottom-z)/(S.bottom-S.top),0,1));
 export const onAtticDeck=(x:number,z:number)=>Math.abs(x)<16.3&&z>-8.2&&z<4.55&&!inAtticStair(x,z);
 
 export function buildAttic(e:Estate){
  const {stone,wood,panel,plaster,gold}=e.mats;
  e.atticBarriers=[];
  for(const [x0,x1,z0,z1] of [
-  [-21,21,-16,near],[-21,21,far,12],
-  [-21,S.top,near,far],[S.bottom,21,near,far]
+  [-21,left,-16,12],[right,21,-16,12],
+  [left,right,-16,S.top],[left,right,S.bottom,12]
  ]){
   e.box(x1-x0,.21,z1-z0,mid(x0,x1),ATTIC_FLOOR-.105,mid(z0,z1),stone);
   e.walls.push(e.box(x1-x0,.02,z1-z0,mid(x0,x1),ATTIC_FLOOR-.22,mid(z0,z1),plaster));
  }
  const length=S.bottom-S.top,tread=length/23;
  for(let i=0;i<23;i++){
-  const x=S.bottom-(i+.5)*tread,y=atticStairHeight(x);
-  e.box(tread+.002,y-S.base,S.width,x,mid(y,S.base),S.z,wood);
-  e.box(.064,.045,S.width+.025,x+tread/2-.028,y-.022,S.z,panel);
+  const z=S.bottom-(i+.5)*tread,y=atticStairHeight(z);
+  e.box(S.width,y-S.base,tread+.002,S.x,mid(y,S.base),z,wood);
+  e.box(S.width+.025,.045,.064,S.x,y-.022,z+tread/2-.028,panel);
  }
  const rail=(x1:number,y1:number,z1:number,x2:number,y2:number,z2:number)=>{
   const axis=new T.Vector3(x2-x1,y2-y1,z2-z1);
   const mesh=e.box(.13,axis.length(),.13,mid(x1,x2),mid(y1,y2),mid(z1,z2),panel);
   mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),axis.normalize());
  };
- for(const z of [near,far]){
-  const edge={x:mid(S.top,S.bottom),z,w:length,d:.12};
+ for(const x of [left,right]){
+  const edge={x,z:mid(S.top,S.bottom),w:.12,d:length};
   e.upperBarriers.push(edge);e.atticBarriers.push(edge);
-  rail(S.top,ATTIC_FLOOR+.93,z,S.bottom,S.base+.93,z);
-  rail(S.top,ATTIC_FLOOR+.93,z,S.bottom,ATTIC_FLOOR+.93,z);
+  rail(x,ATTIC_FLOOR+.93,S.top,x,S.base+.93,S.bottom);
+  rail(x,ATTIC_FLOOR+.93,S.top,x,ATTIC_FLOOR+.93,S.bottom);
   for(let i=0;i<=16;i++){
-   const x=S.top+i*length/16,y=atticStairHeight(x);
+   const z=S.top+i*length/16,y=atticStairHeight(z);
    e.box(.075,.94,.075,x,y+.47,z,panel);
    e.box(.075,.94,.075,x,ATTIC_FLOOR+.47,z,panel);
   }
  }
- e.upperBarriers.push({x:S.top,z:S.z,w:.12,d:S.width});
- e.atticBarriers.push({x:S.bottom,z:S.z,w:.12,d:S.width});
- rail(S.bottom,ATTIC_FLOOR+.93,near,S.bottom,ATTIC_FLOOR+.93,far);
- for(let i=0;i<6;i++)e.box(.075,.96,.075,S.bottom,ATTIC_FLOOR+.48,near+.18+i*.37,panel);
+ e.upperBarriers.push({x:S.x,z:S.top,w:S.width,d:.12});
+ e.atticBarriers.push({x:S.x,z:S.bottom,w:S.width,d:.12});
+ rail(left,ATTIC_FLOOR+.93,S.bottom,right,ATTIC_FLOOR+.93,S.bottom);
+ for(let i=0;i<6;i++)e.box(.075,.96,.075,left+.18+i*.37,ATTIC_FLOOR+.48,S.bottom,panel);
 
  const solid=(w:number,d:number,x:number,z:number)=>e.atticBarriers.push({w,d,x,z});
  for(const x of [-13,13])solid(1.8,1.2,x,-3);
