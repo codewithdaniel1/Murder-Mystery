@@ -10,9 +10,35 @@ import {resolveOverlap,clearAt,clearSegment} from '../src/navigation';
 import {STAIR,UPPER_FLOOR} from '../src/upstairs';
 import {decodeSave,encodeSave} from '../src/state';
 import {ATTIC_FLOOR,ATTIC_STAIR} from '../src/attic';
+import {buildShed,SHED,WITNESSES,Yard} from '../src/yard';
 import {buildCellar,BULKHEADS,bulkheadGate,CELLAR_FLOOR} from '../src/cellar';
 
 describe('walkable surfaces and physical obstacles',()=>{
+ it('keeps the shed entrance walkable and its back and sides solid',()=>{
+  const e=furnishedEstate(),s=freshState();buildShed(e);
+  e.setPose({x:SHED.x,z:SHED.z+4,yaw:0,pitch:0});
+  e.move(0,-8,s);expect(e.pose().z).toBeLessThan(SHED.z-1);
+  expect(e.pose().z).toBeGreaterThan(SHED.z-SHED.depth/2);
+  e.move(0,3,s);expect(e.pose().z).toBeGreaterThan(SHED.z);
+ });
+ it('moves both outdoor witnesses and wildlife, and pauses a witness for conversation',async()=>{
+  const e=furnishedEstate(),s=freshState();buildShed(e);const yard=new Yard(e);
+  e.setPose(s.pose);
+  for(const w of yard.witnesses){
+   const spec=WITNESSES[w.id],source=await loadModel(w.id==='finch'?'sam':'harper');
+   w.root.add(source.scene);w.motion=createCharacterMotion(source.scene,source.animations,new T.Group());
+   expect(e.targets.find(t=>t.root===w.root)?.label).toBe(spec.name);
+  }
+  const homes=yard.witnesses.map(w=>w.root.position.clone());
+  const bird=e.scene.getObjectByName('Garden bird')!,origin=bird.position.clone();
+  for(let i=0;i<465;i++)yard.update(1/60,s,true,null);
+  for(const [i,w] of yard.witnesses.entries())expect(w.root.position.distanceTo(homes[i])).toBeGreaterThan(1.5);
+  expect(bird.position.distanceTo(origin)).toBeGreaterThan(2);
+  const [finch]=yard.witnesses,location=finch.root.position.clone();
+  for(let i=0;i<90;i++)yard.update(1/60,s,true,'finch');
+  expect(finch.root.position.distanceTo(location)).toBeLessThan(.001);
+  expect(s.evidence).toEqual([]);
+ });
  it('walks from the second floor to both attic rooms and back, and restores attic saves',()=>{
   const e=furnishedEstate(),s=freshState(),stair=ATTIC_STAIR;
   e.setPose({x:stair.bottom+.48,z:stair.z,yaw:0,pitch:0,elevation:UPPER_FLOOR});

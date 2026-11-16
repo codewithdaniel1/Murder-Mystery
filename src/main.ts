@@ -1,3 +1,4 @@
+import {WITNESSES,type WitnessId} from './yard';
 import './style.css';
 import {Estate} from './world';
 import {EstateAudio} from './audio';
@@ -11,15 +12,16 @@ const sound=new EstateAudio();let estate:Estate;
 try{estate=new Estate(document.querySelector('#world')!)}catch(e){overlay.innerHTML='<div class="panel"><h1>A little more graphics support is needed.</h1><p>Please enable hardware acceleration in your desktop browser and reload.</p></div>';throw e}
 let state=freshState(), mode:'menu'|'play'|'pause'|'dialogue'|'inspect'|'notebook'|'ending'='menu',talking:PersonId|null=null,arrivalT=0,tab='Evidence',last=performance.now(),toastTimer=0,drag=false,started=false;
 const keys=new Set<string>();
+let talkingWitness:WitnessId|null=null;
 function toast(text:string){const el=document.querySelector<HTMLElement>('#toast')!;el.textContent=text;el.classList.add('show');clearTimeout(toastTimer);toastTimer=window.setTimeout(()=>el.classList.remove('show'),4200)}
 function record(...ids:EvidenceId[]){if(addEvidence(state,...ids)){toast('Evidence recorded in your notebook');sound.effect('clue')}refreshHUD()}
 function refreshHUD(){const [title,detail]=objective(state);document.querySelector('#objective')!.innerHTML=`<span class="eyebrow">THE INVESTIGATION</span><strong>${title}</strong><p>${detail}</p>`}
 function saved(){try{return decodeSave(localStorage.getItem(SAVE_KEY)??'')}catch{return null}}
-function interrupt(){keys.clear();drag=false;talking=null;sound.stopVoice();estate.clearHeld();prompt.textContent='';if(document.pointerLockElement)document.exitPointerLock()}
+function interrupt(){keys.clear();drag=false;talking=null;talkingWitness=null;sound.stopVoice();estate.clearHeld();prompt.textContent='';if(document.pointerLockElement)document.exitPointerLock()}
 function panel(next:typeof mode){mode=next;interrupt();hud.hidden=next==='menu';overlay.className=next;overlay.innerHTML=''}
 function lock(){try{const r=estate.renderer.domElement.requestPointerLock();if(r)r.catch(()=>toast('Drag the scene to look around. Click it to capture the mouse.'))}catch{toast('Drag the scene to look around.')}}
-function play(){sound.stopVoice();mode='play';overlay.className='';overlay.innerHTML='';talking=null;estate.clearHeld();hud.hidden=false;sound.start();keys.clear();refreshHUD();lock()}
-function start(load=false){const prior=load?saved():null;state=prior??freshState();arrivalT=0;estate.routines.reset();for(const a of estate.actors.values())a.root.position.copy(a.home);estate.setPose(state.pose);estate.syncBulkheads(state);estate.resetDog(state.dog==='walking',state.doors);started=true;play();toast(load?'Investigation restored.':'June is waiting in the entrance hall. Walk toward the castle.')}
+function play(){sound.stopVoice();mode='play';overlay.className='';overlay.innerHTML='';talking=null;talkingWitness=null;estate.clearHeld();hud.hidden=false;sound.start();keys.clear();refreshHUD();lock()}
+function start(load=false){const prior=load?saved():null;state=prior??freshState();arrivalT=0;estate.routines.reset();estate.yard.reset();for(const a of estate.actors.values())a.root.position.copy(a.home);estate.setPose(state.pose);estate.syncBulkheads(state);estate.resetDog(state.dog==='walking',state.doors);started=true;play();toast(load?'Investigation restored.':'June is waiting in the entrance hall. Walk toward the castle.')}
 function mainMenu(){panel('menu');sound.pause();overlay.innerHTML=`<div class="title-screen"><div class="edition"><span class="seal">B</span> A BRAMBLEWICK MYSTERY</div><div class="title-copy"><span class="eyebrow">ENGLAND · 1942</span><h1>The Last Bell</h1><p class="subtitle">at Bramblewick</p><div class="rule"></div><p class="intro">A beautiful estate. An unfinished letter.<br>Everyone has something to tell you.</p><div class="start-buttons">${saved()?'<button class="primary" data-action="continue">Continue investigation <span>↗</span></button>':''}<button class="${saved()?'secondary':'primary'}" data-action="new">Begin a new case <span>→</span></button></div><small>FIRST-PERSON MYSTERY &nbsp; / &nbsp; DESKTOP BROWSER</small></div><div class="menu-bottom"><span>Explore. Listen. Make the connections.</span><span>ESTATE EDITION · 05</span></div></div>`}
 function pause(){if(!started)return;panel('pause');sound.pause();overlay.innerHTML=`<section class="panel narrow"><span class="eyebrow">TAKE YOUR TIME</span><h1>Investigation paused</h1><p>Your case waits for you. Save manually before leaving.</p><button class="primary" data-action="resume">Return to the estate →</button><button data-action="save" ${state.arrival==='arriving'?'disabled':''}>Save game · one slot</button>${state.arrival==='arriving'?'<small>Resume and let the car finish its approach before saving.</small>':''}<div class="settings"><label>Rendering quality<select id="quality">${['Auto','Low','Medium','High'].map(q=>`<option ${estate.quality===q?'selected':''}>${q}</option>`).join('')}</select></label><label>Sound volume<input id="volume" type="range" min="0" max="1" step=".05" value="${sound.volume}"></label></div><p class="fine">Mouse to look · WASD to walk · Shift to walk briskly<br>E to interact · Tab for notebook · Esc to pause<br>Saving uses this browser and this site address.</p><button data-action="menu">Return to title</button></section>`}
 function save(){try{localStorage.setItem(SAVE_KEY,encodeSave(state,estate.pose()));toast('Investigation saved in this browser.')}catch(e){toast(e instanceof Error?e.message:'This browser could not save your investigation.')}}
@@ -70,7 +72,13 @@ function inspect(id:string){
  const eid=(id==='lexicon'?'translation':id) as EvidenceId;if(!(eid in EVIDENCE))return;
  panel('inspect');record(eid);if(id==='ledger')record('receipts');estate.present(id);sound.effect('paper');const e=EVIDENCE[eid];overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">${e.source}</span><h1>${e.title}</h1><p>${e.text}</p>${id==='ledger'?`<div class="inset">${EVIDENCE.receipts.text}</div>`:''}<div class="recorded">✓ Recorded in your notebook</div><button class="primary" data-action="resume">Return to the investigation →</button><small>Use ← / → to turn the object.</small></section>`;
 }
-function interact(){if(mode!=='play')return;const t=estate.targetAt();if(!t)return;estate.gesture=1;if(t.id.startsWith('npc:'))dialogue(t.id.slice(4) as PersonId);else if(t.id.startsWith('bulkhead:')){
+function witnessDialogue(id:WitnessId,followup=false){
+ panel('dialogue');talkingWitness=id;
+ const w=WITNESSES[id],actor=estate.yard.witnesses.find(a=>a.id===id);
+ if(actor){const p=actor.root.position;sound.vocal(w.template,[p.x,p.y+1.58,p.z]);}
+ overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:#c2ad87">${w.initials}</span><div><span class="eyebrow">${w.role}</span><h2>${w.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${followup?w.reply:w.first}”</p><div class="topics">${followup?'<button data-action="resume">Thank you.</button>':`<button data-witness-followup="1">${w.question}</button>`}</div><small>Esc ends the conversation.</small></section>`;
+}
+function interact(){if(mode!=='play')return;const t=estate.targetAt();if(!t)return;estate.gesture=1;if(t.id.startsWith('npc:'))dialogue(t.id.slice(4) as PersonId);else if(t.id.startsWith('witness:'))witnessDialogue(t.id.slice(8) as WitnessId);else if(t.id.startsWith('bulkhead:')){
  const opened=estate.toggleBulkhead(t.id.slice(9),state);
  if(opened===null){toast('Step clear of the doors first.');return}
  const position=t.root.getWorldPosition(estate.camera.position.clone());
@@ -92,6 +100,7 @@ app.addEventListener('click',e=>{const el=(e.target as HTMLElement).closest<HTML
  if(action==='menu'){overlay.innerHTML=`<section class="panel narrow"><h1>Leave the investigation?</h1><p>Unsaved progress will be lost when you begin or load another case.</p><button class="primary" data-action="save-title">Save and return to title</button><button data-action="title">Return without saving</button><button data-action="pause">Stay here</button></section>`}
  if(action==='save-title'){try{localStorage.setItem(SAVE_KEY,encodeSave(state,estate.pose()));mainMenu()}catch(e){toast((e as Error).message)}}
  if(action==='complete-call'){if(completeCall(state))toast('Message delivered. Lady Beatrice’s car will approach when you return.');play()}
+ if(el.dataset.witnessFollowup&&talkingWitness)witnessDialogue(talkingWitness,true);
  if(el.dataset.topic!==undefined&&talking){const id=talking,t=currentTopics[Number(el.dataset.topic)];t.run?.();if(mode==='dialogue')dialogue(id,t.reply);refreshHUD()}
  if(el.dataset.tab)notebook(el.dataset.tab);
  if(el.dataset.deduction){const ok=solveDeduction(state,el.dataset.deduction as DeductionId,Number(el.dataset.choice));if(ok){sound.effect('clue');notebook('Connections');refreshHUD()}else toast('That conclusion goes beyond what the evidence supports. Compare the clues again.')}
@@ -126,7 +135,7 @@ function frame(now:number){requestAnimationFrame(frame);const dt=Math.min((now-l
 
  }
  if(mode==='play'||mode==='dialogue'||mode==='inspect'){const p=estate.camera.position;sound.update(dt,p,estate.camera.rotation.y,mode==='play'&&estate.lastMove,estate.inCellar()||(p.z<12&&p.z>-16&&Math.abs(p.x)<21),[estate.dog.position.x,.4,estate.dog.position.z],state.arrival==='arriving'?[4,1,estate.car.position.z]:null)}
- estate.update(dt,state,mode==='play'||mode==='dialogue'||mode==='inspect',talking,arrivalT,mode==='menu');
+ estate.update(dt,state,mode==='play'||mode==='dialogue'||mode==='inspect',talking,arrivalT,mode==='menu',talkingWitness);
  if(!estate.inCellar()&&(mode==='play'||mode==='dialogue'||mode==='inspect'))sound.updateActors(dt,[...estate.actors.values()].filter(a=>a.root.visible).map(a=>({id:a.id,x:a.root.position.x,z:a.root.position.z,moving:!!a.isWalking})),estate.camera.position);
 }
 overlay.innerHTML='<div class=loading-estate><span class=eyebrow>BRAMBLEWICK · ENGLAND, 1942</span><h1>A place with a past.</h1><p>Preparing the estate, materials and characters…</p><div class=loading-line></div></div>';overlay.className='loading';estate.ready.then(()=>{mainMenu();refreshHUD()}).catch(err=>{console.error(err);overlay.innerHTML='<div class=loading-estate><h1>The estate could not finish loading.</h1><p>Please reload to retry the character downloads.</p><button onclick=location.reload()>Reload</button></div>'});requestAnimationFrame(frame);

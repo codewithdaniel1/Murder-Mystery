@@ -289,8 +289,8 @@ function flattenGardenerShirt(model:T.Object3D){
  positions.needsUpdate=true;shirt.geometry.computeVertexNormals();shirt.geometry.computeBoundingSphere();
 }
 
-export function dressCharacter(id:PersonId,model:T.Object3D){
- const style=CAST[id];
+export function dressCharacter(id:PersonId,model:T.Object3D,overrides:Partial<Costume>={}){
+ const style={...CAST[id],...overrides};
  model.traverse(o=>{if(!(o instanceof T.Mesh))return;const mats=Array.isArray(o.material)?o.material:[o.material];
  for(const m of mats){if(!(m instanceof T.MeshStandardMaterial))continue;
   if(/tailored business fabric/i.test(m.name)){if(id==='june'){m.map=null;m.needsUpdate=true;m.color.setHex(style.coat)}else m.color.setHex(style.coat).multiplyScalar(2.15);m.roughness=.98;m.metalness=0;}

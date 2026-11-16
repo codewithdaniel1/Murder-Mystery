@@ -36,20 +36,32 @@ export async function loadCharacters(e:Estate){
  const loader=new GLTFLoader();
  const names=['harper','jordan','sam','maya','pip'];const loaded=await Promise.all(names.map(name=>loader.loadAsync(import.meta.env.BASE_URL+'models/people/'+name+'.glb')));const sources=new Map(names.map((name,i)=>[name,loaded[i]])),dog=sources.get('pip')!;
  const heights:Record<PersonId,number>={june:1.64,rook:1.81,mara:1.69,ada:1.72,tomas:1.77,beatrice:1.68,jonah:1.79};
- for(const [id,a]of e.actors){
- const source=sources.get(CAST[id].model)!;const model=clone(source.scene);model.updateMatrixWorld(true);
- const bounds=new T.Box3().setFromObject(model),size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3()),scale=heights[id]/size.y;
+ const prepareHuman=(source:typeof dog,height:number)=>{
+ const model=clone(source.scene);model.updateMatrixWorld(true);
+ const bounds=new T.Box3().setFromObject(model),size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3()),scale=height/size.y;
  model.scale.multiplyScalar(scale);model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
  // Assets face forward (+Z), matching the game movement and dialogue facing convention.
  model.traverse(o=>{if(!(o instanceof T.Mesh))return;o.castShadow=true;o.receiveShadow=true;
  const list=Array.isArray(o.material)?o.material:[o.material];const copies=list.map(mat=>{const m=mat.clone() as T.MeshStandardMaterial;if(m.map)m.map.anisotropy=Math.min(4,e.renderer.capabilities.getMaxAnisotropy());m.envMapIntensity=.65;return m});o.material=Array.isArray(o.material)?copies:copies[0];});
+  return model;
+ };
+ for(const [id,a]of e.actors){
+ const source=sources.get(CAST[id].model)!,model=prepareHuman(source,heights[id]);
  a.root.clear();a.root.add(model);a.root.position.y=.08;
  const book=new T.Group();e.box(.54,.035,.37,0,0,0,e.mats.red,book);e.box(.51,.018,.34,0,.025,0,e.mats.paper,book);book.visible=false;a.root.add(book);
  e.characterMotion.set(id,createCharacterMotion(model,source.animations,book));dressCharacter(id,model);
  }
+ for(const witness of e.yard.witnesses){
+  const spec=e.yard.spec(witness.id),id=spec.template,source=sources.get(CAST[id].model)!;
+  const model=prepareHuman(source,id==='tomas'?1.71:1.67);
+  const prop=new T.Group();prop.visible=false;witness.root.add(model,prop);
+  witness.motion=createCharacterMotion(model,source.animations,prop);
+  dressCharacter(id,model,{coat:spec.coat,hair:spec.hair,skirt:id==='mara'?0x465b56:undefined});
+ }
  e.dogMotion=rigDog(dog.scene);e.dog.clear();e.dog.add(e.dogMotion.root);
 }
-export function animateCharacter(e:Estate,id:PersonId,moving:boolean,dt:number,paused:boolean,activity:Activity|null=null,time=0,speed=.9){
+type MotionScene={characterMotion:Map<PersonId,CharacterMotion>;actors:ReadonlyMap<PersonId,{root:T.Group}>;groundHeight(x:number,z:number):number};
+export function animateCharacter(e:MotionScene,id:PersonId,moving:boolean,dt:number,paused:boolean,activity:Activity|null=null,time=0,speed=.9){
  const a=e.characterMotion.get(id);if(!a||paused)return;
  // AnimationMixer skips writes for unchanged tracks. Restore the saved mixer pose
  // first, otherwise our work gestures accumulate on those bones every frame.
