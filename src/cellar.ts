@@ -164,8 +164,8 @@ export function buildCellar(e:Estate){
     item(.16,.11,.27,8.62,1.97,z+dz,iron);
    }
   }else{
-   solid(.76,4.5,workX,z);
-   item(.7,2.7,4.5,workX-side*.25,1.35,z,wood);
+   solid(.84,4.5,workX,z);
+   item(.09,2.7,4.5,workX+side*.37,1.35,z,wood);
    for(const dz of[-2.14,0,2.14])item(.83,2.7,.115,workX,1.35,z+dz,wood);
    for(const y of[.3,.95,1.6,2.25]){
     item(.84,.09,4.48,workX,y,z,wood);
