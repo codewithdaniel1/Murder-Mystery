@@ -77,22 +77,21 @@ export function landscape(e:Estate){
 
 }
 export function castle(e:Estate){
- const {stone,trim,wood,plaster}=e.mats;
- const entranceOak=wood.clone();entranceOak.color.setHex(0xc3ac87);entranceOak.roughness=.72;
+ const {stone,trim}=e.mats;
  const hallHole=cellarGroundOpenings()[2];
  for(const [x0,x1,z0,z1] of [
   [-21,hallHole.left,-16,12],[hallHole.right,21,-16,12],
   [hallHole.left,hallHole.right,-16,hallHole.near],
   [hallHole.left,hallHole.right,HALL_BULKHEAD.top,12]
- ])e.floor(x1-x0,.15,z1-z0,(x0+x1)/2,0,(z0+z1)/2,entranceOak);
+ ])e.floor(x1-x0,.15,z1-z0,(x0+x1)/2,0,(z0+z1)/2,stone);
  e.wall(19.2,1,.6,-11.4,.5,12);e.wall(19.2,1,.6,11.4,.5,12);e.wall(42,1,.65,0,4.35,12);e.wall(3.6,1.4,.65,0,4.1,12);
  const cuts=[-21,-18,-16,-12,-10,-1.8,1.8,10,12,16,18,21];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1],mid=(a+b)/2;if(Math.abs(mid)<1.81||[-17,-11,11,17].some(x=>Math.abs(mid-x)<.1))continue;e.wall(b-a,2.85,.6,mid,2.425,12);}
  for(const x of[-17,-11,11,17])windowDetail(e,x,2.45,12.12,2,2.7);
  e.wall(.6,4.8,28,-21,2.4,-2);e.wall(.6,4.8,28,21,2.4,-2);e.wall(19.2,4.8,.6,-11.4,2.4,-16);e.wall(19.2,4.8,.6,11.4,2.4,-16);e.wall(3.6,1.4,.6,0,4.1,-16);
- for(const x of[-7,7]){e.wall(.32,4.8,13,x,2.4,-3.5,plaster);e.wall(.32,4.8,5.5,x,2.4,9.25,plaster);e.wall(.34,1.6,3.5,x,4,4.75,plaster);e.addDoor(x<0?'study':'library',x,6.3,Math.PI/2);for(const z of[3.1,6.4])e.wall(.46,3.3,.2,x,1.65,z,e.mats.panel);}
+ for(const x of[-7,7]){e.wall(.32,4.8,13,x,2.4,-3.5,stone);e.wall(.32,4.8,5.5,x,2.4,9.25,stone);e.wall(.34,1.6,3.5,x,4,4.75,stone);e.addDoor(x<0?'study':'library',x,6.3,Math.PI/2);for(const z of[3.1,6.4])e.wall(.46,3.3,.2,x,1.65,z,e.mats.panel);}
  // Rear room connections are two deliberately framed 2.4m doorways.
- for(const [x,w]of[[-15.7,10.6],[0,16],[15.7,10.6]])e.wall(w,4.8,.35,x,2.4,-10,plaster);
- for(const x of[-9.2,9.2]){e.wall(2.4,1.6,.35,x,4,-10,plaster);for(const dx of[-1.2,1.2])e.box(.14,3.25,.48,x+dx,1.625,-10,e.mats.panel);e.box(2.55,.16,.48,x,3.24,-10,e.mats.panel);}
+ for(const [x,w]of[[-15.7,10.6],[0,16],[15.7,10.6]])e.wall(w,4.8,.35,x,2.4,-10,stone);
+ for(const x of[-9.2,9.2]){e.wall(2.4,1.6,.35,x,4,-10,stone);for(const dx of[-1.2,1.2])e.box(.14,3.25,.48,x+dx,1.625,-10,e.mats.panel);e.box(2.55,.16,.48,x,3.24,-10,e.mats.panel);}
  e.addDoor('front',-1.55,12,0,true);e.addDoor('rear',-1.55,-16,0,true);
  for(const z of[12,-16]){for(const x of[-1.675,1.675])e.wall(.25,3.4,.72,x,1.7,z,trim);e.wall(3.6,.18,.72,0,3.32,z,trim);}
 
@@ -155,13 +154,11 @@ export function castle(e:Estate){
 }
 function tube(e:Estate,points:T.Vector3[],r:number,mat:T.Material,parent:T.Object3D){return mesh(e,new T.TubeGeometry(new T.CatmullRomCurve3(points),20,r,7,false),mat,0,0,0,parent);}
 export function interiorDetail(e:Estate){
- // Walnut wainscoting, recessed panels and fine picture rails.
- const panel=e.mats.panel,plaster=e.mats.plaster,paint=e.mat(0xd7d0bd,.9);
+ // Walnut trim and picture rails frame the exposed brick.
+ const panel=e.mats.panel,paint=e.mat(0xd7d0bd,.9);
  for(const x of[-20.64,-7.22,-6.78,6.78,7.22,20.64])for(let z=-8.8;z<11;z+=1.5){if(Math.abs(x)<8&&z>2.2&&z<7.1)continue;const toward=x<0?1:-1;const face=x+toward*.035;
- e.box(.08,1.45,1.47,x,.8,z,panel);e.box(.025,1.08,1.13,face,.79,z,e.mats.wood);for(const zz of[-.64,.64])e.box(.05,1.4,.045,face+toward*.03,.8,z+zz,panel);for(const y of[.14,1.43,1.55,3.68,4.57])e.box(.12,y===1.55?.1:.06,1.5,face,y,z,y>3?paint:panel);
+ for(const zz of[-.64,.64])e.box(.05,1.4,.045,face+toward*.03,.8,z+zz,panel);for(const y of[.14,1.43,1.55,3.68,4.57])e.box(.12,y===1.55?.1:.06,1.5,face,y,z,y>3?paint:panel);
  }
- // Side walls get plaster above panelling; conceal unfinished masonry indoors.
- for(const x of[-20.66,20.66])e.box(.04,3.1,27,x,3.05,-2,plaster);
  for(const x of[-14,0,14])for(let z=-7;z<=10;z+=5.5){
   if(x===0&&z>STAIR.top&&z<STAIR.bottom){
    const left=STAIR.x-STAIR.width/2,right=STAIR.x+STAIR.width/2;

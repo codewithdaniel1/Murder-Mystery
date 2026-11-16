@@ -37,7 +37,10 @@ export function buildCellar(e:Estate){
  const existing=new Set(e.scene.children);
  const stone=e.mats.stone.clone(),wood=e.mats.wood,iron=e.mat(0x303633,.66,.28),brass=e.mats.gold;
  stone.color.multiplyScalar(.55);
- const concrete=e.mat(0x77756b,.98),canvas=e.mat(0x657058,.98),crate=e.mat(0x8b6842,.91);
+ const brickTone=(color:number)=>{
+  const material=stone.clone();material.color.setHex(color);material.roughness=.98;return material;
+ };
+ const bunkerBrick=brickTone(0x77756b),canvas=e.mat(0x657058,.98),crate=e.mat(0x8b6842,.91);
  const wall=(w:number,d:number,x:number,z:number,mat=stone)=>{
   e.walls.push(e.box(w,CEILING-CELLAR_FLOOR,d,x,(CEILING+CELLAR_FLOOR)/2,z,mat));
   e.cellarBarriers.push({w,d,x,z});
@@ -62,7 +65,7 @@ export function buildCellar(e:Estate){
  wall(22,.35,0,-2);
  const wing=11-tunnelHalf;
  for(const side of [-1,1]){
-  wall(wing,.35,side*(tunnelHalf+wing/2),-20,concrete);
+  wall(wing,.35,side*(tunnelHalf+wing/2),-20,bunkerBrick);
   wall(.3,22,side*tunnelHalf,-31);
  }
 
@@ -72,8 +75,8 @@ export function buildCellar(e:Estate){
 
  // The hall stair and west passage both discharge into the open landing.
  // The far arch is on axis with the garden tunnel; rooms branch from the landing.
- const landingStone=e.mat(0x65594b,.96),wineStone=e.mat(0x76614c,.94);
- const storeStone=e.mat(0x6d685b,.94),shelterStone=e.mat(0x59605a,.96);
+ const landingStone=brickTone(0x65594b),wineStone=brickTone(0x76614c);
+ const storeStone=brickTone(0x6d685b),shelterStone=brickTone(0x59605a);
  item(13.35,.022,3.3,-3.85,.012,-18.2,landingStone);
  item(3,.027,7.15,0,.016,-16.35,landingStone);
  item(6.75,.02,14.25,-7.42,.012,-9.45,wineStone);
@@ -85,8 +88,8 @@ export function buildCellar(e:Estate){
  for(const [a,b] of [[-16.55,-10.25],[-7.75,-2]])wall(.34,b-a,-3.8,(a+b)/2);
  // Stores and shelter have separate entrances off the east side of the main route.
  for(const [a,b] of [[-20,-18.95],[-16.15,-10.25],[-7.75,-2]])
-  wall(.34,b-a,3.8,(a+b)/2,a<-12?concrete:stone);
- wall(7.2,.38,7.4,-13,concrete);
+  wall(.34,b-a,3.8,(a+b)/2,a<-12?bunkerBrick:stone);
+ wall(7.2,.38,7.4,-13,bunkerBrick);
 
  // Recessed lintels and masonry voussoirs give each entrance a readable outline.
  const portal=(x:number,z:number,width:number,turn=false,mat=stone)=>{
@@ -107,8 +110,8 @@ export function buildCellar(e:Estate){
   if(headroom>.02)e.walls.push(e.box(width+.4,headroom,.4,0,crown+headroom/2,0,mat,g));
  };
  portal(-7.45,-16.55,2.9);portal(-3.8,-9,2.5,true);
- portal(3.8,-9,2.5,true);portal(3.8,-17.55,2.8,true,concrete);
- portal(0,-19.94,3.05,false,concrete);
+ portal(3.8,-9,2.5,true);portal(3.8,-17.55,2.8,true,bunkerBrick);
+ portal(0,-19.94,3.05,false,bunkerBrick);
 
  const bottlePositions:T.Vector3[]=[];
  for(const z of [-14,-3.05]){
@@ -152,7 +155,7 @@ export function buildCellar(e:Estate){
    item(1.46,.06,1.12,x,y+.33,z,wood);
   }
  }
- // The concrete shelter has canvas cots, a radio desk and supply lockers.
+ // The shelter has canvas cots, a radio desk and supply lockers.
  for(const x of [6.2,9.1]){
   solid(2.6,1.05,x,-18.2);
   item(2.6,.15,1.04,x,.57,-18.2,iron);

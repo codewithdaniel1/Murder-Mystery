@@ -15,7 +15,7 @@ export function onUpperDeck(x:number,z:number){
 }
 
 export function buildUpstairs(e:Estate){
- const {wood,plaster,panel,trim,gold}=e.mats;
+ const {stone,wood,plaster,panel,trim,gold}=e.mats;
  const left=STAIR.x-STAIR.width/2,right=STAIR.x+STAIR.width/2;
  const mid=(a:number,b:number)=>(a+b)/2;
  // One slab serves as the downstairs ceiling and upstairs floor.
@@ -23,7 +23,7 @@ export function buildUpstairs(e:Estate){
   [-21,left,-16,12],[right,21,-16,12],
   [left,right,-16,STAIR.top],[left,right,STAIR.bottom,12]
  ]){
-  e.box(x1-x0,.25,z1-z0,mid(x0,x1),UPPER_FLOOR-.125,mid(z0,z1),wood);
+  e.box(x1-x0,.25,z1-z0,mid(x0,x1),UPPER_FLOOR-.125,mid(z0,z1),stone);
   e.walls.push(e.box(x1-x0,.02,z1-z0,mid(x0,x1),UPPER_FLOOR-.25,mid(z0,z1),plaster));
  }
  const stairDepth=STAIR.bottom-STAIR.top,steps=28,tread=stairDepth/steps;
@@ -57,7 +57,7 @@ export function buildUpstairs(e:Estate){
  for(let i=1;i<6;i++)e.box(.075,.96,.075,left+i*STAIR.width/6,UPPER_FLOOR+.48,STAIR.bottom,panel);
 
  const solid=(w:number,d:number,x:number,z:number)=>e.upperBarriers.push({x,z,w,d});
- const wall=(w:number,d:number,x:number,z:number,mat=plaster)=>{
+ const wall=(w:number,d:number,x:number,z:number,mat=stone)=>{
   solid(w,d,x,z);e.walls.push(e.box(w,3.58,d,x,6.84,z,mat));
   e.box(w+.04,.19,d+.04,x,UPPER_FLOOR+.095,z,panel);
  };
@@ -67,7 +67,7 @@ export function buildUpstairs(e:Estate){
   for(const [a,b] of [[-16,-10.3],[-8.1,5.2],[7.4,12]])wall(.25,b-a,x,mid(a,b));
   for(const z of [-9.2,6.3]){
    for(const end of [-1.1,1.1])e.box(.42,2.65,.14,x,UPPER_FLOOR+1.325,z+end,panel);
-   e.box(.42,1.03,2.34,x,8.115,z,plaster);
+   e.box(.42,1.03,2.34,x,8.115,z,stone);
    e.box(.46,.14,2.34,x,7.67,z,panel);
   }
  }

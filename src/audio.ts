@@ -1,10 +1,17 @@
+import {inStair,onUpperDeck} from './upstairs';
 type Position=[number,number,number];
 type Playing={source:AudioBufferSourceNode;gain:GainNode;pan?:PannerNode;filter?:BiquadFilterNode};
 const VOICE_SYLLABLES=['mmm','mhm','hmm','ah','ahh','huh'];
 const VOICE_FILES=['f','m'].flatMap(kind=>VOICE_SYLLABLES.map(syllable=>`voice-${kind}-${syllable}`));
 const FILES=['birds','wind','fountain','fireplace','step-wood-1','step-wood-2','step-gravel-1','step-stone-1','step-grass-1','step-grass-2','door-open','door-close','paper-1','paper-2','dog-bark','engine','murmur','telephone-ring',...VOICE_FILES];
-export function surfaceAt(x:number,z:number){
- if(z>-16&&z<12&&Math.abs(x)<21){if((Math.abs(x)<1.5&&z>-7&&z<9)||(Math.abs(x+15)<2.1&&Math.abs(z-3.5)<2.7))return 'carpet';return 'wood'}
+export function surfaceAt(x:number,z:number,elevation=1.65){
+ if(elevation<0)return 'stone';
+ if(inStair(x,z)&&elevation>1.8&&!onUpperDeck(x,z))return 'wood';
+ if(z>-16&&z<12&&Math.abs(x)<21){
+  if(elevation>5.6)return 'stone';
+  if((Math.abs(x)<1.5&&z>-5.6&&z<9.5)||(Math.abs(x+15)<2.1&&Math.abs(z-3.5)<2.7)||(Math.abs(x-15)<2&&Math.abs(z-4)<2.5))return 'carpet';
+  return 'stone';
+ }
  if(x>21&&x<31&&z<-25&&z>-33)return 'stone';
  if((z>12&&Math.abs(x)<4)||(z>12.8&&z<21.2&&Math.abs(x)<24)||(z<-16&&z>-35&&Math.abs(x)<2.5)||(Math.abs(z+23)<1.5&&x>0&&x<29)||(Math.abs(x-25)<1.5&&z<-23&&z>-35))return 'gravel';
  return 'grass';
@@ -46,7 +53,7 @@ export class EstateAudio {
  this.loop('fountain',inside?.02:.75,[0,.8,-30],inside?550:14000);this.loop('fireplace',p.y<0?0:inside&&p.x<-7?.65:inside?.12:.005,[-20,1,4.5],inside?11000:400);
  this.loop('engine',car?(inside?.12:.9):0,car??[4,1,24],inside?850:9500);
  const current:Position=[p.x,p.y,p.z];if(this.lastPosition&&moving){const d=Math.hypot(p.x-this.lastPosition[0],p.z-this.lastPosition[2]);if(d<1)this.distance+=d;else this.distance=0;}else this.distance=0;this.lastPosition=current;
- if(this.distance>1.15){this.distance%=1.15;const surface=p.y<0?'stone':surfaceAt(p.x,p.z);this.stepIndex++;const n=this.stepIndex%2+1;const file=surface==='carpet'||surface==='wood'?'step-wood-'+n:surface==='grass'?'step-grass-'+n:surface==='stone'?'step-stone-1':'step-gravel-1';this.playClip(file,surface==='carpet'?.17:.48,undefined,.94+Math.random()*.12);}
+ if(this.distance>1.15){this.distance%=1.15;const surface=surfaceAt(p.x,p.z,p.y);this.stepIndex++;const n=this.stepIndex%2+1;const file=surface==='carpet'||surface==='wood'?'step-wood-'+n:surface==='grass'?'step-grass-'+n:surface==='stone'?'step-stone-1':'step-gravel-1';this.playClip(file,surface==='carpet'?.17:.48,undefined,.94+Math.random()*.12);}
  this.barkAt-=dt;if(this.barkAt<0){this.barkAt=24+Math.random()*22;if(Math.hypot(p.x-dog[0],p.z-dog[2])<12)this.effect('bark',dog)}
 
  }
