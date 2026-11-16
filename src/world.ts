@@ -30,6 +30,8 @@ export class Estate {
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
  upperBarriers:Barrier[]=[];atticBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
+ cellarLightFixtures?:{position:T.Vector3;power:number}[];
+ cellarLightPool?:T.PointLight[];
  cellarDoors=new Map<string,{leaves:T.Group[];amount:number}>();
  yard:Yard;
  ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;fountainWater?:FountainWater;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
@@ -254,6 +256,15 @@ export class Estate {
   if(this.cellarInterior)this.cellarInterior.visible=!menu&&(depth>.15||
    BULKHEADS.some(s=>Math.hypot(this.camera.position.x-s.x,this.camera.position.z-s.top)<10));
   const fade=T.MathUtils.smoothstep(depth,.5,3.3);
+  if(this.cellarLightPool&&this.cellarLightFixtures){
+   const strength=T.MathUtils.smoothstep(depth,.15,.8);
+   const nearest=strength>0?[...this.cellarLightFixtures].sort((a,b)=>
+    a.position.distanceToSquared(this.camera.position)-b.position.distanceToSquared(this.camera.position)):[];
+   this.cellarLightPool.forEach((light,i)=>{
+    const fixture=nearest[i];light.intensity=fixture?fixture.power*strength:0;
+    if(fixture)light.position.copy(fixture.position);
+   });
+  }
   this.scene.environmentIntensity=T.MathUtils.lerp(.42,.065,fade);
   if(this.sun)this.sun.intensity=T.MathUtils.lerp(3.2,.06,fade);
  }

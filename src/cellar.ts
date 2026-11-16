@@ -38,6 +38,7 @@ export function cellarGroundOpenings(){
 export function buildCellar(e:Estate){
  e.cellarBarriers=[];
  e.cellarDoors=new Map();
+ const lamps:{position:T.Vector3;power:number}[]=[];
  const existing=new Set(e.scene.children);
  const stone=e.mats.stone.clone(),wood=e.mats.wood,iron=e.mat(0x303633,.66,.28),brass=e.mats.gold;
  stone.color.multiplyScalar(.55);
@@ -198,7 +199,7 @@ export function buildCellar(e:Estate){
   e.cyl(.1,.25,.17,x,y,z,iron);
   const bulb=e.mat(0xffd98e);bulb.emissive.setHex(0xffb65b);bulb.emissiveIntensity=2;
   e.sphere(.092,x,y-.12,z,bulb,e.scene,1,.68,1);
-  const lamp=new T.PointLight(0xffc58a,power*.38,8,2);lamp.position.set(x,y-.38,z);e.scene.add(lamp);
+  lamps.push({position:new T.Vector3(x,y-.38,z),power:power*.38});
  };
  for(const [x,z,power] of [[0,-5,65],[0,-14.3,100],[-7,-8,110],[7,-8,90],[-9.6,-18.5,110],[-7.45,-15.65,74],[7.6,-16.8,82],[0,-19,115],[-14,-19.6,68],[-20,-19.6,56],[-26,-19.6,66]])light(x,z,power);
  for(let z=-24;z>tunnelEnd;z-=6)light(0,z,z>=-36?70:55);
@@ -210,6 +211,11 @@ export function buildCellar(e:Estate){
  const interior=new T.Group();interior.name='Cellar and garden tunnel';
  for(const object of [...e.scene.children])if(!existing.has(object))interior.add(object);
  interior.visible=false;e.scene.add(interior);e.cellarInterior=interior;
+ // Keep the same lights registered even when the cellar geometry is hidden.
+ // Adding/removing lights from the render pass invalidates lit shader variants.
+ e.cellarLightFixtures=lamps;
+ e.cellarLightPool=Array.from({length:4},()=>new T.PointLight(0xffc58a,0,8,2));
+ e.scene.add(...e.cellarLightPool);
  // Each metal leaf hinges along a long edge of the stone stairwell.
  const frame=e.mats.trim,paint=e.mat(0x292421,.73,.2);
  for(const s of BULKHEADS){

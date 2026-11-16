@@ -14,6 +14,18 @@ import {buildShed,SHED,WITNESSES,Yard} from '../src/yard';
 import {buildCellar,BULKHEADS,bulkheadGate,CELLAR_FLOOR} from '../src/cellar';
 
 describe('walkable surfaces and physical obstacles',()=>{
+ it('keeps the light count stable while crossing the library service doorway',()=>{
+  const e=furnishedEstate(),s=freshState();buildCellar(e);
+  const visibleLights=()=>{const lights:T.PointLight[]=[];e.scene.traverseVisible(o=>{if(o instanceof T.PointLight)lights.push(o)});return lights;};
+  e.setPose({x:9.2,z:-6,yaw:0,pitch:0});
+  const before=visibleLights();expect(e.cellarInterior!.visible).toBe(true);
+  e.move(0,-6,s);expect(e.pose().z).toBeCloseTo(-12);
+  expect(e.cellarInterior!.visible).toBe(false);
+  expect(visibleLights()).toEqual(before);
+  e.setPose({x:0,z:-25,elevation:CELLAR_FLOOR,yaw:0,pitch:0});
+  expect(visibleLights()).toEqual(before);
+  expect(e.cellarLightPool!.some(light=>light.intensity>0)).toBe(true);
+ });
  it('connects the garden through the lodge and out to the woodland loop',()=>{
   const e=furnishedEstate(),s=freshState();landscape(e);buildGardenLodge(e);buildCellar(e);
   for(const x of[-7,5]){
