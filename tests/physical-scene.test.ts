@@ -141,6 +141,15 @@ describe('walkable surfaces and physical obstacles',()=>{
   e.move(-4.8+hall.x,0,s);e.move(0,-13.7-e.pose().z,s);
   e.move(0,9,s);expect(e.inCellar()).toBe(false);
  });
+ it('keeps the rear passage walkable above the covered cellar stairs',()=>{
+  const e=furnishedEstate(),s=freshState();landscape(e);buildCellar(e);
+  e.setPose({x:-3.4,z:-11.8,yaw:0,pitch:0});
+  e.move(6.8,0,s);expect(e.pose().x).toBeCloseTo(3.4);
+  e.move(-3.4,0,s);expect(e.pose().x).toBeCloseTo(0);
+  e.move(0,-6,s);expect(e.pose().z).toBeCloseTo(-17.8);
+  e.move(0,6,s);expect(e.pose().z).toBeCloseTo(-11.8);
+  expect(e.pose().elevation).toBeCloseTo(.075);
+ });
  it('connects both storeys through the stair and restores upstairs saves',()=>{
   const e=furnishedEstate(),s=freshState();
   e.setPose({x:STAIR.x,z:STAIR.bottom+.5,yaw:0,pitch:0});

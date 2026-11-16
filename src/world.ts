@@ -1,7 +1,7 @@
 import {buildShed,Yard,type StaffLevel,type WitnessId} from './yard';
 import {ATTIC_FLOOR,atticStairHeight,inAtticStair,onAtticDeck} from './attic';
 import {gardenBench,gardenGroundDetail} from './detail';
-import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
+import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarOpeningEnd,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {materials,landscape,castle,interiorDetail,sceneryAssets,batchDetail,grandfatherClock} from './visuals';
@@ -214,7 +214,8 @@ export class Estate {
   if(from>UPPER_FLOOR-.25&&inAtticStair(x,z))return atticStairHeight(z);
   if(from>UPPER_FLOOR-.25&&onUpperDeck(x,z))return UPPER_FLOOR;
   const stairs=cellarStairAt(x,z);
-  if(stairs){
+  // Above the buried part of the stair, the ground surface is still intact.
+  if(stairs&&(from<-.15||(z-cellarOpeningEnd(stairs))*stairs.direction<0)){
    const height=cellarStairHeight(stairs,z);
    return stairs.indoors&&from===CELLAR_FLOOR&&height> -2.8?CELLAR_FLOOR:height;
   }

@@ -26,9 +26,10 @@ export const cellarContains=(x:number,z:number)=>
  (Math.abs(x)<11&&z>-20&&z<-2)||(Math.abs(x)<tunnelHalf&&z>=-42&&z<=-20)||
  (x>=-28.15&&x<=-11&&z>=-21.3&&z<=-18);
 export const HALL_BULKHEAD=BULKHEADS[2];
+export const cellarOpeningEnd=(s:typeof BULKHEADS[number])=>s.top+s.direction*OPEN;
 export function cellarGroundOpenings(){
  return BULKHEADS.map(s=>({left:s.x-HALF,right:s.x+HALF,
-  near:Math.min(s.top,s.top+s.direction*OPEN),far:Math.max(s.top,s.top+s.direction*OPEN)}));
+  near:Math.min(s.top,cellarOpeningEnd(s)),far:Math.max(s.top,cellarOpeningEnd(s))}));
 }
 
 export function buildCellar(e:Estate){
@@ -241,7 +242,7 @@ export function buildCellar(e:Estate){
   poseBulkhead(leaves,0);e.scene.add(doors);e.walls.push(doors);
   e.target(doors,'bulkhead:'+s.id,s.label,'Open / close');
   e.cellarDoors.set(s.id,{leaves,amount:0});
-  const back=s.top+s.direction*OPEN;
+  const back=cellarOpeningEnd(s);
   for(const z of [s.top,back])e.box(3.3,.41,.15,s.x,.115,z,frame);
   e.barrier(s.x,back,3.3,.21);
   // Low roof over the buried part leaves headroom below the ground opening.
