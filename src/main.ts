@@ -78,7 +78,7 @@ function witnessDialogue(id:WitnessId,followup=false){
  if(actor){const p=actor.root.position;sound.vocal(w.template,[p.x,p.y+1.58,p.z]);}
  overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:#c2ad87">${w.initials}</span><div><span class="eyebrow">${w.role}</span><h2>${w.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${followup?w.reply:w.first}”</p><div class="topics">${followup?'<button data-action="resume">Thank you.</button>':`<button data-witness-followup="1">${w.question}</button>`}</div><small>Esc ends the conversation.</small></section>`;
 }
-function interact(){if(mode!=='play')return;const t=estate.targetAt();if(!t)return;estate.gesture=1;if(t.id.startsWith('npc:'))dialogue(t.id.slice(4) as PersonId);else if(t.id.startsWith('witness:'))witnessDialogue(t.id.slice(8) as WitnessId);else if(t.id.startsWith('bulkhead:')){
+function interact(){if(mode!=='play')return;const t=estate.targetAt();if(!t)return;estate.gesture=1;if(t.id.startsWith('npc:'))dialogue(t.id.slice(4) as PersonId);else if(t.id.startsWith('witness:')){const id=t.id.slice(8) as WitnessId;if(WITNESSES[id].level===estate.staffLevel())witnessDialogue(id);}else if(t.id.startsWith('bulkhead:')){
  const opened=estate.toggleBulkhead(t.id.slice(9),state);
  if(opened===null){toast('Step clear of the doors first.');return}
  const position=t.root.getWorldPosition(estate.camera.position.clone());

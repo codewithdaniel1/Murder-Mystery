@@ -3,19 +3,61 @@ import type {Estate} from './world';
 import {animateCharacter,type CharacterMotion} from './characters';
 import {clearSegment} from './navigation';
 import type {GameState,PersonId} from './state';
+import {CELLAR_FLOOR} from './cellar';
+import {UPPER_FLOOR} from './upstairs';
+import {ATTIC_FLOOR} from './attic';
 
 export const SHED={x:-22,z:-30.5,width:5.6,depth:4.5};
 export const WITNESSES={
- finch:{name:'Alfred Finch',role:'Estate handyman',initials:'AF',template:'tomas',coat:0x895f49,hair:0x604b36,
+ finch:{name:'Alfred Finch',role:'Estate handyman',initials:'AF',template:'tomas',level:'ground',coat:0x895f49,hair:0x604b36,
   route:[[-18,-24],[-22,-25.55],[-20.6,-26.05]], question:'What was the crash near the shed?',
   first:'There was an awful crash out west. For a minute I thought somebody was hiding in the shed.',
   reply:'I went back to check. A loose flowerpot had fallen off the shelf. The shed was empty when I got there.'},
- webb:{name:'Nora Webb',role:'Village courier',initials:'NW',template:'mara',coat:0x65716f,hair:0x6c4330,
+ webb:{name:'Nora Webb',role:'Village courier',initials:'NW',template:'mara',level:'ground',coat:0x65716f,hair:0x6c4330,
   route:[[14,-23],[18.5,-23],[15.4,-21.3]],question:'Did you see who crossed the garden?',
   first:'Something dark darted past the flower beds. I thought it might have been someone leaving the house.',
-  reply:'I saw it again by the hedge. It was a rabbit. I couldn’t see the house doors from where I stood.'}
+  reply:'I saw it again by the hedge. It was a rabbit. I couldn’t see the house doors from where I stood.'},
+ hale:{name:'Arthur Hale',role:'Head butler',initials:'AH',template:'rook',level:'ground',coat:0x35343a,hair:0x6b6056,
+  route:[[.7,9.4],[-.7,7.1],[-1.3,10.3]],question:'Who has been coming through the hall?',
+  first:'Good afternoon, Detective. I have kept the entrance clear for you and the household.',
+  reply:'I was laying out the tea service earlier. June knows who was expected today.'},
+ price:{name:'Leonard Price',role:'Underbutler',initials:'LP',template:'jonah',level:'ground',coat:0x43474a,hair:0x554031,
+  route:[[4.7,-10.6],[4.7,-14.5],[2.9,-14.1]],question:'What are you doing back here?',
+  first:'I’m checking the service passage before supper. Someone always leaves a door ajar.',
+  reply:'I only came through after June called for help. I can tell you where things are, but not what happened.'},
+ green:{name:'Samuel Green',role:'Drive gardener',initials:'SG',template:'tomas',level:'ground',coat:0x6f5136,hair:0x554b42,
+  route:[[10.1,29],[10.1,35],[11.1,33]],question:'What are you working on?',
+  first:'The verge keeps creeping over the drive. I’m trying to get it tidy before the next car arrives.',
+  reply:'I’ve been trimming on this side of the gate. The wall hides most of the house from here.'},
+ ward:{name:'Hugh Ward',role:'West garden gardener',initials:'HW',template:'tomas',level:'ground',coat:0x7a7451,hair:0x362f25,
+  route:[[-15.5,-26.5],[-15.5,-32.8],[-17,-31.3]],question:'What grows in these beds?',
+  first:'We’re making room for more vegetables this year. The flowers can keep the borders.',
+  reply:'Watch your step at the back of the beds. The rabbits have been digging there again.'},
+ bellamy:{name:'Edith Bellamy',role:'Glasshouse gardener',initials:'EB',template:'ada',level:'ground',coat:0x756746,hair:0x564034,
+  route:[[19.9,-27],[19.9,-31.6],[19,-30.3]],question:'Can I go into the glasshouse?',
+  first:'Mind the young plants by the glass. Some of them are hard to replace this year.',
+  reply:'You can walk through either end. Ask Tomas if you need to disturb anything on his bench.'},
+ shaw:{name:'George Shaw',role:'Orchard gardener',initials:'GS',template:'tomas',level:'ground',coat:0x655843,hair:0x8a8178,
+  route:[[5,-36.9],[5,-38.4],[1,-37.6]],question:'Have you seen anyone by the far garden?',
+  first:'I’m picking dead stems out of the beds. There’s always more work after rain.',
+  reply:'I’ve seen birds and rabbits down this end. I haven’t seen anyone use the garden stairs.'},
+ pike:{name:'Walter Ames',role:'Wine steward',initials:'WA',template:'rook',level:'cellar',coat:0x625044,hair:0x685948,
+  route:[[-8,-12.4],[-8,-9.1],[-6.1,-10.2]],question:'What are you counting?',
+  first:'Bottles, Detective. I’m checking the racks against the cellar book before I lock up.',
+  reply:'The wine is all accounted for. I haven’t found anything down here that explains what happened upstairs.'},
+ miller:{name:'Ruth Miller',role:'Second floor maid',initials:'RM',template:'june',level:'upper',coat:0x52606a,hair:0x785a44,
+  route:[[9.4,6.4],[9.4,9.55],[13,9.4]],question:'Are the rooms in use?',
+  first:'I’m straightening the sitting room and putting away fresh linen.',
+  reply:'The bedrooms are quiet just now. I haven’t moved any of the detective’s things.'},
+ foster:{name:'Lucy Foster',role:'Attic maid',initials:'LF',template:'june',level:'attic',coat:0x69616d,hair:0x4c3b2e,
+  route:[[9,-.8],[9,-5.55],[10.5,-5.4]],question:'What’s kept up here?',
+  first:'Spare linen and old trunks, mostly. I’ve been airing out the little bedroom.',
+  reply:'The storage loft is across the landing. Nothing there has been taken out today.'}
 } as const;
 export type WitnessId=keyof typeof WITNESSES;
+export type StaffLevel=typeof WITNESSES[WitnessId]['level'];
+const staffFloor=(e:Estate,level:StaffLevel,x:number,z:number)=>
+ level==='ground'?e.groundHeight(x,z):level==='cellar'?CELLAR_FLOOR:level==='upper'?UPPER_FLOOR:ATTIC_FLOOR;
 type Witness={id:WitnessId;root:T.Group;index:number;wait:number;motion?:CharacterMotion;driver?:Parameters<typeof animateCharacter>[0]};
 type Rabbit={root:T.Group;head:T.Group;home:T.Vector2;phase:number;heading:number};
 type Bird={root:T.Group;wings:T.Group[];phase:number};
@@ -76,7 +118,7 @@ export class Yard {
  constructor(private e:Estate){
   for(const id of Object.keys(WITNESSES) as WitnessId[]){
    const spec=WITNESSES[id],root=new T.Group(),[x,z]=spec.route[0];
-   root.position.set(x,e.groundHeight(x,z),z);e.scene.add(root);
+   root.position.set(x,staffFloor(e,spec.level,x,z),z);e.scene.add(root);
    this.witnesses.push({id,root,index:1,wait:3});
    e.target(root,'witness:'+id,spec.name,'Speak to');
   }
@@ -113,18 +155,27 @@ export class Yard {
   }
  }
  spec(id:WitnessId){return WITNESSES[id]}
+ staffObstacles(level:StaffLevel,exclude?:WitnessId){
+  return this.witnesses.filter(w=>w.id!==exclude&&WITNESSES[w.id].level===level)
+   .map(w=>({x:w.root.position.x,z:w.root.position.z,w:.4,d:.4}));
+ }
  reset(){
   for(const w of this.witnesses){
-   const [x,z]=WITNESSES[w.id].route[0];w.root.position.set(x,this.e.groundHeight(x,z),z);w.index=1;w.wait=3;
+   const spec=WITNESSES[w.id],[x,z]=spec.route[0];w.root.position.set(x,staffFloor(this.e,spec.level,x,z),z);w.index=1;w.wait=3;
   }
  }
  update(dt:number,state:GameState,playing:boolean,active:WitnessId|null){
   const e=this.e,player=e.camera.position;
   if(playing)this.time+=dt;
+  const people=[...e.actors.values()].filter(a=>a.root.visible).map(a=>({x:a.root.position.x,z:a.root.position.z,w:.42,d:.42}));
+  const ground=[...e.collisionBarriers(state),...e.stairBarriers];
+  const levels:Record<StaffLevel,readonly {x:number;z:number;w:number;d:number;door?:string}[]>={
+   ground:[...ground,...people],cellar:e.cellarBarriers??[],upper:e.collisionBarriers(state,true),attic:e.atticBarriers
+  };
   for(const w of this.witnesses){
    if(!w.motion)continue;
-   const route=WITNESSES[w.id].route,[tx,tz]=route[w.index],p=w.root.position;
-   const near=e.onGroundLevel()&&Math.hypot(player.x-p.x,player.z-p.z)<2.65;
+   const spec=WITNESSES[w.id],route=spec.route,[tx,tz]=route[w.index],p=w.root.position;
+   const near=e.staffLevel()===spec.level&&Math.hypot(player.x-p.x,player.z-p.z)<2.65;
    let distance=0,angle=w.root.rotation.y;
    if(active===w.id||near)angle=Math.atan2(player.x-p.x,player.z-p.z);
    else if(playing){
@@ -134,14 +185,15 @@ export class Yard {
     if(w.wait===0&&d<.12){w.index=(w.index+1)%route.length;w.wait=3.8;}
     else if(w.wait===0&&d>.001){
      const hop=Math.min(dt*.8,d),next={x:p.x+dx/d*hop,z:p.z+dz/d*hop};
-     const people=[...e.actors.values()].filter(a=>a.root.visible).map(a=>({x:a.root.position.x,z:a.root.position.z,w:.42,d:.42}));
-     if(clearSegment(p,next,[...e.barriers,...people],state.doors,.22)){p.x=next.x;p.z=next.z;distance=hop;}
+     const colleagues=this.staffObstacles(spec.level,w.id);
+     if(clearSegment(p,next,[...levels[spec.level],...colleagues],state.doors,.22)){p.x=next.x;p.z=next.z;distance=hop;}
     }
    }
    w.root.rotation.y+=Math.atan2(Math.sin(angle-w.root.rotation.y),Math.cos(angle-w.root.rotation.y))*Math.min(1,dt*5);
-   p.y=e.groundHeight(p.x,p.z);
+   p.y=staffFloor(e,spec.level,p.x,p.z);
    const template:PersonId=WITNESSES[w.id].template;
-   w.driver??={actors:new Map([[template,{root:w.root}]]),characterMotion:new Map([[template,w.motion]]),groundHeight:(x,z)=>e.groundHeight(x,z)};
+   w.driver??={actors:new Map([[template,{root:w.root}]]),characterMotion:new Map([[template,w.motion]]),groundHeight:(x,z)=>staffFloor(e,spec.level,x,z)};
+   if(active!==w.id&&(Math.abs(p.y+1.65-player.y)>3.1||Math.hypot(p.x-player.x,p.z-player.z)>25))continue;
    animateCharacter(w.driver,template,distance>0,dt,!playing&&active!==w.id,null,this.time,dt>0?distance/dt:0);
   }
   if(!playing)return;

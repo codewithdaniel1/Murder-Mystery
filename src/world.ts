@@ -1,4 +1,4 @@
-import {buildShed,Yard,type WitnessId} from './yard';
+import {buildShed,Yard,type StaffLevel,type WitnessId} from './yard';
 import {ATTIC_FLOOR,atticStairHeight,inAtticStair,onAtticDeck} from './attic';
 import {gardenBench,gardenGroundDetail} from './detail';
 import {buildCellar,BULKHEADS,bulkheadGate,cellarContains,cellarStairAt,cellarStairHeight,CELLAR_FLOOR,poseBulkhead} from './cellar';
@@ -241,6 +241,10 @@ export class Estate {
   s.doors[id]=!open;
   return !open;
  }
+ staffLevel():StaffLevel{
+  const y=this.playerElevation??0;
+  return this.inCellar()?'cellar':y>ATTIC_FLOOR-.25?'attic':y>UPPER_FLOOR-.25?'upper':'ground';
+ }
  onGroundLevel(){return !this.inCellar()&&(this.playerElevation??0)<1.2}
  private updateCellarView(menu=false){
   const depth=menu?0:Math.max(0,-(this.playerElevation??0));
@@ -263,14 +267,15 @@ export class Estate {
  move(dx:number,dz:number,s:GameState){
  const start=this.camera.position.clone(),ground=[...this.collisionBarriers(s),...(this.stairBarriers??[])];
  for(const a of this.actors.values())if(a.root.visible)ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
- for(const w of this.yard?.witnesses??[])ground.push({x:w.root.position.x,z:w.root.position.z,w:.4,d:.4});
+ ground.push(...(this.yard?.staffObstacles('ground')??[]));
  let elevation=this.playerElevation??this.groundHeight(start.x,start.z);
- const upper=this.collisionBarriers(s,true);
- const cellar=[...(this.cellarBarriers??[])];
+ const upper=[...this.collisionBarriers(s,true),...(this.yard?.staffObstacles('upper')??[])];
+ const attic=[...this.atticBarriers,...(this.yard?.staffObstacles('attic')??[])];
+ const cellar=[...(this.cellarBarriers??[]),...(this.yard?.staffObstacles('cellar')??[])];
  for(const entry of BULKHEADS)if(s.doors[entry.id]!==true||(this.cellarDoors?.get(entry.id)?.amount??1)<.83){
   ground.push(bulkheadGate(entry,false));cellar.push(bulkheadGate(entry,true));
  }
- const barriers=()=>elevation<-.15?cellar:elevation>ATTIC_FLOOR-.25?this.atticBarriers:elevation>UPPER_FLOOR-.25?upper:ground;
+ const barriers=()=>elevation<-.15?cellar:elevation>ATTIC_FLOOR-.25?attic:elevation>UPPER_FLOOR-.25?upper:ground;
  let p=resolveOverlap(start,barriers(),s.doors,.26);const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
  const advance=(x:number,z:number)=>{
   if(Math.abs(x)>=52||z>=53||z<=-49||!clearSegment(p,{x,z},barriers(),s.doors,.26))return;

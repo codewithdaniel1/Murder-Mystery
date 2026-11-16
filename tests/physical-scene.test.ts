@@ -24,20 +24,36 @@ describe('walkable surfaces and physical obstacles',()=>{
  it('moves both outdoor witnesses and wildlife, and pauses a witness for conversation',async()=>{
   const e=furnishedEstate(),s=freshState();buildShed(e);const yard=new Yard(e);
   e.setPose(s.pose);
-  for(const w of yard.witnesses){
+  const decoys=yard.witnesses.filter(w=>w.id==='finch'||w.id==='webb');
+  for(const w of decoys){
    const spec=WITNESSES[w.id],source=await loadModel(w.id==='finch'?'sam':'harper');
    w.root.add(source.scene);w.motion=createCharacterMotion(source.scene,source.animations,new T.Group());
    expect(e.targets.find(t=>t.root===w.root)?.label).toBe(spec.name);
   }
-  const homes=yard.witnesses.map(w=>w.root.position.clone());
+  const homes=decoys.map(w=>w.root.position.clone());
   const bird=e.scene.getObjectByName('Garden bird')!,origin=bird.position.clone();
   for(let i=0;i<465;i++)yard.update(1/60,s,true,null);
-  for(const [i,w] of yard.witnesses.entries())expect(w.root.position.distanceTo(homes[i])).toBeGreaterThan(1.5);
+  for(const [i,w] of decoys.entries())expect(w.root.position.distanceTo(homes[i])).toBeGreaterThan(1.5);
   expect(bird.position.distanceTo(origin)).toBeGreaterThan(2);
   const [finch]=yard.witnesses,location=finch.root.position.clone();
   for(let i=0;i<90;i++)yard.update(1/60,s,true,'finch');
   expect(finch.root.position.distanceTo(location)).toBeLessThan(.001);
   expect(s.evidence).toEqual([]);
+ });
+ it('places staff on their assigned levels with unobstructed routes and local collision',()=>{
+  const e=furnishedEstate(),s=freshState();buildShed(e);buildCellar(e);e.yard=new Yard(e);
+  for(const w of e.yard.witnesses){
+   const spec=WITNESSES[w.id],level=spec.level;
+   const solid=level==='ground'?[...e.collisionBarriers(s),...e.stairBarriers]:
+    level==='cellar'?e.cellarBarriers:level==='upper'?e.collisionBarriers(s,true):e.atticBarriers;
+   for(const [[x,z],i] of spec.route.map((point,i)=>[point,i] as const)){
+    const [nextX,nextZ]=spec.route[(i+1)%spec.route.length];
+    expect(clearSegment({x,z},{x:nextX,z:nextZ},solid,s.doors,.22),spec.name+' stop '+i).toBe(true);
+   }
+   e.setPose({x:w.root.position.x,z:w.root.position.z,yaw:0,pitch:0,elevation:w.root.position.y});
+   expect(e.staffLevel()).toBe(level);
+   expect(e.yard.staffObstacles(level).some(b=>b.x===w.root.position.x&&b.z===w.root.position.z)).toBe(true);
+  }
  });
  it('walks from the second floor to both attic rooms and back, and restores attic saves',()=>{
   const e=furnishedEstate(),s=freshState(),stair=ATTIC_STAIR;

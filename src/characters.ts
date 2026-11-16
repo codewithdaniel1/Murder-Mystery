@@ -56,7 +56,9 @@ export async function loadCharacters(e:Estate){
   const model=prepareHuman(source,id==='tomas'?1.71:1.67);
   const prop=new T.Group();prop.visible=false;witness.root.add(model,prop);
   witness.motion=createCharacterMotion(model,source.animations,prop);
-  dressCharacter(id,model,{coat:spec.coat,hair:spec.hair,skirt:id==='mara'?0x465b56:undefined});
+  dressCharacter(id,model,{coat:spec.coat,hair:spec.hair,
+   ...(id==='mara'?{skirt:0x465b56}:id==='june'?{skirt:spec.level==='attic'?0x524750:0x394751}:{}),
+   ...(id==='jonah'?{hat:undefined}:{})});
  }
  e.dogMotion=rigDog(dog.scene);e.dog.clear();e.dog.add(e.dogMotion.root);
 }
