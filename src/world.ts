@@ -1,3 +1,4 @@
+import {flowerBorders} from './planting';
 import {buildShed,Yard,type StaffLevel,type WitnessId} from './yard';
 import {withinGrounds} from './grounds';
 import type {bakeCellarLighting} from './cellar-lighting';
@@ -218,8 +219,16 @@ export class Estate {
   const a=i*Math.PI/7,flute=this.sphere(.074,Math.sin(a)*.71,.5,Math.cos(a)*.71-30,stone,this.scene,.75,3.2,.75);
   flute.rotation.z=-Math.sin(a)*.13;flute.rotation.x=Math.cos(a)*.13;
  }
- for(const x of[-12,12]){this.barrier(x,-29,2.2,8.2);}for(let i=0;i<6;i++){const x=-16+i*6;this.floor(4,.32,2,x,.1,-40,this.mats.stone);this.barrier(x,-40,4,2);}
- const flowers=new T.InstancedMesh(new T.SphereGeometry(.07,5,4),this.mat(0xddbd98),480),stems=new T.InstancedMesh(new T.CylinderGeometry(.018,.025,.45,4),this.mats.leaf,480);const m=new T.Matrix4();for(let i=0;i<480;i++){const x=-18+rnd()*36,z=-39.2-rnd()*1.5,y=.4+rnd()*.4;m.makeTranslation(x,y,z);flowers.setMatrixAt(i,m);m.makeTranslation(x,y-.2,z);stems.setMatrixAt(i,m);}this.scene.add(flowers,stems);
+ for(const x of[-12,12]){this.barrier(x,-29,2.2,8.2);}const borderSoil=this.mat(0x453828,.99);
+ for(let i=0;i<6;i++){
+  const x=-16+i*6;
+  this.floor(4,.25,2,x,.065,-40,this.mats.stone);
+  this.floor(3.8,.07,1.8,x,.225,-40,borderSoil);
+  for(const z of [-40.95,-39.05])this.box(4,.085,.1,x,.233,z,stone);
+  for(const dx of [-1.95,1.95])this.box(.1,.085,1.8,x+dx,.233,-40,stone);
+  this.barrier(x,-40,4,2);
+ }
+ flowerBorders(this);
  for(const x of [-10,8])gardenBench(this,x,-36);
  // Matching front and rear greenhouse entries connect both garden paths.
  const glass=this.mats.glass,metal=this.mats.dark;this.floor(10,.15,8,26,0,-29,this.mats.wood);for(const x of[21,31]){this.box(.1,3.5,8,x,1.75,-29,glass,this.scene,false);this.barrier(x,-29,.2,8);}

@@ -1,3 +1,4 @@
+import {ORCHARD,ORCHARD_HEIGHT,ORCHARD_WIDTH,orchardFruit} from './planting';
 import {wallSocket} from './detail';
 import {GROUNDS} from './grounds';
 import {cellarGroundOpenings,HALL_BULKHEAD} from './cellar';
@@ -321,15 +322,15 @@ export function normalized(source:T.Object3D,height:number,centerHorizontal=true
  const anchor=new T.Group();anchor.add(content);anchor.scale.setScalar(scale);anchor.position.set(centerHorizontal?-center.x*scale:0,-bounds.min.y*scale,centerHorizontal?-center.z*scale:0);const root=new T.Group();root.add(anchor);return root;
 }
 type PlantPose=[number,number,number,number];
-function plantVariants(e:Estate,source:T.Object3D,positions:PlantPose[],height:number,rootDepth:number){
+function plantVariants(e:Estate,source:T.Object3D,positions:PlantPose[],height:number,rootDepth:number,width=1){
  // These GLBs contain a row of separate variants, not one continuous plant.
  // Seat each variant on the soil at its own location.
  source.children.forEach((variant,index)=>{
   const group=new T.Group();group.add(variant.clone(true));
-  staticBatch(e,group,positions.filter((_,i)=>i%source.children.length===index),height,rootDepth);
+  staticBatch(e,group,positions.filter((_,i)=>i%source.children.length===index),height,rootDepth,false,width);
  });
 }
-export function staticBatch(e:Estate,source:T.Object3D,positions:PlantPose[],height:number,rootDepth=.03,woodland=false){
+export function staticBatch(e:Estate,source:T.Object3D,positions:PlantPose[],height:number,rootDepth=.03,woodland=false,width=1){
  const openings=cellarGroundOpenings();
  positions=positions.filter(([x,z])=>!openings.some(h=>x>h.left-2&&x<h.right+2&&z>h.near-2&&z<h.far+2));
  if(!positions.length)return;
@@ -344,18 +345,21 @@ export function staticBatch(e:Estate,source:T.Object3D,positions:PlantPose[],hei
  const matrix=new T.Matrix4(),q=new T.Quaternion();
  for(const tile of tiles.values()){
   const inst=new T.InstancedMesh(geo,material,tile.length);
-  tile.forEach(([x,z,s,angle],i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),angle);matrix.compose(new T.Vector3(x,e.groundHeight(x,z)-rootDepth*s,z),q,new T.Vector3(s,s,s));inst.setMatrixAt(i,matrix);if(height>5)inst.setColorAt(i,new T.Color().setHSL(.16+(i%4)*.024,.15+(i%3)*.032,.72+(i%5)*.051))});
+  tile.forEach(([x,z,s,angle],i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),angle);matrix.compose(new T.Vector3(x,e.groundHeight(x,z)-rootDepth*s,z),q,new T.Vector3(s*width,s,s*width));inst.setMatrixAt(i,matrix);if(height>5)inst.setColorAt(i,new T.Color().setHSL(.16+(i%4)*.024,.15+(i%3)*.032,.72+(i%5)*.051))});
   inst.name='Grounded planting';inst.castShadow=!woodland;inst.receiveShadow=true;e.scene.add(inst);
  }
  });}
 export async function sceneryAssets(e:Estate){const loader=new GLTFLoader(),outer=woodland();
  const load=async(name:string)=>{try{return (await loader.loadAsync(base+'models/'+name+'.glb')).scene}catch(err){console.warn('Scenery asset unavailable:',name,err);return null}};
- const shrub=await load('shrub');if(shrub){const positions:[number,number,number,number][]=[];for(const x of[-12,12])for(let z=-32.6;z<=-25.5;z+=1.15)positions.push([x,z,.65+seeded()*.2,seeded()*6.28]);for(const x of[-25.5,25.5])for(let z=-16;z<=12;z+=2.2)positions.push([x,z,1+seeded()*.4,seeded()*6.28]);for(const side of[-1,1])for(let i=0;i<35;i++)positions.push([side*(31+seeded()*25),-45+seeded()*100,1+seeded()*1.3,seeded()*6.28]);plantVariants(e,shrub,positions,1.2,.15);}
+ const shrub=await load('shrub');if(shrub){const positions:[number,number,number,number][]=[];for(const x of[-12,12])for(let z=-32.6;z<=-25.5;z+=1.15)positions.push([x,z,.65+seeded()*.2,seeded()*6.28]);for(const x of[-25.5,25.5])for(let z=-16;z<=12;z+=2.2)positions.push([x,z,1+seeded()*.4,seeded()*6.28]);for(const side of[-1,1])for(let i=0;i<35;i++)positions.push([side*(31+seeded()*25),-45+seeded()*100,1+seeded()*1.3,seeded()*6.28]);plantVariants(e,shrub,positions,1.2,.15,1.33);}
  const flower=await load('shrub-flowering');if(flower){const poses:[number,number,number,number][]=[];for(const side of[-1,1])for(let i=0;i<16;i++)poses.push([side*(7+seeded()*14),22+seeded()*4,.55+seeded()*.3,seeded()*6]);for(let x=-17;x<19;x+=2)poses.push([x,-40,.6,seeded()*6]);plantVariants(e,flower,poses,1.7,.12);}
  const fern=await load('fern');if(fern){const poses:PlantPose[]=[...outer.scrub];for(let i=0;i<35;i++)poses.push([(i%2?1:-1)*(25+seeded()*9),-20+seeded()*60,.6+seeded()*.5,seeded()*6]);plantVariants(e,fern,poses,.55,.075);}
  const tree=await load('garden-tree');if(tree){const poses:[number,number,number,number][]=[];
  for(const side of[-1,1])for(let z=-43;z<51;z+=10.5){const x=side*(33+(Math.round(z)%2?3:0));poses.push([x,z,.85+seeded()*.3,seeded()*6]);e.barrier(x,z,.7,.7);}
- for(let x=-42;x<=42;x+=9)poses.push([x,-49,.95+seeded()*.3,seeded()*6]);staticBatch(e,tree,poses,10);
+ for(let x=-42;x<=42;x+=9)poses.push([x,-49,.95+seeded()*.3,seeded()*6]);staticBatch(e,tree,poses,10,.03,false,1.25);
+ staticBatch(e,tree,ORCHARD.map(t=>[t.x,t.z,t.scale,t.angle]),ORCHARD_HEIGHT,.035,false,ORCHARD_WIDTH);
+ orchardFruit(e,normalized(tree,ORCHARD_HEIGHT));
+ for(const {x,z,scale} of ORCHARD)e.barrier(x,z,.53*scale,.53*scale);
  staticBatch(e,tree,outer.trees,10,.045,true);
  for(const [x,z,scale] of outer.trees)if(Math.abs(x)<GROUNDS.halfWidth&&z>GROUNDS.back&&z<GROUNDS.front)e.woodlandTrunks.push({x,z,w:.54*scale,d:.54*scale});
  }
