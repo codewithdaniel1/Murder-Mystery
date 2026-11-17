@@ -124,7 +124,22 @@ export function buildWartimeEstate(e:Estate){
   e.cyl(.024,.024,.88,gx+side*.61,2.27,gz+2.21,wood).rotation.z=Math.PI/2;
   for(let i=0;i<6;i++)e.cyl(.036,.043,1.04,gx+side*(.58+i*.043),1.72,gz+2.2,dark,e.scene,7);
  }
- for(const side of[-1,1])e.box(5.95,.14,2.87,gx,3.05,gz+side*1.28,slate).rotation.x=side*.27;
+ const roofPitch=.27,roofCenterY=3.05,roofOffset=1.28;
+ for(const side of[-1,1])
+  e.box(5.95,.14,2.87,gx,roofCenterY,gz+side*roofOffset,slate).rotation.x=side*roofPitch;
+ const ridgeY=roofCenterY+roofOffset*Math.tan(roofPitch);
+ e.box(5.98,.09,.24,gx,ridgeY+.09,gz,slate);
+ // Close each triangular end between the brick wall and the underside of the slate.
+ const profile=new T.Shape();
+ profile.moveTo(-2.4,0);profile.lineTo(2.4,0);profile.lineTo(0,ridgeY-2.75);profile.closePath();
+ const gableGeometry=new T.ExtrudeGeometry(profile,{depth:.28,bevelEnabled:false}).translate(0,0,-.14);
+ const uv=gableGeometry.getAttribute('uv'),positions=gableGeometry.getAttribute('position');
+ for(let i=0;i<uv.count;i++)uv.setXY(i,(gz+positions.getX(i))/2,(2.75+positions.getY(i))/2);
+ for(const side of[-1,1]){
+  const gable=new T.Mesh(gableGeometry,stone);
+  gable.position.set(gx+side*2.8,2.75,gz);gable.rotation.y=-Math.PI/2;
+  gable.castShadow=true;gable.receiveShadow=true;e.scene.add(gable);e.walls.push(gable);
+ }
  e.box(.61,1.1,.63,gx-1.6,3.16,gz-.86,stone);
  e.table(gx-1.65,gz,1.23,1.9);
  e.target(phone(e,gx-1.64,1.12,gz-.62),'gate-phone','Gatehouse telephone','Use');

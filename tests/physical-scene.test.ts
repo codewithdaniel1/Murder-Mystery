@@ -28,6 +28,15 @@ describe('walkable surfaces and physical obstacles',()=>{
   expect(partitionHits(4.7).length).toBeGreaterThan(0);
   expect(e.targets.find(t=>t.id==='kitchen-wireless')!.root.position.x).toBeLessThan(e.pose().x);
  });
+ it('seals the gatehouse roof above both end walls and across the ridge',()=>{
+  const e=furnishedEstate();buildWartimeEstate(e);e.scene.updateMatrixWorld(true);
+  for(const side of [-1,1])for(const z of [43.65,44.5,45.35]){
+   const ray=new T.Raycaster(new T.Vector3(-12.5,3.07,z),new T.Vector3(side,0,0),0,3.1);
+   expect(ray.intersectObjects(e.scene.children,true).some(hit=>Math.abs(hit.point.x+12.5)>2.5)).toBe(true);
+  }
+  const ridge=new T.Raycaster(new T.Vector3(-12.5,3.18,44.5),new T.Vector3(0,1,0),0,.45);
+  expect(ridge.intersectObjects(e.scene.children,true).length).toBeGreaterThan(0);
+ });
  it('stops the delivery van for the player and restores a completed delivery',()=>{
   const e=furnishedEstate(),s=freshState();e.dog=new T.Group();
   const delivery=new EstateDelivery(e);delivery.reset(s);expect(delivery.obstacle()).toBeNull();
