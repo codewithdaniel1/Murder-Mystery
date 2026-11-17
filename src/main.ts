@@ -1,3 +1,4 @@
+import {SUSPECTS,METHODS,MOTIVES,CANDIDATE_OBJECTS} from './case-options';
 import {Mesh,MeshStandardMaterial} from 'three';
 import {WITNESSES,type WitnessId} from './yard';
 import {rememberStory,storyNotes,storyTopics} from './stories';
@@ -99,6 +100,7 @@ function dialogue(speaker:Speaker,reply?:string){
  overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:#c2ad87">${person.initials}</span><div><span class="eyebrow">${person.role}</span><h2>${person.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${reply??greeting}”</p><div class="topics">${currentTopics.map((t,i)=>`<button data-topic="${i}"><span>${t.label}</span><span aria-hidden="true">↗</span></button>`).join('')}<button data-action="resume">End conversation</button></div><small>Esc ends the conversation.</small></section>`;
 }
 const estateObjects:Record<string,[string,string,string]> = {
+ ...CANDIDATE_OBJECTS,
  'lodge-letters':['Garden lodge · former dormitory','Letters home','Elsie wrote that she had a peg of her own. Several letters are folded together and tied with string.'],
  'lodge-heights':['Garden lodge · former dormitory','Evacuees’ height chart','Three pencil marks on the wall are dated between October 1940 and July 1941. Elsie insisted the last mark counted, even with her shoes off.'],
  'fire-watch-rota':['Mansion · service passage','Fire-watch rota','Leonard Price was pencilled in from eight to half past. Beside his name, Arthur Hale initialled an amendment: “Relieved L.P. at 8:10.” The rota records the handover, not where Price went afterward.'],
@@ -132,6 +134,7 @@ function inspect(id:string){
  }
  if(estateObjects[id]){
   const [location,title,entry]=estateObjects[id];
+  state.flags['read:'+id]=true;
   const detail=id==='vehicle-log'&&state.flags.deliveryParked?entry+' Today — Grocer’s van checked in by Elsie Briggs.':entry;
   if(id==='vehicle-log')state.flags.vehicleLogRead=true;
   if(id==='shelter-crate')state.flags.shelterCrateRead=true;
@@ -166,8 +169,12 @@ function interact(){if(mode!=='play')return;const t=estate.targetAt();if(!t)retu
 function notebook(next=tab){tab=next;panel('notebook');let content='';
  if(tab==='Notes')content=`<div class="personal-notes"><h1>Personal notes</h1><p>Keep your own leads, questions, and theories here. Use Save game in the pause menu to keep them for next time.</p><div class="note-pages"><button data-note-step="-1" ${notePage===0?'disabled':''}>← Previous</button><label>Page <select id="note-page-number" aria-label="Go to notes page">${state.notes.map((_,i)=>`<option value="${i}" ${i===notePage?'selected':''}>${i+1}</option>`).join('')}</select> of ${NOTE_PAGES}</label><button data-note-step="1" ${notePage===NOTE_PAGES-1?'disabled':''}>Next →</button></div><textarea id="note-writing" aria-label="Notes for page ${notePage+1}" maxlength="${NOTE_PAGE_LIMIT}" placeholder="Write your notes here…"></textarea></div>`;
  if(tab==='Evidence')content=`<div class="page-heading"><h1>The evidence</h1><span>${state.evidence.length} ${state.evidence.length===1?'entry':'entries'}</span></div>${state.evidence.length?'<div class="evidence-grid">'+state.evidence.map(id=>{const e=EVIDENCE[id];return `<article><span class="eyebrow">${e.kind} · ${e.source}</span><h3>${e.title}</h3><p>${e.text}</p></article>`}).join('')+'</div>':'<div class="empty"><h2>Every detail has a place.</h2><p>Examine the study and speak with the people at Bramblewick. Your discoveries will be recorded here.</p></div>'}`;
+ if(tab==='Evidence'){
+  const observations=[...Object.keys(CANDIDATE_OBJECTS),'wine-bottle','shed-secateurs'].filter(id=>state.flags['read:'+id]);
+  if(observations.length)content+=`<h2>Objects examined</h2><div class="evidence-grid">${observations.map(id=>{const [location,title,detail]=estateObjects[id];return `<article><span class="eyebrow">${location}</span><h3>${title}</h3><p>${detail}</p></article>`}).join('')}</div>`;
+ }
  if(tab==='Connections')content=`<h1>Make the connections</h1><p class="page-intro">Evidence becomes useful when you can explain what it means.</p><div class="connection-list">${Object.entries(DEDUCTIONS).map(([id,d])=>{const done=state.deductions.includes(id as DeductionId),ready=d.needs.every(e=>has(state,e));return `<article><div class="page-heading"><h3>${d.title}</h3><span>${done?'✓ Established':d.needs.filter(e=>has(state,e)).length+' / '+d.needs.length+' clues'}</span></div><p class="clue-list">${d.needs.map(e=>has(state,e)?EVIDENCE[e].title:'Undiscovered evidence').join(' · ')}</p>${done?`<p>${d.text}</p>`:ready?d.options.map((o,i)=>`<button data-deduction="${id}" data-choice="${i}">${o}</button>`).join(''):'<p class="muted">Keep investigating to compare these clues.</p>'}</article>`}).join('')}</div>`;
- if(tab==='Accusation')content=`<h1>Present your explanation</h1><p class="page-intro">Name the person, the weapon, and the motive. Establish your supporting connections before making the case.</p><form id="accusation"><label>Who killed Elias Vale?<select name="person">${Object.entries(PEOPLE).map(([id,p])=>`<option value="${id}">${p.name}</option>`).join('')}</select></label><label>What was used?<select name="method"><option value="poison">Poison in a drink</option><option value="falcon">The bronze falcon</option><option value="fall">A fall from the tower</option></select></label><label>Why?<select name="motive"><option value="inheritance">To gain an inheritance</option><option value="funds">To conceal diverted restoration funds</option><option value="rivalry">A scholarly rivalry</option></select></label><button class="primary" type="submit">Explain the case →</button><p id="accusation-result" role="status"></p></form>`;
+ if(tab==='Accusation')content=`<h1>Present your explanation</h1><p class="page-intro">Name the person, the weapon, and the motive. Establish your supporting connections before making the case.</p><form id="accusation"><label>Who killed Elias Vale?<select name="person">${Object.entries(SUSPECTS).map(([id,p])=>`<option value="${id}">${p.name} · ${p.role}</option>`).join('')}</select></label><label>What was used?<select name="method">${Object.entries(METHODS).map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><label>Why?<select name="motive">${Object.entries(MOTIVES).map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><button class="primary" type="submit">Explain the case →</button><p id="accusation-result" role="status"></p></form>`;
  if(tab==='People'){
   const notes=storyNotes(state);
   const card=(id:PersonId|WitnessId,name:string,role:string)=>{
