@@ -18,7 +18,8 @@ export function materials(e:Estate):Promise<unknown>[] {
  const texture=(name:string,color=false)=>{let finish:()=>void=()=>{};pending.push(new Promise<void>(r=>finish=r));const tex=new T.TextureLoader().load(base+'materials/'+name,finish,undefined,()=>{console.warn('Material unavailable:',name);finish()});tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.anisotropy=Math.min(8,e.renderer.capabilities.getMaxAnisotropy());if(color)tex.colorSpace=T.SRGBColorSpace;return tex;};
  const pbr=(name:string,tint:number,normal=.5)=>new T.MeshStandardMaterial({map:texture(name+'-color.jpg',true),normalMap:texture(name+'-normal.jpg'),roughnessMap:texture(name+'-roughness.jpg'),normalScale:new T.Vector2(normal,normal),color:tint,roughness:1});
  e.mats.stone=pbr('ashlar',0xd7cfbb,.52);e.mats.stone.userData.masonryUV=true;e.mats.ashlar=pbr('ashlar',0xe3ded2,.38);e.mats.trim=e.mats.ashlar;
- e.mats.wood=pbr('oak',0x817365,.3);e.mats.panel=pbr('oak',0x8a7156,.16);e.mats.grass=pbr('lawn',0x91b879,.16);
+ e.mats.wood=pbr('oak',0x817365,.3);e.mats.floor=e.mats.wood.clone();e.mats.floor.normalScale.set(.22,.22);e.mats.floor.roughnessMap=null;e.mats.floor.roughness=.96;
+ e.mats.panel=pbr('oak',0x8a7156,.16);e.mats.grass=pbr('lawn',0x91b879,.16);
  e.mats.gravel=pbr('gravel',0xc1bbac,.7);e.mats.slate=pbr('slate',0x8b9395,.65);e.mats.plaster=new T.MeshStandardMaterial({color:0xc9c5ad,roughness:.95,normalMap:texture('plaster-normal.jpg'),normalScale:new T.Vector2(.035,.035)});
  e.mats.leather=pbr('leather',0x483026,.3);e.mats.dark.color.setHex(0x242c28);e.mats.gold.color.setHex(0x9f8253);e.mats.gold.roughness=.45;
  e.mats.glass=new T.MeshPhysicalMaterial({color:0xc5d5d5,metalness:.1,roughness:.08,transparent:true,opacity:.18,side:T.DoubleSide,depthWrite:false,envMapIntensity:1.3});
@@ -29,9 +30,10 @@ function mesh(e:Estate,geo:T.BufferGeometry,mat:T.Material,x:number,y:number,z:n
 function mould(e:Estate,w:number,h:number,d:number,x:number,y:number,z:number){for(const [a,b,c]of[[0,0,0],[.12,.07,.08],[.21,.16,.15]])e.box(w+a,h+b,d+c,x,y+b,z,e.mats.trim);}
 function arch(e:Estate,x:number,y:number,z:number,r:number,depth:number,mat:T.Material,parent:T.Object3D=e.scene){const shape=new T.Shape();shape.absarc(0,0,r+.23,0,Math.PI,false);shape.lineTo(-r,0);shape.absarc(0,0,r,Math.PI,0,true);shape.closePath();return mesh(e,new T.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.02,bevelThickness:.02,curveSegments:20}),mat,x,y,z,parent);}
 function roof(e:Estate,x:number,y:number,z:number,w:number,d:number,h:number){
- const pts=[-w/2,0,-d/2, w/2,0,-d/2, w/2-3,h,0, -w/2+3,h,0, -w/2,0,d/2,w/2,0,d/2];
- const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pts,3));g.setIndex([0,3,2,0,2,1,4,5,2,4,2,3,0,4,3,1,2,5]);const uv=[0,0,w/2,0,w/2-1.5,h/2,1.5,h/2,0,0,w/2,0];g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.computeVertexNormals();const m=mesh(e,g,e.mats.slate,x,y,z);m.material=e.mats.slate.clone();(m.material as T.MeshStandardMaterial).side=T.DoubleSide;
- e.box(w-5,.16,.2,x,y+h,z,e.mats.dark);
+ const hip=Math.min(3,w*.2,d*.35);
+ const pts=[-w/2,0,-d/2, w/2,0,-d/2, w/2-hip,h,0, -w/2+hip,h,0, -w/2,0,d/2,w/2,0,d/2];
+ const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pts,3));g.setIndex([0,3,2,0,2,1,4,5,2,4,2,3,0,4,3,1,2,5]);const uv=[0,0,w/2,0,(w-hip)/2,h/2,hip/2,h/2,0,0,w/2,0];g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.computeVertexNormals();const m=mesh(e,g,e.mats.slate,x,y,z);m.material=e.mats.slate.clone();(m.material as T.MeshStandardMaterial).side=T.DoubleSide;
+ e.box(w-2*hip,.16,.2,x,y+h,z,e.mats.dark);
 }
 function windowDetail(e:Estate,x:number,y:number,z:number,w=1.8,h=2.4,solid:boolean|null=false,parent:T.Object3D=e.scene){
  const trim=e.mats.trim,dark=e.mats.dark;const box=(a:number,b:number,c:number,xx:number,yy:number,zz:number,mat:T.Material)=>e.box(a,b,c,xx,yy,zz,mat,parent);
@@ -126,7 +128,7 @@ export function buildGardenLodge(e:Estate){
  for(const x of[-3.1,3.1])e.floor(1.65,.04,courtFront-courtBack,x,-.043,(courtFront+courtBack)/2,gravel);
  e.floor(4.55,.04,back-courtFront,0,-.043,(back+courtFront)/2,gravel);
  e.floor(4.55,.04,1.5,0,-.043,courtBack+.75,gravel);
- e.floor(24,.16,depth,0,-.005,mid,wood);
+ e.floor(24,.16,depth,0,-.005,mid,e.mats.floor??wood);
  const h=4.1,opening=3,doorH=2.8;
  for(const [z,id,yaw] of [[front,'lodge-front',Math.PI],[back,'lodge-rear',0]] as const){
   for(const side of[-1,1]){
@@ -204,7 +206,7 @@ export function castle(e:Estate){
   [-21,hallHole.left,-16,12],[hallHole.right,21,-16,12],
   [hallHole.left,hallHole.right,-16,hallHole.near],
   [hallHole.left,hallHole.right,HALL_BULKHEAD.top,12]
- ])e.floor(x1-x0,.15,z1-z0,(x0+x1)/2,0,(z0+z1)/2,e.mats.wood);
+ ])e.floor(x1-x0,.15,z1-z0,(x0+x1)/2,0,(z0+z1)/2,e.mats.floor??e.mats.wood);
  e.wall(19.2,1,.6,-11.4,.5,12);e.wall(19.2,1,.6,11.4,.5,12);e.wall(42,1,.65,0,4.35,12);e.wall(3.6,1.4,.65,0,4.1,12);
  const cuts=[-21,-18,-16,-12,-10,-1.8,1.8,10,12,16,18,21];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1],mid=(a+b)/2;if(Math.abs(mid)<1.81||[-17,-11,11,17].some(x=>Math.abs(mid-x)<.1))continue;e.wall(b-a,2.85,.6,mid,2.425,12);}
  for(const x of[-17,-11,11,17])windowDetail(e,x,2.45,12.12,2,2.7);
@@ -330,7 +332,11 @@ function plantVariants(e:Estate,source:T.Object3D,positions:PlantPose[],height:n
 }
 export function staticBatch(e:Estate,source:T.Object3D,positions:PlantPose[],height:number,rootDepth=.03,woodland=false,width=1){
  const openings=cellarGroundOpenings();
- positions=positions.filter(([x,z])=>!openings.some(h=>x>h.left-2&&x<h.right+2&&z>h.near-2&&z<h.far+2));
+ positions=positions.filter(([x,z])=>!openings.some(h=>x>h.left-2&&x<h.right+2&&z>h.near-2&&z<h.far+2)&&
+  !(height<=5&&(
+   (Math.abs(Math.abs(x)-31)<2&&z>-25&&z<19)||
+   (Math.abs(z-5.5)<1.85&&Math.abs(x)>29&&Math.abs(x)<46)
+  )));
  if(!positions.length)return;
  const tiles=new Map<string,PlantPose[]>();
  for(const pose of positions){
@@ -366,9 +372,28 @@ export async function sceneryAssets(e:Estate){const loader=new GLTFLoader(),oute
 }
 
 // Merge opaque static detail by material, preserving all interactive objects and wall occluders.
-export function batchDetail(e:Estate){const excluded=new Set<T.Object3D>(e.walls);for(const t of e.targets)t.root.traverse(o=>excluded.add(o));for(const a of e.actors.values())a.root.traverse(o=>excluded.add(o));e.car.traverse(o=>excluded.add(o));e.dog.traverse(o=>excluded.add(o));const groups=new Map<T.Material,T.Mesh[]>();
- e.scene.updateMatrixWorld(true);for(const child of [...e.scene.children]){if(!(child instanceof T.Mesh)||child instanceof T.InstancedMesh||excluded.has(child)||Array.isArray(child.material)||child.material.transparent)continue;const list=groups.get(child.material)??[];list.push(child);groups.set(child.material,list);}
- for(const [mat,meshes]of groups){if(meshes.length<8)continue;const geos=meshes.map(m=>{const g=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();g.applyMatrix4(m.matrixWorld);g.deleteAttribute('uv1');g.deleteAttribute('tangent');return g;});try{const combined=mergeGeometries(geos,false);if(combined){const m=new T.Mesh(combined,mat);m.castShadow=true;m.receiveShadow=true;e.scene.add(m);meshes.forEach(n=>e.scene.remove(n));}}finally{geos.forEach(g=>g.dispose())}}
+export function batchDetail(e:Estate){
+ const excluded=new Set<T.Object3D>(e.walls);
+ for(const t of e.targets)t.root.traverse(o=>excluded.add(o));
+ for(const a of e.actors.values())a.root.traverse(o=>excluded.add(o));
+ e.car.traverse(o=>excluded.add(o));e.dog.traverse(o=>excluded.add(o));
+ e.scene.updateMatrixWorld(true);
+ // Keep cellar geometry inside its visibility group. Only direct, static meshes
+ // are merged; doors, characters, animated props and interaction roots stay intact.
+ for(const parent of [e.scene,e.cellarInterior].filter((p):p is T.Scene|T.Group=>!!p)){
+  const groups=new Map<T.Material,T.Mesh[]>();
+  for(const child of [...parent.children]){
+   if(!(child instanceof T.Mesh)||child instanceof T.InstancedMesh||excluded.has(child)||!child.visible||Array.isArray(child.material)||child.material.transparent)continue;
+   const list=groups.get(child.material)??[];list.push(child);groups.set(child.material,list);
+  }
+  const inverse=new T.Matrix4().copy(parent.matrixWorld).invert();
+  for(const [mat,meshes]of groups){
+   if(meshes.length<8)continue;
+   const geos=meshes.map(m=>{const g=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();g.applyMatrix4(new T.Matrix4().multiplyMatrices(inverse,m.matrixWorld));g.deleteAttribute('uv1');g.deleteAttribute('tangent');return g;});
+   try{const combined=mergeGeometries(geos,false);if(combined){const m=new T.Mesh(combined,mat);m.castShadow=true;m.receiveShadow=true;parent.add(m);meshes.forEach(n=>parent.remove(n));}}
+   finally{geos.forEach(g=>g.dispose())}
+  }
+ }
 }
 
 export function grandfatherClock(e:Estate,x:number,z:number){

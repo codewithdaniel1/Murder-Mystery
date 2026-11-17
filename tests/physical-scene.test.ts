@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import * as T from 'three';
 import {furnishedEstate} from './estate-fixture';
 import {freshState} from '../src/state';
-import {normalized,landscape,buildGardenLodge} from '../src/visuals';
+import {normalized,landscape,buildGardenLodge,batchDetail} from '../src/visuals';
 import {createCharacterMotion,animateCharacter} from '../src/characters';
 import {loadModel} from './model-fixture';
 import type {Estate} from '../src/world';
@@ -36,6 +36,28 @@ describe('walkable surfaces and physical obstacles',()=>{
   }
   const ridge=new T.Raycaster(new T.Vector3(-12.5,3.18,44.5),new T.Vector3(0,1,0),0,.45);
   expect(ridge.intersectObjects(e.scene.children,true).length).toBeGreaterThan(0);
+ });
+ it('keeps the gatehouse chimney above the occupied room',()=>{
+  const e=furnishedEstate();buildWartimeEstate(e);e.scene.updateMatrixWorld(true);
+  const ray=new T.Raycaster(new T.Vector3(-14.1,1.7,43.64),new T.Vector3(0,1,0),0,3);
+  const hits=ray.intersectObjects(e.scene.children,true);
+  expect(hits.length).toBeGreaterThan(0);
+  expect(hits[0].point.y).toBeGreaterThan(3);
+ });
+ it('batches cellar decorations without moving interactive objects or losing visibility control',()=>{
+  const e=furnishedEstate();buildCellar(e);e.car=new T.Group();e.dog=new T.Group();
+  const cellar=e.cellarInterior!;
+  const targets=e.targets.map(t=>({root:t.root,parent:t.root.parent}));
+  e.scene.updateMatrixWorld(true);
+  const ray=new T.Raycaster(new T.Vector3(-10,-3,-7),new T.Vector3(0,-1,0),0,3);
+  const before=ray.intersectObject(cellar,true)[0]?.point.clone();
+  expect(before).toBeDefined();
+  const count=cellar.children.length;batchDetail(e);
+  expect(cellar.children.length).toBeLessThan(count);
+  e.scene.updateMatrixWorld(true);
+  expect(ray.intersectObject(cellar,true)[0].point.distanceTo(before!)).toBeLessThan(.001);
+  for(const t of targets)expect(t.root.parent).toBe(t.parent);
+  cellar.visible=false;expect(cellar.children.every(c=>c.parent===cellar)).toBe(true);
  });
  it('stops the delivery van for the player and restores a completed delivery',()=>{
   const e=furnishedEstate(),s=freshState();e.dog=new T.Group();

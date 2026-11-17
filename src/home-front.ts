@@ -99,8 +99,8 @@ export function upperHomeFront(e:Estate,y:number){
  cv.height=portraitH+2*portraitMargin;
  const tex=new T.CanvasTexture(cv);tex.colorSpace=T.SRGBColorSpace;
  // The rear window bay centers are x=0 and x=5.
- const frame=e.box(1.89,.92,.058,2.5,y+1.6,-15.65,e.mats.panel);
- const photo=new T.Mesh(new T.PlaneGeometry(1.76,.8),new T.MeshStandardMaterial({map:tex,roughness:.93}));
+ const frame=e.box(1.89,.943,.058,2.5,y+1.6,-15.65,e.mats.panel);
+ const photo=new T.Mesh(new T.PlaneGeometry(1.76,1.76*cv.height/cv.width),new T.MeshStandardMaterial({map:tex,roughness:.93}));
  photo.position.z=.033;frame.add(photo);
  e.target(frame,'family-photos','Painted portraits of the household');
 }

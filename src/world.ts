@@ -232,7 +232,7 @@ export class Estate {
  flowerBorders(this);
  for(const x of [-10,8])gardenBench(this,x,-36);
  // Matching front and rear greenhouse entries connect both garden paths.
- const glass=this.mats.glass,metal=this.mats.dark;this.floor(10,.15,8,26,0,-29,this.mats.wood);for(const x of[21,31]){this.box(.1,3.5,8,x,1.75,-29,glass,this.scene,false);this.barrier(x,-29,.2,8);}
+ const glass=this.mats.glass,metal=this.mats.dark;this.floor(10,.15,8,26,0,-29,this.mats.floor??this.mats.wood);for(const x of[21,31]){this.box(.1,3.5,8,x,1.75,-29,glass,this.scene,false);this.barrier(x,-29,.2,8);}
  for(const z of[-25,-33]){for(const x of[22.8,29.2]){this.box(3.6,3.5,.1,x,1.75,z,glass,this.scene,false);this.barrier(x,z,3.6,.2);}for(const x of[24.6,27.4])this.box(.08,3.6,.09,x,1.8,z,metal);this.box(2.8,.1,.09,26,3.52,z,metal);}
  for(let x=21;x<=31;x+=2){if(x!==25&&x!==27)for(const z of[-25,-33])this.box(.08,3.6,.09,x,1.8,z,metal);for(const z of[-25,-33]){const beam=this.box(5.5,.08,.09,x<26?23.5:28.5,4.2,z,metal);beam.rotation.z=x<26?.24:-.24;}}
  for(const x of[21,31])for(let z=-33;z<=-25;z+=2)this.box(.09,3.6,.08,x,1.8,z,metal);

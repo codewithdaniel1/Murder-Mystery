@@ -26,7 +26,7 @@ export function buildUpstairs(e:Estate){
   [-21,left,-16,12],[right,21,-16,12],
   [left,right,-16,STAIR.top],[left,right,STAIR.bottom,12]
  ]){
-  e.box(x1-x0,.25,z1-z0,mid(x0,x1),UPPER_FLOOR-.125,mid(z0,z1),wood);
+  e.box(x1-x0,.25,z1-z0,mid(x0,x1),UPPER_FLOOR-.125,mid(z0,z1),e.mats.floor??wood);
   e.walls.push(e.box(x1-x0,.02,z1-z0,mid(x0,x1),UPPER_FLOOR-.25,mid(z0,z1),plaster));
  }
  const stairDepth=STAIR.bottom-STAIR.top,steps=28,tread=stairDepth/steps;
@@ -169,7 +169,7 @@ export function buildUpstairs(e:Estate){
   e.cyl(.035,.035,.46,x,8.35,z,gold);
   const shade=e.mat(0xe4cb9c,.85);shade.emissive.setHex(0x977447);
   e.cyl(.17,.35,.23,x,8.08,z,shade);
-  const lamp=new T.PointLight(0xffdfb6,115,15,2);lamp.position.set(x,7.7,z);e.scene.add(lamp);
+  const lamp=new T.PointLight(0xffdfb6,65,12,2);lamp.position.set(x,7.7,z);e.scene.add(lamp);
  }
  const stairLight=new T.PointLight(0xffdfb6,55,9,2);
  stairLight.position.set(STAIR.x,4.7,.7);e.scene.add(stairLight);

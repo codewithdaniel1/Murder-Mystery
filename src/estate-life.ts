@@ -107,7 +107,7 @@ export function buildWartimeEstate(e:Estate){
  const iron=e.mat(0x393d3b,.74,.28),enamel=e.mat(0xb3b8a1,.44),soil=e.mat(0x49412e,.98);
  // The gatehouse is offset from the carriage lane; the pedestrian gap leads to its side door.
  const gx=-12.5,gz=44.5,floor=.075;
- e.floor(5.6,.16,4.8,gx,-.005,gz,wood);
+ e.floor(5.6,.16,4.8,gx,-.005,gz,e.mats.floor??wood);
  e.floor(2.3,.04,1.9,-8.55,-.065,gz,e.mats.gravel);
  e.wall(5.6,2.8,.28,gx,1.4,gz-2.4,stone);
  for(const side of[-1,1])e.wall(2,2.8,.28,gx+side*1.8,1.4,gz+2.4,stone);
@@ -140,7 +140,10 @@ export function buildWartimeEstate(e:Estate){
   gable.position.set(gx+side*2.8,2.75,gz);gable.rotation.y=-Math.PI/2;
   gable.castShadow=true;gable.receiveShadow=true;e.scene.add(gable);e.walls.push(gable);
  }
- e.box(.61,1.1,.63,gx-1.6,3.16,gz-.86,stone);
+ // Seat the chimney above the slate instead of projecting into the room.
+ e.box(.61,.78,.63,gx-1.6,3.67,gz-.86,stone);
+ e.box(.71,.09,.73,gx-1.6,4.07,gz-.86,trim);
+ e.box(.69,.045,.71,gx-1.6,3.305,gz-.86,iron);
  e.table(gx-1.65,gz,1.23,1.9);
  e.target(phone(e,gx-1.64,1.12,gz-.62),'gate-phone','Gatehouse telephone','Use');
  e.target(e.paper('VEHICLE LOG',['Yesterday · 8.12 pm','Grocer’s van · BW–12','Pantry entry crossed out'],gx-1.52,1.041,gz+.5,true),'vehicle-log','Gatehouse vehicle log','Read');

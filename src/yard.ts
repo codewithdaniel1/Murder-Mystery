@@ -100,7 +100,7 @@ type Bird={root:T.Group;wings:T.Group[];phase:number;x:number;z:number;height:nu
 
 export function buildShed(e:Estate){
  const {x,z,width:w,depth:d}=SHED,wood=e.mats.wood,frame=e.mats.panel;
- e.floor(w,.14,d,x,.01,z,wood);
+ e.floor(w,.14,d,x,.01,z,e.mats.floor??wood);
  e.floor(2.1,.03,2.6,x,-.025,z+d/2+1.3,e.mats.gravel);
  e.wall(w,2.72,.19,x,1.39,z-d/2,wood);
  for(const side of [-1,1]){
