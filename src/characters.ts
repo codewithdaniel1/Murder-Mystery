@@ -7,6 +7,8 @@ import type {PersonId} from './state';
 import {rigDog} from './dog';
 import {paintHouseholdPortraits} from './home-front';
 import {CAST,dressCharacter,updateAdaLegCover} from './appearance';
+import {upstairsPerson} from './routines';
+import {UPPER_FLOOR} from './upstairs';
 import {plantFoot} from './locomotion';
 function updateRig(root:T.Object3D){root.updateWorldMatrix(true,false);root.updateMatrixWorld(true)}
 const WALK_STANCE=.60,WALK_STRIDE=.52;
@@ -71,7 +73,7 @@ export async function loadCharacters(e:Estate){
  };
  for(const [id,a]of e.actors){
  const source=sources.get(CAST[id].model)!,model=prepareHuman(source,heights[id]);
- a.root.clear();a.root.add(model);a.root.position.y=.08;
+ a.root.clear();a.root.add(model);a.root.position.y=upstairsPerson(id)?UPPER_FLOOR:.08;
  const book=new T.Group();e.box(.54,.035,.37,0,0,0,e.mats.red,book);e.box(.51,.018,.34,0,.025,0,e.mats.paper,book);book.visible=false;a.root.add(book);
  e.characterMotion.set(id,createCharacterMotion(model,source.animations,book));dressCharacter(id,model);
  }

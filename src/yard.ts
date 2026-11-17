@@ -206,7 +206,6 @@ export class Yard {
  update(dt:number,state:GameState,playing:boolean,active:WitnessId|null){
   const e=this.e,player=e.camera.position;
   if(playing)this.time+=dt;
-  const people=[...e.actors.values()].filter(a=>a.root.visible).map(a=>({x:a.root.position.x,z:a.root.position.z,w:.42,d:.42}));
   if(playing)for(const w of this.witnesses){
    const p=w.root.position;
    if(w.id==='mercer'&&Math.abs(p.x)<.7&&Math.abs(p.z+54)<1.7)state.doors['lodge-front']=true;
@@ -214,7 +213,7 @@ export class Yard {
   }
   const ground=[...e.collisionBarriers(state),...e.stairBarriers];
   const levels:Record<StaffLevel,readonly {x:number;z:number;w:number;d:number;door?:string}[]>={
-   ground:[...ground,...people],cellar:e.cellarBarriers??[],upper:e.collisionBarriers(state,true),attic:e.atticBarriers
+   ground:[...ground,...[...e.actors.values()].filter(a=>a.root.visible&&a.root.position.y<1.2).map(a=>({x:a.root.position.x,z:a.root.position.z,w:.42,d:.42}))],cellar:e.cellarBarriers??[],upper:[...e.collisionBarriers(state,true),...[...e.actors.values()].filter(a=>a.root.visible&&Math.abs(a.root.position.y-UPPER_FLOOR)<1).map(a=>({x:a.root.position.x,z:a.root.position.z,w:.42,d:.42}))],attic:e.atticBarriers
   };
   for(const w of this.witnesses){
    if(!w.motion)continue;

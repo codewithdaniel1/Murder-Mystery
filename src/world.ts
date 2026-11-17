@@ -21,7 +21,7 @@ import {DogFollower,animateDog} from './dog';
 import type {DogMotion} from './dog';
 import type {CharacterMotion} from './characters';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-import {EstateRoutines,HALL_CLOCK} from './routines';
+import {EstateRoutines,HALL_CLOCK,upstairsPerson,ROOK_HOME} from './routines';
 import {FountainWater} from './fountain';
 import {inStair,onUpperDeck,STAIR,stairHeight,UPPER_FLOOR} from './upstairs';
 import {clearAt,clearSegment,resolveOverlap} from './navigation';
@@ -55,7 +55,7 @@ export class Estate {
  this.mats={dark:this.mat(0x26302a),gold:this.mat(0xaa8c51,.4,.7),black:this.mat(0x171c1a,.6),cream:this.mat(0xcdbfa3),leaf:this.mat(0x3c5631),red:this.mat(0x472d2c),paper:this.mat(0xe4d5b6),glass:this.mat(0xbac7c4)};
  const loaded=materials(this);
  this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();buildGardenLodge(this);buildCellar(this);buildShed(this);buildWartimeEstate(this);dressGroundRooms(this);buildCandidateObjects(this);this.yard=new Yard(this);
- this.addActor('june',2,6,0x3b4943,0xd1b39c,true);this.addActor('rook',-12,3,0x3f3e47,0xc2a48a,false);this.addActor('mara',13,1,0x7d6045,0xd2b7a1,true);this.addActor('ada',-9,-20,0x537b72,0xd7b79e,true);this.addActor('tomas',23,-21,0x66704b,0xc6a182,false);this.addActor('beatrice',4,20,0x664d56,0xd8b59b,true);this.addActor('jonah',7,24,0x3c4853,0xc7a085,false);
+ this.addActor('june',2,6,0x3b4943,0xd1b39c,true);this.addActor('rook',ROOK_HOME.x,ROOK_HOME.z,0x3f3e47,0xc2a48a,false);this.addActor('mara',13,1,0x7d6045,0xd2b7a1,true);this.addActor('ada',-9,-20,0x537b72,0xd7b79e,true);this.addActor('tomas',23,-21,0x66704b,0xc6a182,false);this.addActor('beatrice',4,20,0x664d56,0xd8b59b,true);this.addActor('jonah',7,24,0x3c4853,0xc7a085,false);
  this.actors.get('beatrice')!.root.visible=false;this.actors.get('jonah')!.root.visible=false;
  this.car=this.makeCar();this.car.position.set(4,0,56);this.car.visible=false;this.scene.add(this.car);
  const boot=makeSaloonBoot(this);this.car.add(boot);this.carBoot=boot;
@@ -221,7 +221,7 @@ export class Estate {
  const tray=new T.Group();tray.position.set(28.8,.93,-30);this.box(1.2,.2,.7,0,0,0,this.mats.wood,tray);this.box(1,.08,.6,0,.13,0,this.mat(0x514335),tray);this.scene.add(tray);this.target(tray,'falcon','Disturbed potting tray','Search');gardenGroundDetail(this);
 
  }
- addActor(id:PersonId,x:number,z:number,color:number,skin:number,female:boolean){const root=new T.Group();root.position.set(x,.13,z);const coat=this.mat(color),skinMat=this.mat(skin),trousers=this.mat(0x343936),boot=this.mats.black;this.round(.45,.72,.27,0,1.04,0,coat,root);this.round(.5,.3,.28,0,1.35,0,coat,root);if(female)this.cyl(.23,.34,.64,0,.65,0,coat,root);this.box(.1,.4,.015,0,1.29,.16,this.mats.cream,root);this.box(.04,.29,.02,0,1.25,.18,this.mats.dark,root);const head=new T.Group();head.position.y=1.65;this.sphere(.17,0,0,0,skinMat,head,.86,1.2,.91);this.sphere(.17,0,.07,-.025,this.mat(id==='mara'||id==='june'?0x8a8374:0x4c3c30),head,.92,.8,.96);this.sphere(.045,0,-.015,.15,skinMat,head,.6,1,.8);for(const a of[-1,1])this.sphere(.014,a*.065,.015,.147,this.mats.black,head,1,.7,.5);this.box(.05,.009,.01,0,-.08,.15,this.mat(0x815d4d),head);if(id==='tomas'||id==='jonah'){this.cyl(.2,.2,.08,0,.18,0,coat,head);this.box(.32,.025,.14,0,.145,.14,coat,head);}root.add(head);
+ addActor(id:PersonId,x:number,z:number,color:number,skin:number,female:boolean){const root=new T.Group();root.position.set(x,upstairsPerson(id)?UPPER_FLOOR:.13,z);const coat=this.mat(color),skinMat=this.mat(skin),trousers=this.mat(0x343936),boot=this.mats.black;this.round(.45,.72,.27,0,1.04,0,coat,root);this.round(.5,.3,.28,0,1.35,0,coat,root);if(female)this.cyl(.23,.34,.64,0,.65,0,coat,root);this.box(.1,.4,.015,0,1.29,.16,this.mats.cream,root);this.box(.04,.29,.02,0,1.25,.18,this.mats.dark,root);const head=new T.Group();head.position.y=1.65;this.sphere(.17,0,0,0,skinMat,head,.86,1.2,.91);this.sphere(.17,0,.07,-.025,this.mat(id==='mara'||id==='june'?0x8a8374:0x4c3c30),head,.92,.8,.96);this.sphere(.045,0,-.015,.15,skinMat,head,.6,1,.8);for(const a of[-1,1])this.sphere(.014,a*.065,.015,.147,this.mats.black,head,1,.7,.5);this.box(.05,.009,.01,0,-.08,.15,this.mat(0x815d4d),head);if(id==='tomas'||id==='jonah'){this.cyl(.2,.2,.08,0,.18,0,coat,head);this.box(.32,.025,.14,0,.145,.14,coat,head);}root.add(head);
  const arms:T.Group[]=[],legs:T.Group[]=[];for(const a of[-1,1]){const arm=new T.Group();arm.position.set(a*.29,1.32,0);this.round(.14,.48,.16,0,-.2,0,coat,arm);this.sphere(.075,0,-.49,.025,skinMat,arm,.8,1.2,.8);root.add(arm);arms.push(arm);const leg=new T.Group();leg.position.set(a*.12,.71,0);this.round(.16,.58,.19,0,-.29,0,trousers,leg);this.round(.18,.12,.32,0,-.6,.07,boot,leg);root.add(leg);legs.push(leg);}this.scene.add(root);this.actors.set(id,{root,head,arms,legs,home:root.position.clone(),id});this.target(root,'npc:'+id,({june:'June Bell',rook:'Edmund Rook',mara:'Dr. Mara Voss',ada:'Ada Ashcombe',tomas:'Tomas Reed',beatrice:'Lady Beatrice',jonah:'Jonah Pike'})[id],'Speak to');return root;}
  makeDog(){const g=new T.Group(),fur=this.mat(0xd1c4a5),patch=this.mat(0x786047);this.round(.3,.33,.65,0,.35,0,fur,g);this.sphere(.17,0,.55,.32,fur,g,.9,1,1);this.round(.16,.11,.2,0,.5,.48,fur,g);this.sphere(.045,0,.52,.59,this.mats.black,g);for(const x of[-.13,.13]){this.sphere(.08,x,.64,.3,patch,g,.6,1.5,.7);this.sphere(.02,x*.55,.58,.47,this.mats.black,g);for(const z of[-.22,.22]){const leg=this.cyl(.04,.05,.3,x,.16,z,fur,g,7);}}const tail=this.cyl(.035,.06,.35,0,.55,-.38,fur,g,7);tail.rotation.x=-.6;this.cyl(.18,.18,.045,0,.42,.27,this.mats.red,g).rotation.x=Math.PI/2;return g;}
  makeCar(){return makeEstateSaloon(this);}
@@ -317,10 +317,11 @@ export class Estate {
  move(dx:number,dz:number,s:GameState){
  const start=this.camera.position.clone(),ground=[...this.collisionBarriers(s),...(this.stairBarriers??[])];
  for(const tree of this.woodlandTrunks??[])if(Math.abs(tree.x-start.x)<=Math.abs(dx)+1&&Math.abs(tree.z-start.z)<=Math.abs(dz)+1)ground.push(tree);
- for(const a of this.actors.values())if(a.root.visible)ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
+ for(const a of this.actors.values())if(a.root.visible&&!upstairsPerson(a.id))ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
  ground.push(...(this.yard?.staffObstacles('ground')??[]));
  let elevation=this.playerElevation??this.groundHeight(start.x,start.z);
  const upper=[...this.collisionBarriers(s,true),...(this.yard?.staffObstacles('upper')??[])];
+ for(const a of this.actors.values())if(a.root.visible&&upstairsPerson(a.id))upper.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
  const attic=[...this.atticBarriers,...(this.yard?.staffObstacles('attic')??[])];
  const cellar=[...(this.cellarBarriers??[]),...(this.yard?.staffObstacles('cellar')??[])];
  for(const entry of BULKHEADS)if(s.doors[entry.id]!==true||(this.cellarDoors?.get(entry.id)?.amount??1)<.83){
@@ -375,11 +376,13 @@ export class Estate {
  if((id==='beatrice'||id==='jonah')&&s.arrival!=='present'){a.root.visible=false;continue;}a.root.visible=true;
  const before=a.root.position.clone();
  const nearby=[...this.actors.values()].filter(other=>other.id!==id&&other.root.visible&&other.root.position.distanceTo(a.root.position)<4).map(other=>({x:other.root.position.x,z:other.root.position.z,w:.48,d:.48}));
- const result=this.routines.update(id,a.root.position,dt,[...solid,...nearby],s.doors,!playing||id===talking,this.onGroundLevel()?this.camera.position:undefined,a.root.rotation.y);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
- a.root.position.y=this.groundHeight(a.root.position.x,a.root.position.z);a.isWalking=result.moving;a.activity=id===talking?null:result.activity;a.activityLabel=result.label;
+ const upstairs=upstairsPerson(id),floor=upstairs?UPPER_FLOOR:this.groundHeight(a.root.position.x,a.root.position.z);
+ const blockers=upstairs?[...this.collisionBarriers(s,true),...(this.yard?.staffObstacles('upper')??[])]:solid;
+ const result=this.routines.update(id,a.root.position,dt,[...blockers,...nearby],s.doors,!playing||id===talking,Math.abs(this.camera.position.y-1.65-floor)<1?this.camera.position:undefined,a.root.rotation.y);a.root.position.x=result.position.x;a.root.position.z=result.position.z;
+ a.root.position.y=upstairs?UPPER_FLOOR:this.groundHeight(a.root.position.x,a.root.position.z);a.isWalking=result.moving;a.activity=id===talking?null:result.activity;a.activityLabel=result.label;
  const targetAngle=id===talking?Math.atan2(this.camera.position.x-a.root.position.x,this.camera.position.z-a.root.position.z):result.face;
  if(playing||id===talking){const delta=Math.atan2(Math.sin(targetAngle-a.root.rotation.y),Math.cos(targetAngle-a.root.rotation.y));a.root.rotation.y+=delta*Math.min(1,dt*3.4);}
- animateCharacter(this,id,result.moving,dt,!playing&&!talking,a.activity??null,this.clock,dt>0?Math.hypot(a.root.position.x-before.x,a.root.position.z-before.z)/dt:0);
+ animateCharacter(upstairs?{actors:this.actors,characterMotion:this.characterMotion,groundHeight:()=>UPPER_FLOOR}:this,id,result.moving,dt,!playing&&!talking,a.activity??null,this.clock,dt>0?Math.hypot(a.root.position.x-before.x,a.root.position.z-before.z)/dt:0);
  }
 
  const previousCarZ=this.car.position.z;

@@ -35,7 +35,7 @@ Files are Ogg Vorbis, with DC offset removal, conservative level adjustment and 
 - Dog: `dog barking.ogg`, source seconds 2.72–3.17, isolated short bark.
 - Engine: the creator describes a car engine ticking over; no exact vehicle model or historical authenticity claimed.
 - Murmur: a person's short thinking “hmm”, retained as a fallback while the new vocal clips load.
-- Dialogue reactions: twelve short spoken acknowledgments cut from four recordings. Each cut was given a short fade, reduced DC offset and leveled to a similar RMS. The six syllables vary by NPC and are shuffled without adjacent repeats for that NPC. They are expressive filler sounds, not spoken dialogue or a full character voice library. The `voice-m-mhm.ogg` cut joins two hums from the same source with 45 ms of silence.
+- Dialogue reactions: twelve short spoken acknowledgments cut from four recordings. Each cut was given a short fade, reduced DC offset and leveled to a similar RMS. The active dialogue playlist uses four syllables (mmm, mhm, hmm, huh), shuffled without adjacent repeats for each NPC. The breathy ah/ahh cuts are retained in the asset archive but are not loaded or played. They are expressive filler sounds, not spoken dialogue or a full character voice library. The `voice-m-mhm.ogg` cut joins two hums from the same source with 45 ms of silence.
 - Telephone: recorded vintage-style ringer, recorded by MPTSound using a Tascam DR-40 and condenser microphones.
 
 Freesound supplies public encoded previews of its recordings; these were used rather than an authenticated original-file download:

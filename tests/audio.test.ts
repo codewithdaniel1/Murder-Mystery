@@ -8,7 +8,15 @@ describe('recorded audio mixing',()=>{
  it('keeps one continuous engine and ambience loop across frames',()=>{const {audio,sources}=fixture();for(let i=0;i<300;i++)audio.update(.016,{x:0,y:1.7,z:25},0,false,false,[100,0,100],[4,1,30-i*.01]);expect(sources).toHaveLength(5);expect(sources.every(s=>s.loop&&s.started===1)).toBe(true)});
  it('fades and muffles outside recordings indoors',()=>{const {audio}=fixture();audio.update(.016,{x:0,y:1.7,z:25},0,false,false,[100,0,100],null);const outdoor=audio.loops.get('birds')!.gain.gain.value;audio.update(.016,{x:0,y:1.7,z:5},0,false,true,[100,0,100],null);expect(audio.loops.get('birds')!.gain.gain.value).toBeLessThan(outdoor);expect(audio.loops.get('birds')!.filter!.frequency.value).toBe(1100)});
  it('stops an interrupted acknowledgment immediately and preserves ambient loops when paused',()=>{const {audio,sources}=fixture();audio.update(.016,{x:0,y:1.7,z:5},0,false,true,[100,0,100],null);audio.vocal('june',[2,1.6,5]);const voice=sources.at(-1)!;expect(voice.loop).toBe(false);audio.stopVoice();expect(voice.stopped).toBe(true);audio.pause();expect(sources.slice(0,5).every(s=>!s.stopped)).toBe(true);expect(audio.paused).toBe(true)});
- it('rotates distinct recorded acknowledgments without repeating an NPC sound back to back',()=>{const {audio,sources}=fixture();for(const [person,kind] of [['june','f'],['rook','m']] as const){const used:string[]=[];for(let i=0;i<18;i++){audio.vocal(person);used.push(sources.at(-1)!.buffer.name)}expect(used.every(name=>name.startsWith(`voice-${kind}-`))).toBe(true);expect(new Set(used)).toHaveProperty('size',6);expect(used.every((name,i)=>i===0||name!==used[i-1])).toBe(true)}});
+ it('rotates distinct recorded acknowledgments without repeating an NPC sound back to back',()=>{const {audio,sources}=fixture();for(const [person,kind] of [['june','f'],['rook','m']] as const){const used:string[]=[];for(let i=0;i<18;i++){audio.vocal(person);used.push(sources.at(-1)!.buffer.name)}expect(used.every(name=>name.startsWith(`voice-${kind}-`))).toBe(true);expect(new Set(used)).toHaveProperty('size',4);expect(used.every((name,i)=>i===0||name!==used[i-1])).toBe(true)}});
+ it('never selects the removed gasp clips, including from an old shuffle bag',()=>{
+  const {audio,sources}=fixture();
+  for(const person of ['june','rook']){
+   const kind=person==='june'?'f':'m';audio.voiceBags.set(person,[`voice-${kind}-ah`,`voice-${kind}-ahh`]);
+   for(let i=0;i<32;i++)audio.vocal(person);
+  }
+  expect(sources.every(s=>!/-ahh?$/.test(s.buffer.name))).toBe(true);
+ });
  it('uses the original murmur if the new voice clips are still loading',()=>{const {audio,sources}=fixture();for(const name of [...audio.buffers.keys()])if(name.startsWith('voice-'))audio.buffers.delete(name);audio.vocal('june');expect(sources.at(-1)!.buffer.name).toBe('murmur')});
  it('does not repeat a bark on successive interactions',()=>{const {audio,sources}=fixture();audio.effect('bark');audio.effect('bark');expect(sources).toHaveLength(1)});
  it('uses different footsteps for carpet, wood, gravel, grass and stone',()=>{expect(surfaceAt(0,4)).toBe('carpet');expect(surfaceAt(5,4)).toBe('wood');expect(surfaceAt(-3.8,0,4)).toBe('wood');expect(surfaceAt(0,24)).toBe('gravel');expect(surfaceAt(15,28)).toBe('grass');expect(surfaceAt(26,-29)).toBe('wood');expect(surfaceAt(6,-8,-3)).toBe('stone')});

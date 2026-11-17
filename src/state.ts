@@ -64,7 +64,7 @@ export function objective(s:GameState):[string,string]{
  if(s.finished)return ['Case closed','Elias’s final discovery has been heard.'];
  if(!s.flags.intro)return ['Speak to June','The housekeeper is waiting in the entrance hall.'];
  if(!['fragment','note','ledger'].some(x=>has(s,x as EvidenceId)))return ['Examine the study','The room to the left of the entrance hall holds Elias’s work.'];
- if(!s.interviews.length)return ['Hear another account','Question Rook in the study, Mara in the library, or a guest outside.'];
+ if(!s.interviews.length)return ['Hear another account','Question Rook in the second-floor reading room, Mara in the library, or a guest outside.'];
  if(!s.flags.reported)return ['Report back to June','Tell the housekeeper what you have found.'];
  if(s.arrival==='absent')return ['Telephone the gatehouse','Use the telephone on the hall side table.'];
  if(s.arrival==='queued'||s.arrival==='arriving')return ['The owner is arriving','Look toward the front drive, or continue investigating.'];

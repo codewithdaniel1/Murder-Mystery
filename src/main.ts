@@ -34,6 +34,7 @@ function save(){try{localStorage.setItem(SAVE_KEY,encodeSave(state,estate.pose()
 type Topic={label:string;reply:string;run?:()=>void};
 function topics(id:PersonId):Topic[]{const interview=()=>{if(!state.interviews.includes(id)&&id!=='june')state.interviews.push(id)};const t:Topic[]=[];
 if(id==='june'){
+ t.push({label:'Where can I find Mr Rook?',reply:'He is working in the reading room on the second floor. Take the oak stairs from the entrance hall, then enter the room on the left toward the front of the house.'});
  t.push({label:'Tell me what happened.',reply:'Mr Vale was found here in his study last night, shortly after half past eight. The constable has taken him away. Lady Beatrice is returning from town. Please look at his desk; he was worried about something.',run:()=>{state.flags.intro=true}});
  t.push({label:'Did you see anyone near the study?',reply:'At twenty-six minutes past eight I saw Mr Rook enter the service passage. I was looking at the hall clock. I did not see which door he used afterward.',run:()=>record('sighting')});
  if(state.flags.intro)t.push({label:'Is the kitchen expecting anyone?',reply:state.flags.deliveryRequested?'The order’s been called through. Elsie keeps the vehicle log, if you need to check who came in.':'The grocer is due. I’ll ring the gatehouse so Elsie knows to expect him. The van can wait by her window.',run:()=>{if(!state.flags.deliveryRequested){state.flags.deliveryRequested=true;sound.effect('phone');toast('June has called the gatehouse.')}}});

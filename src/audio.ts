@@ -1,7 +1,8 @@
 import {inStair,onUpperDeck} from './upstairs';
 type Position=[number,number,number];
 type Playing={source:AudioBufferSourceNode;gain:GainNode;pan?:PannerNode;filter?:BiquadFilterNode};
-const VOICE_SYLLABLES=['mmm','mhm','hmm','ah','ahh','huh'];
+// Keep conversational acknowledgments; omit the breathy ah/ahh reactions.
+const VOICE_SYLLABLES=['mmm','mhm','hmm','huh'];
 const VOICE_FILES=['f','m'].flatMap(kind=>VOICE_SYLLABLES.map(syllable=>`voice-${kind}-${syllable}`));
 const FILES=['birds','wind','fountain','fireplace','step-wood-1','step-wood-2','step-gravel-1','step-stone-1','step-grass-1','step-grass-2','door-open','door-close','paper-1','paper-2','dog-bark','engine','murmur','telephone-ring',...VOICE_FILES];
 export function surfaceAt(x:number,z:number,elevation=1.65){
