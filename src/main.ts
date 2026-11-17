@@ -15,6 +15,7 @@ const overlay=document.querySelector<HTMLDivElement>('#overlay')!, hud=document.
 const sound=new EstateAudio();let estate:Estate;
 try{estate=new Estate(document.querySelector('#world')!)}catch(e){overlay.innerHTML='<div class="panel"><h1>A little more graphics support is needed.</h1><p>Please enable hardware acceleration in your desktop browser and reload.</p></div>';throw e}
 let state=freshState(), mode:'menu'|'play'|'pause'|'dialogue'|'inspect'|'notebook'|'ending'='menu',talking:PersonId|null=null,arrivalT=0,tab='Notes',notePage=0,last=performance.now(),toastTimer=0,drag=false,started=false;
+let estateReady=false;
 const keys=new Set<string>();
 let talkingWitness:WitnessId|null=null;
 function toast(text:string){const el=document.querySelector<HTMLElement>('#toast')!;el.textContent=text;el.classList.add('show');clearTimeout(toastTimer);toastTimer=window.setTimeout(()=>el.classList.remove('show'),4200)}
@@ -223,7 +224,7 @@ addEventListener('mousemove',e=>{if(mode==='play'&&(document.pointerLockElement|
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement&&mode==='play')pause()});
 addEventListener('blur',()=>{if(mode==='play'||mode==='dialogue'||mode==='inspect')pause()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&mode!=='menu')pause()});
-function frame(now:number){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.05);last=now;
+function frame(now:number){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.05);last=now;if(!estateReady)return;
  if(mode==='play'){
  let x=Number(keys.has('KeyD'))-Number(keys.has('KeyA')),z=Number(keys.has('KeyS'))-Number(keys.has('KeyW'));const len=Math.hypot(x,z)||1,speed=(keys.has('ShiftLeft')?4.5:2.9)*dt,y=estate.camera.rotation.y;x=x/len*speed;z=z/len*speed;estate.move(Math.cos(y)*x+Math.sin(y)*z,-Math.sin(y)*x+Math.cos(y)*z,state);
  if(state.arrival==='queued'){state.arrival='arriving';arrivalT=0;toast('A motorcar is coming up the front drive.')}if(state.arrival==='arriving'){arrivalT=estate.advanceArrival(arrivalT,dt,state);if(arrivalT>=1){state.arrival='present';state.doors.front=true;toast('Lady Beatrice and Jonah have arrived.');refreshHUD()}}
@@ -246,4 +247,4 @@ function frame(now:number){requestAnimationFrame(frame);const dt=Math.min((now-l
  estate.update(dt,state,mode==='play'||mode==='dialogue'||mode==='inspect',talking,arrivalT,mode==='menu',talkingWitness);
  if(!estate.inCellar()&&(mode==='play'||mode==='dialogue'||mode==='inspect'))sound.updateActors(dt,[...estate.actors.values()].filter(a=>a.root.visible).map(a=>({id:a.id,x:a.root.position.x,z:a.root.position.z,moving:!!a.isWalking})),estate.camera.position);
 }
-overlay.innerHTML='<div class=loading-estate><span class=eyebrow>BRAMBLEWICK · ENGLAND, 1942</span><h1>A place with a past.</h1><p>Preparing the estate, materials and characters…</p><div class=loading-line></div></div>';overlay.className='loading';estate.ready.then(()=>{mainMenu();refreshHUD()}).catch(err=>{console.error(err);overlay.innerHTML='<div class=loading-estate><h1>The estate could not finish loading.</h1><p>Please reload to retry the character downloads.</p><button onclick=location.reload()>Reload</button></div>'});requestAnimationFrame(frame);
+overlay.innerHTML='<div class=loading-estate><span class=eyebrow>BRAMBLEWICK · ENGLAND, 1942</span><h1>A place with a past.</h1><p>Preparing the estate, materials and characters…</p><div class=loading-line></div></div>';overlay.className='loading';estate.ready.then(()=>{estateReady=true;mainMenu();refreshHUD()}).catch(err=>{console.error(err);overlay.innerHTML='<div class=loading-estate><h1>The estate could not finish loading.</h1><p>Please reload to retry the character downloads.</p><button onclick=location.reload()>Reload</button></div>'});requestAnimationFrame(frame);

@@ -63,7 +63,14 @@ export class Estate {
  this.dog=this.makeDog();this.dog.position.set(11,.1,3);this.scene.add(this.dog);this.target(this.dog,'pip','Pip','Greet');
  this.hands=this.makeHands();this.camera.add(this.hands);this.scene.add(this.camera);this.camera.position.set(0,6.2,38);this.camera.lookAt(0,3,0);
  this.composer=new EffectComposer(this.renderer);this.composer.addPass(new RenderPass(this.scene,this.camera));this.ao=new GTAOPass(this.scene,this.camera,innerWidth,innerHeight);this.ao.blendIntensity=.35;this.ao.updateGtaoMaterial({radius:.45,distanceExponent:1.5,thickness:1,scale:1});this.composer.addPass(this.ao);this.composer.addPass(new OutputPass());this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));
- loaded.push(sceneryAssets(this),loadCharacters(this));batchDetail(this);this.ready=Promise.all(loaded).then(()=>{});addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));});
+ loaded.push(sceneryAssets(this),loadCharacters(this));batchDetail(this);this.ready=Promise.all(loaded).then(async()=>{
+ // Compile every material before play, including rooms normally hidden from view.
+ // First encounters must not synchronously compile shaders in the walking loop.
+ const hidden=this.cellarInterior,wasVisible=hidden?.visible;
+ if(hidden)hidden.visible=true;
+ try{await this.renderer.compileAsync(this.scene,this.camera)}
+ finally{if(hidden)hidden.visible=wasVisible!}
+ });addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));});
  }
  mat(c:number,roughness=.75,metalness=0){return new T.MeshStandardMaterial({color:c,roughness,metalness});}
  box(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,shadow=true){const geo=new T.BoxGeometry(w,h,d);const uv=geo.attributes.uv,pos=geo.attributes.position,n=geo.attributes.normal;for(let i=0;i<uv.count;i++){const nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i)),brick=mat.userData.masonryUV;
@@ -333,7 +340,31 @@ export class Estate {
  this.updateCellarView();
  }
 
- targetAt():Target|null{this.ray.setFromCamera(this.pointer,this.camera);let best:Target|null=null,near=3.25;for(const t of this.targets){if(!t.root.visible||!t.root.parent?.visible)continue;const hit=this.ray.intersectObject(t.root,true)[0];if(hit&&hit.distance<near){const occluder=this.ray.intersectObjects([...this.walls,...[...this.doors.values()].map(d=>d.pivot)],true)[0];if(occluder&&occluder.distance<hit.distance-.08)continue;near=hit.distance;best={...t,distance:near};}}return best;}
+ targetAt():Target|null{
+ const reach=3.25;
+ this.ray.near=0;this.ray.far=reach;this.ray.setFromCamera(this.pointer,this.camera);
+ const characters=new Set<T.Object3D>([...this.actors.values()].map(a=>a.root));
+ for(const w of this.yard?.witnesses??[])characters.add(w.root);
+ if(this.dog)characters.add(this.dog);
+ const sphere=new T.Sphere(new T.Vector3(),2.2);
+ let best:Target|null=null,near=reach,occlusion:number|undefined;
+ for(const t of this.targets){
+  let visible=true;for(let o:T.Object3D|null=t.root;o;o=o.parent)if(!o.visible){visible=false;break}
+  if(!visible||!t.root.parent)continue;
+  // Human raycasts skin every triangle they test. Reject distant characters
+  // before touching their detailed meshes, even when the view points at them.
+  if(characters.has(t.root)){
+   t.root.getWorldPosition(sphere.center);sphere.center.y+=1;
+   if(sphere.center.distanceTo(this.camera.position)>reach+sphere.radius||!this.ray.ray.intersectsSphere(sphere))continue;
+  }
+  const hit=this.ray.intersectObject(t.root,true)[0];
+  if(!hit||hit.distance>=near)continue;
+  if(occlusion===undefined)occlusion=this.ray.intersectObjects([...this.walls,...[...this.doors.values()].map(d=>d.pivot)],true)[0]?.distance??Infinity;
+  if(occlusion<hit.distance-.08)continue;
+  near=hit.distance;best={...t,distance:near};
+ }
+ return best;
+ }
   setQuality(q:string){this.quality=q;const cap=q==='Low'?.85:q==='High'?1.8:q==='Medium'?1.25:Math.min(devicePixelRatio,1.25);this.renderer.setPixelRatio(Math.min(devicePixelRatio,cap));this.renderer.shadowMap.enabled=q!=='Low';this.ao.enabled=q!=='Low';this.renderer.setSize(innerWidth,innerHeight);this.composer.setPixelRatio(this.renderer.getPixelRatio());this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));}
  update(dt:number,s:GameState,playing:boolean,talking:PersonId|null,arrivalT:number,menu=false,witness:WitnessId|null=null){if(playing||talking)this.clock+=dt;
  this.syncBulkheads(s,dt);
