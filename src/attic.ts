@@ -1,3 +1,4 @@
+import {dressAttic,drapedQuilt} from './room-dressing';
 import * as T from 'three';
 import type {Estate} from './world';
 import {wovenFabric} from './detail';
@@ -89,7 +90,7 @@ export function buildAttic(e:Estate){
  item(1.55,.27,2.76,12.7,.33,-5.85,panel);
  item(1.56,1.18,.16,12.7,.62,-7.16,wood);
  e.round(1.45,.26,2.65,12.7,ATTIC_FLOOR+.56,-5.85,linen,e.scene);
- e.round(1.51,.13,1.9,12.7,ATTIC_FLOOR+.75,-5.52,cloth,e.scene);
+ drapedQuilt(e,12.7,ATTIC_FLOOR+.81,-5.52,1.57,2.02,cloth);
  e.round(1.06,.16,.47,12.7,ATTIC_FLOOR+.76,-6.72,linen,e.scene);
  solid(2,.85,11.8,3.45);item(2,.14,.85,11.8,.86,3.45,panel);
  for(const dx of [-.82,.82])for(const dz of [-.31,.31])item(.095,.81,.095,11.8+dx,.405,3.45+dz,wood);
@@ -118,6 +119,7 @@ export function buildAttic(e:Estate){
  print.position.z=.028;postcard.add(print);
  e.target(postcard,'attic-postcard','Framed estate postcard','Inspect');
  item(2.9,.016,1.5,12.3,.012,-2.9,brickRed);
+ dressAttic(e,ATTIC_FLOOR);
  // Fixtures light the landing, store and bedroom without adding shadow lights.
  const bulb=e.mat(0xffdeae);bulb.emissive.setHex(0xc38e50);bulb.emissiveIntensity=.9;
  for(const [x,z] of [[-2,-.7],[4,-.7],[-11,-1],[11,-.6]]){

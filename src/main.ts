@@ -110,6 +110,9 @@ const estateObjects:Record<string,[string,string,string]> = {
  'attic-letter':['Mansion · staff bedroom','Unfinished letter home','“There is a room under the eaves. It rains on the slates at night. I can see the orchard from here.” The writer has left space for one more line.'],
  'attic-trunk':['Mansion · storage loft','Ada’s trunk label','“A. Ashcombe. Family keepsakes.” Below it, Elias pencilled in a reminder that the trunk had been moved away from a leak.'],
  'attic-postcard':['Mansion · staff bedroom','Framed estate postcard','A postcard dated 1912 shows a double row of lime trees. Its sender complains that the walk is too long in Sunday shoes.'],
+ 'shed-secateurs':['Garden · potting shed','Gardener’s secateurs','A pair of well-used bypass secateurs with wooden grips and a brass pivot. The curved blade passes the fixed jaw to make a clean cut. Squeeze the handles to test the action; the tool stays on the bench.'],
+ 'shed-seeds':['Garden · potting shed','Gardener’s seed notes','Apple and pear grafts are marked for spring. A note beneath the seed tally reads: “Sharpen, clean and oil tools. Return the secateurs after use.”'],
+ 'bedroom-travel':['Mansion · guest bedroom','Postponed travel plans','The train journey to London has been crossed out. A separate line asks for the blue case to remain packed. The note is undated.'],
  'family-photos':['Mansion · upstairs landing','Painted portraits of the household','Lady Beatrice, Ada Ashcombe, and Edmund Rook sit for three portraits in a single walnut frame.'],
  'vehicle-log':['Gatehouse · dispatch desk','Gatehouse vehicle log','Yesterday, 8:12 p.m. — Grocer’s van, “Pantry · BW–12” (crossed out). Departed 8:16 p.m. No estate saloon was logged at that time.'],
  'shelter-crate':['Cellar · air-raid shelter','Marked supply crate','Chalk on the side reads BW–12. The crate holds folded blankets and spare wireless batteries.'],
@@ -134,7 +137,7 @@ function inspect(id:string){
   if(['lodge-letters','lodge-heights','fire-watch-rota','orchard-tally','gatehouse-mail','upper-linen','attic-trunk','attic-letter'].includes(id))state.flags['read:'+id]=true;
   panel('inspect');
   if(id==='wine-bottle'||id==='hall-watch')estate.present(id);
-  if(id==='workshop-bench')sound.effect('knock',[7.55,-3.7,-35]);else if(id!=='garden-tools')sound.effect('paper');
+  if(id==='workshop-bench')sound.effect('knock',[7.55,-3.7,-35]);else if(id!=='garden-tools'&&id!=='shed-secateurs')sound.effect('paper');
   let closeup='';
   if(id==='family-photos'||id==='attic-postcard'){
    const art=estate.targets.find(t=>t.id===id)?.root.children.find(o=>o instanceof Mesh&&o.material instanceof MeshStandardMaterial&&o.material.map?.image instanceof HTMLCanvasElement) as Mesh|undefined;
@@ -143,7 +146,7 @@ function inspect(id:string){
     closeup=`<img class="inspect-art" src="${picture.toDataURL()}" alt="${title}">`;
    }
   }
-  overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">${location}</span><h1>${title}</h1>${closeup}<p>${detail}</p>${estate.held?'<small>Use ← / → to turn the object.</small>':''}<button class="primary" data-action="resume">Back to the estate →</button></section>`;return;
+  overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">${location}</span><h1>${title}</h1>${closeup}<p>${detail}</p>${id==='shed-secateurs'?'<button data-action="shed-shears">Squeeze / release the handles</button>':''}${estate.held?'<small>Use ← / → to turn the object.</small>':''}<button class="primary" data-action="resume">Back to the estate →</button></section>`;return;
  }
  if(id==='phone'||id==='gate-phone'){
  panel('inspect');sound.effect('phone');const allowed=canCall(state)&&state.arrival==='absent';overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">TELEPHONE · LINE 2</span><h1>Telephone</h1><p>${allowed?'“Gatehouse speaking. Yes, Detective. Lady Beatrice is expected shortly. Shall I send her car up to the house?”':state.arrival!=='absent'?'“Your message has been passed on, Detective.”':'“Good afternoon. Please check with Mrs Bell before making your report.”'}</p>${allowed?'<button class="primary" data-action="complete-call">Send her up. Thank you. Replace receiver.</button>':''}<button data-action="resume">${allowed?'End call without a message':'Replace receiver'}</button></section>`;return;}
@@ -187,6 +190,7 @@ function turnNotePage(page:number,focus:string){
 function ending(){panel('ending');overlay.innerHTML=`<section class="panel ending-card"><span class="eyebrow">THE LAST BELL AT BRAMBLEWICK</span><h1>The truth,<br>at last.</h1><p>Edmund Rook diverted £120 from the restoration accounts. Elias discovered the deception and intended to tell Lady Beatrice.</p><p>The bronze falcon connects the attack to the study. Rook’s account of ringing the bell, and the evidence from the service passage, unravel his story.</p><p>Beatrice sends for the constable. Beyond the windows, Pip chases the afternoon light across the garden. Bramblewick can finally begin to recover.</p><div class="recorded">CASE EXPLAINED · ${state.evidence.length} pieces of evidence · ${state.deductions.length} connections</div><button class="primary" data-action="resume">Stay a little longer →</button><button data-action="save">Save this completed case</button></section>`}
 app.addEventListener('click',e=>{const el=(e.target as HTMLElement).closest<HTMLElement>('button');if(!el)return;const action=el.dataset.action;
  if(action==='new'){if(saved()){overlay.innerHTML=`<section class="panel narrow"><h1>A fresh investigation</h1><p>Your saved case stays available until you use Save Game again.</p><button class="primary" data-action="start-new">Begin →</button><button data-action="title">Back</button></section>`}else start()}
+ if(action==='shed-shears'&&mode==='inspect'){state.flags.shedShearsClosed=!state.flags.shedShearsClosed;sound.effect('shears');toast(state.flags.shedShearsClosed?'The handles close and the curved blade meets the jaw.':'The handles open again.');}
  if(action==='start-new')start();if(action==='continue')start(true);if(action==='resume')play();if(action==='pause')pause();if(action==='save')save();if(action==='title')mainMenu();if(action==='notebook')notebook();
  if(action==='menu'){overlay.innerHTML=`<section class="panel narrow"><h1>Leave the investigation?</h1><p>Unsaved progress will be lost when you begin or load another case.</p><button class="primary" data-action="save-title">Save and return to title</button><button data-action="title">Return without saving</button><button data-action="pause">Stay here</button></section>`}
  if(action==='save-title'){try{localStorage.setItem(SAVE_KEY,encodeSave(state,estate.pose()));mainMenu()}catch(e){toast((e as Error).message)}}

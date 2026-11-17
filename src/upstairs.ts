@@ -1,3 +1,4 @@
+import {dressUpperRooms,drapedQuilt} from './room-dressing';
 import {upperHomeFront} from './home-front';
 import {wovenFabric} from './detail';
 import {buildAttic} from './attic';
@@ -136,14 +137,21 @@ export function buildUpstairs(e:Estate){
   item(2.23,.31,3.22,x,.36,z,panel);item(2.2,1.25,.17,x,.67,z-1.54,panel);
   upholstered(2.06,.28,3.03,x,.59,z,linen);
   const quilt=x<0?blue:green;
-  upholstered(2.14,.125,2.12,x,.77,z+.46,quilt);
-  for(const dx of [-.79,-.4,0,.4,.79])upholstered(.017,.024,1.92,x+dx,.827,z+.46,quilt);
+  drapedQuilt(e,x,UPPER_FLOOR+.84,z+.46,2.24,2.3,quilt);
   upholstered(2.12,.075,.17,x,.84,z-.52,linen);
   for(const dx of [-.51,.51]){
    const pillow=upholstered(.83,.18,.54,x+dx,.82,z-1.04,linen);pillow.rotation.y=dx*.16;
   }
   for(const dx of [-1,1])for(const dz of [-1.42,1.42])item(.13,.31,.13,x+dx,.155,z+dz,panel);
-  for(const dx of [-.76,0,.76])item(.18,.51,.065,x+dx,.89,z-1.435,wood);
+  item(1.95,.72,.045,x,.79,z-1.435,wood);
+  for(const dx of [-.94,0,.94])item(.035,.69,.065,x+dx,.79,z-1.4,panel);
+  item(2.02,.04,.065,x,1.16,z-1.4,panel);
+  for(const side of [-1,1]){
+   const bedside=x+side*1.7;solid(.68,.65,bedside,z-.8);
+   item(.68,.68,.65,bedside,.35,z-.8,panel);item(.73,.055,.7,bedside,.72,z-.8,wood);
+   for(const yy of [.25,.51]){item(.57,.21,.04,bedside,yy,z-.455,wood);item(.09,.045,.035,bedside,yy,z-.42,gold);}
+   upholstered(.35,.035,.25,bedside,.766,z-.8,linen);
+  }
   chest(x+3.1,-14);rug(x,-9.5,3.2,1.65,x<0?blue:green);
  }
  for(const x of [-17,-12,-8.7])bookcase(x,.1);
@@ -159,6 +167,7 @@ export function buildUpstairs(e:Estate){
  const tag=e.paper('REPAIR',['Loose arm','Awaiting glue'],15,UPPER_FLOOR+.657,4.17);
  tag.scale.set(.29,.36,.29);
  e.target(tag,'chair-repair','Repair tag','Read');
+ dressUpperRooms(e,UPPER_FLOOR,solid);
  upperHomeFront(e,UPPER_FLOOR);
  solid(1.35,1.35,13,6.8);e.cyl(.68,.68,.1,13,UPPER_FLOOR+.64,6.8,wood);
  e.cyl(.09,.24,.57,13,UPPER_FLOOR+.31,6.8,panel);

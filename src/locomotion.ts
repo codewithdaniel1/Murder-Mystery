@@ -1,12 +1,13 @@
 import * as T from 'three';
 
 /** Move an ankle with a two-bone leg solve, keeping the shoe's orientation. */
-export function plantFoot(bones:Map<string,T.Bone>,actor:T.Object3D,side:'l'|'r',localTarget:T.Vector3){
+export function plantFoot(bones:Map<string,T.Bone>,actor:T.Object3D,side:'l'|'r',localTarget:T.Vector3,roll=0){
  const hip=bones.get('thigh_'+side),knee=bones.get('calf_'+side),foot=bones.get('foot_'+side);
  if(!hip||!knee||!foot||!hip.parent||!knee.parent||!foot.parent)return;
  actor.updateWorldMatrix(true,true);
  const h=hip.getWorldPosition(new T.Vector3()),k=knee.getWorldPosition(new T.Vector3()),f=foot.getWorldPosition(new T.Vector3());
  const shoeRotation=foot.getWorldQuaternion(new T.Quaternion());
+ if(roll)shoeRotation.premultiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0).transformDirection(actor.matrixWorld),roll));
  const lowerAxis=f.clone().sub(k).applyQuaternion(knee.getWorldQuaternion(new T.Quaternion()).invert());
  const a=h.distanceTo(k),b=k.distanceTo(f),target=actor.localToWorld(localTarget.clone());
  const toTarget=target.clone().sub(h),distance=T.MathUtils.clamp(toTarget.length(),Math.abs(a-b)+.0001,a+b-.0001);

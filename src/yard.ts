@@ -1,3 +1,4 @@
+import {shedTools} from './craftsmanship';
 import * as T from 'three';
 import type {Estate} from './world';
 import {animateCharacter,type CharacterMotion} from './characters';
@@ -94,7 +95,7 @@ export type WitnessId=keyof typeof WITNESSES;
 export type StaffLevel=typeof WITNESSES[WitnessId]['level'];
 const staffFloor=(e:Estate,level:StaffLevel,x:number,z:number)=>
  level==='ground'?e.groundHeight(x,z):level==='cellar'?CELLAR_FLOOR:level==='upper'?UPPER_FLOOR:ATTIC_FLOOR;
-type Witness={id:WitnessId;root:T.Group;index:number;wait:number;motion?:CharacterMotion;driver?:Parameters<typeof animateCharacter>[0]};
+type Witness={id:WitnessId;root:T.Group;index:number;wait:number;speed?:number;motion?:CharacterMotion;driver?:Parameters<typeof animateCharacter>[0]};
 type Rabbit={root:T.Group;head:T.Group;home:T.Vector2;phase:number;heading:number};
 type Bird={root:T.Group;wings:T.Group[];phase:number;x:number;z:number;height:number;radius:number};
 
@@ -141,6 +142,7 @@ export function buildShed(e:Estate){
  for(const dx of [1.13,2.01])e.box(.12,.48,.68,x+dx,.32,z-1.26,wood);
  e.box(.035,1.27,.045,x+2.48,.85,z+.2,e.mats.wood).rotation.x=-.15;
  e.box(.025,.23,.18,x+2.48,.26,z+.11,e.mats.dark).rotation.x=-.15;
+ shedTools(e,x,z);
  const lamp=new T.PointLight(0xfed6a6,21,6,2);lamp.position.set(x,2.45,z-.6);e.scene.add(lamp);
  e.cyl(.025,.025,.22,x,2.65,z-.6,e.mats.dark);
  e.cyl(.11,.23,.14,x,2.53,z-.6,e.mats.cream);
@@ -198,7 +200,7 @@ export class Yard {
  }
  reset(){
   for(const w of this.witnesses){
-   const spec=WITNESSES[w.id],[x,z]=spec.route[0];w.root.position.set(x,staffFloor(this.e,spec.level,x,z),z);w.index=1;w.wait=3;
+   const spec=WITNESSES[w.id],[x,z]=spec.route[0];w.root.position.set(x,staffFloor(this.e,spec.level,x,z),z);w.index=1;w.wait=3;w.speed=0;
   }
  }
  update(dt:number,state:GameState,playing:boolean,active:WitnessId|null){
@@ -225,16 +227,20 @@ export class Yard {
    const [tx,tz]=route[w.index],p=w.root.position;
    const near=e.staffLevel()===spec.level&&Math.hypot(player.x-p.x,player.z-p.z)<2.65;
    let distance=0,angle=w.root.rotation.y;
-   if(active===w.id||near)angle=Math.atan2(player.x-p.x,player.z-p.z);
+   if(active===w.id||near){w.speed=0;angle=Math.atan2(player.x-p.x,player.z-p.z);}
    else if(playing){
     w.wait=Math.max(0,w.wait-dt);
     const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);
     angle=Math.atan2(dx,dz);
-    if(w.wait===0&&d<.12){w.index=(w.index+1)%route.length;w.wait=3.8;}
+    if(w.wait>0)w.speed=0;
+    if(w.wait===0&&d<.12){w.speed=0;w.index=(w.index+1)%route.length;w.wait=3.8;}
     else if(w.wait===0&&d>.001){
-     const hop=Math.min(dt*.8,d),next={x:p.x+dx/d*hop,z:p.z+dz/d*hop};
+     const facingError=Math.abs(Math.atan2(Math.sin(angle-w.root.rotation.y),Math.cos(angle-w.root.rotation.y)));
+     const desired=facingError>.35?0:Math.min(.8,Math.sqrt(2*1.3*Math.max(0,d-.1)));
+     w.speed=(w.speed??0)+T.MathUtils.clamp(desired-(w.speed??0),-dt*2.4,dt*1.2);
+     const hop=facingError>.35?0:Math.min(dt*w.speed,d),next={x:p.x+dx/d*hop,z:p.z+dz/d*hop};
      const colleagues=this.staffObstacles(spec.level,w.id);
-     if(clearSegment(p,next,[...levels[spec.level],...colleagues],state.doors,.22)){p.x=next.x;p.z=next.z;distance=hop;}
+     if(clearSegment(p,next,[...levels[spec.level],...colleagues],state.doors,.22)){p.x=next.x;p.z=next.z;distance=hop;}else w.speed=0;
     }
    }
    w.root.rotation.y+=Math.atan2(Math.sin(angle-w.root.rotation.y),Math.cos(angle-w.root.rotation.y))*Math.min(1,dt*5);

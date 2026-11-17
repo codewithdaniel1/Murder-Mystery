@@ -1,3 +1,6 @@
+import {craftedTable,poseSecateurs} from './craftsmanship';
+import {makeEstateSaloon,makeSaloonBoot,rollCarWheels} from './motorcar';
+import {dressGroundRooms} from './room-dressing';
 import {flowerBorders,mansionSideGardens} from './planting';
 import {buildShed,Yard,type StaffLevel,type WitnessId} from './yard';
 import {withinGrounds} from './grounds';
@@ -50,13 +53,11 @@ export class Estate {
  this.scene.add(new T.HemisphereLight(0xc7def0,0x615241,.42));this.sun=new T.DirectionalLight(0xffe7c7,3.2);this.sun.position.set(-28,38,26);this.sun.castShadow=true;this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-44,right:44,top:44,bottom:-44,near:1,far:115});this.sun.shadow.bias=-.00008;this.sun.shadow.normalBias=.025;this.sun.shadow.radius=2;this.scene.add(this.sun);
  this.mats={dark:this.mat(0x26302a),gold:this.mat(0xaa8c51,.4,.7),black:this.mat(0x171c1a,.6),cream:this.mat(0xcdbfa3),leaf:this.mat(0x3c5631),red:this.mat(0x472d2c),paper:this.mat(0xe4d5b6),glass:this.mat(0xbac7c4)};
  const loaded=materials(this);
- this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();buildGardenLodge(this);buildCellar(this);buildShed(this);buildWartimeEstate(this);this.yard=new Yard(this);
+ this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();buildGardenLodge(this);buildCellar(this);buildShed(this);buildWartimeEstate(this);dressGroundRooms(this);this.yard=new Yard(this);
  this.addActor('june',2,6,0x3b4943,0xd1b39c,true);this.addActor('rook',-12,3,0x3f3e47,0xc2a48a,false);this.addActor('mara',13,1,0x7d6045,0xd2b7a1,true);this.addActor('ada',-9,-20,0x537b72,0xd7b79e,true);this.addActor('tomas',23,-21,0x66704b,0xc6a182,false);this.addActor('beatrice',4,20,0x664d56,0xd8b59b,true);this.addActor('jonah',7,24,0x3c4853,0xc7a085,false);
  this.actors.get('beatrice')!.root.visible=false;this.actors.get('jonah')!.root.visible=false;
  this.car=this.makeCar();this.car.position.set(4,0,56);this.car.visible=false;this.scene.add(this.car);
- const boot=new T.Group();boot.position.set(0,1.17,1.43);
- this.round(1.62,.11,.91,0,0,.455,this.mat(0x253c35,.28,.6),boot);
- this.box(.16,.055,.03,0,.02,.915,this.mats.gold,boot);this.car.add(boot);this.carBoot=boot;
+ const boot=makeSaloonBoot(this);this.car.add(boot);this.carBoot=boot;
  this.suitcase=makeSuitcase(this);this.suitcase.visible=false;this.scene.add(this.suitcase);
  this.delivery=new EstateDelivery(this);
  this.dog=this.makeDog();this.dog.position.set(11,.1,3);this.scene.add(this.dog);this.target(this.dog,'pip','Pip','Greet');
@@ -129,37 +130,8 @@ export class Estate {
   (base>=UPPER_FLOOR?this.upperBarriers:this.barriers).push(blocker);
  }
  lamp(x:number,y:number,z:number){this.cyl(.17,.24,.08,x,y,z,this.mats.gold);this.cyl(.13,.13,.045,x,y+.07,z,this.mats.dark);this.cyl(.025,.04,.55,x,y+.3,z,this.mats.gold);const shade=this.mat(0xe5c28a);shade.emissive=new T.Color(0xd19444);shade.emissiveIntensity=.6;this.cyl(.22,.4,.43,x,y+.72,z,shade);this.cyl(.4,.4,.035,x,y+.51,z,this.mats.gold);this.cyl(.22,.22,.035,x,y+.94,z,this.mats.gold);this.sphere(.045,x,y+.99,z,this.mats.gold);const l=new T.PointLight(0xffcf87,35,9,2);l.position.set(x,y+.65,z);this.scene.add(l);}
- table(x:number,z:number,w=2,d=1,h=.92){
-  const g=new T.Group();g.position.set(x,0,z);const wood=this.mats.panel,edge=this.mats.wood,gold=this.mats.gold;
-  // Layered top, fine perimeter inlay and softened overhanging edge.
-  this.box(w,.12,d,0,h,0,edge,g);this.round(w+.07,.052,d+.07,0,h+.075,0,wood,g);
-  for(const side of[-1,1]){
-   this.box(w-.16,.018,.025,0,h+.1,side*(d/2-.1),gold,g);
-   this.box(.025,.018,d-.16,side*(w/2-.1),h+.1,0,gold,g);
-   const z=side*(d/2+.005);
-   this.box(w-.32,.27,.055,0,h-.13,z,wood,g);
-   const drawers=Math.max(1,Math.min(4,Math.floor((w-.35)/.72)));
-   for(let i=0;i<drawers;i++){
-    const dw=(w-.48-(drawers-1)*.04)/drawers,dx=-(w-.48)/2+dw/2+i*(dw+.04);
-    this.round(dw,.19,.05,dx,h-.13,z+side*.045,this.mats.wood,g);
-    this.round(dw-.15,.118,.018,dx,h-.13,z+side*.073,edge,g);
-    for(const sx of[-1,1])this.box(.025,.15,.018,dx+sx*(dw/2-.035),h-.13,z+side*.065,gold,g);
-    this.box(dw-.08,.025,.018,dx,h-.045,z+side*.065,gold,g);
-    this.cyl(.027,.027,.05,dx,h-.13,z+side*.092,gold,g,14).rotation.x=Math.PI/2;
-    const pull=new T.Mesh(new T.TorusGeometry(.034,.006,7,16),gold);
-    pull.position.set(dx,h-.15,z+side*.12);g.add(pull);
-   }
-  }
-  for(const a of[-1,1])for(const b of[-1,1]){
-   const lx=a*(w/2-.17),lz=b*(d/2-.15);
-   this.round(.175,.245,.175,lx,h-.19,lz,edge,g);
-   this.cyl(.057,.078,h-.34,lx,(h-.16)/2,lz,edge,g,16);
-   this.cyl(.086,.079,.057,lx,.24,lz,wood,g,16);
-   for(const yy of[.12,.2,h-.22])this.cyl(.09,.1,.045,lx,yy,lz,gold,g,12);
-   this.box(.11,.12,.11,lx,.06,lz,wood,g);
-  }
-  this.scene.add(g);this.barrier(x,z,w,d);return g;
- }
+ table(x:number,z:number,w=2,d=1,h=.92){return craftedTable(this,x,z,w,d,h);}
+
  paper(title:string,lines:string[],x:number,y:number,z:number,book=false,parent:T.Object3D=this.scene){const g=new T.Group();g.position.set(x,y,z);if(book)this.box(.65,.07,.85,0,0,0,this.mats.red,g);const cv=document.createElement('canvas');cv.width=512;cv.height=640;const ctx=cv.getContext('2d')!;ctx.fillStyle='#e6d6ae';ctx.fillRect(0,0,512,640);ctx.fillStyle='#3f372b';ctx.font='bold 28px Georgia';ctx.fillText(title,35,70);ctx.font='22px Georgia';lines.forEach((l,i)=>ctx.fillText(l,35,130+i*42));ctx.strokeStyle='#a78f62';ctx.strokeRect(20,20,472,600);const tex=new T.CanvasTexture(cv);tex.colorSpace=T.SRGBColorSpace;const sheet=new T.Mesh(new T.PlaneGeometry(.56,.72),new T.MeshStandardMaterial({map:tex,roughness:.95,side:T.DoubleSide}));sheet.rotation.x=-Math.PI/2;sheet.position.y=.045;g.add(sheet);parent.add(g);return g;}
  falcon(parent:T.Object3D=this.scene){const g=new T.Group();this.cyl(.3,.35,.14,0,.08,0,this.mats.gold,g);this.sphere(.2,0,.42,0,this.mats.gold,g,.8,1.5,.7);this.sphere(.12,.02,.73,0,this.mats.gold,g);const beak=new T.Mesh(new T.ConeGeometry(.06,.2,5),this.mats.gold);beak.rotation.z=-Math.PI/2;beak.position.set(.15,.73,0);g.add(beak);for(const s of[-1,1]){const wing=this.sphere(.19,s*.17,.45,0,this.mats.gold,g,.45,1.5,.8);wing.rotation.z=s*.3;}this.cyl(.035,.035,.23,0,.22,0,this.mats.gold,g);parent.add(g);return g;}
  interiors(){
@@ -244,7 +216,8 @@ export class Estate {
  addActor(id:PersonId,x:number,z:number,color:number,skin:number,female:boolean){const root=new T.Group();root.position.set(x,.13,z);const coat=this.mat(color),skinMat=this.mat(skin),trousers=this.mat(0x343936),boot=this.mats.black;this.round(.45,.72,.27,0,1.04,0,coat,root);this.round(.5,.3,.28,0,1.35,0,coat,root);if(female)this.cyl(.23,.34,.64,0,.65,0,coat,root);this.box(.1,.4,.015,0,1.29,.16,this.mats.cream,root);this.box(.04,.29,.02,0,1.25,.18,this.mats.dark,root);const head=new T.Group();head.position.y=1.65;this.sphere(.17,0,0,0,skinMat,head,.86,1.2,.91);this.sphere(.17,0,.07,-.025,this.mat(id==='mara'||id==='june'?0x8a8374:0x4c3c30),head,.92,.8,.96);this.sphere(.045,0,-.015,.15,skinMat,head,.6,1,.8);for(const a of[-1,1])this.sphere(.014,a*.065,.015,.147,this.mats.black,head,1,.7,.5);this.box(.05,.009,.01,0,-.08,.15,this.mat(0x815d4d),head);if(id==='tomas'||id==='jonah'){this.cyl(.2,.2,.08,0,.18,0,coat,head);this.box(.32,.025,.14,0,.145,.14,coat,head);}root.add(head);
  const arms:T.Group[]=[],legs:T.Group[]=[];for(const a of[-1,1]){const arm=new T.Group();arm.position.set(a*.29,1.32,0);this.round(.14,.48,.16,0,-.2,0,coat,arm);this.sphere(.075,0,-.49,.025,skinMat,arm,.8,1.2,.8);root.add(arm);arms.push(arm);const leg=new T.Group();leg.position.set(a*.12,.71,0);this.round(.16,.58,.19,0,-.29,0,trousers,leg);this.round(.18,.12,.32,0,-.6,.07,boot,leg);root.add(leg);legs.push(leg);}this.scene.add(root);this.actors.set(id,{root,head,arms,legs,home:root.position.clone(),id});this.target(root,'npc:'+id,({june:'June Bell',rook:'Edmund Rook',mara:'Dr. Mara Voss',ada:'Ada Ashcombe',tomas:'Tomas Reed',beatrice:'Lady Beatrice',jonah:'Jonah Pike'})[id],'Speak to');return root;}
  makeDog(){const g=new T.Group(),fur=this.mat(0xd1c4a5),patch=this.mat(0x786047);this.round(.3,.33,.65,0,.35,0,fur,g);this.sphere(.17,0,.55,.32,fur,g,.9,1,1);this.round(.16,.11,.2,0,.5,.48,fur,g);this.sphere(.045,0,.52,.59,this.mats.black,g);for(const x of[-.13,.13]){this.sphere(.08,x,.64,.3,patch,g,.6,1.5,.7);this.sphere(.02,x*.55,.58,.47,this.mats.black,g);for(const z of[-.22,.22]){const leg=this.cyl(.04,.05,.3,x,.16,z,fur,g,7);}}const tail=this.cyl(.035,.06,.35,0,.55,-.38,fur,g,7);tail.rotation.x=-.6;this.cyl(.18,.18,.045,0,.42,.27,this.mats.red,g).rotation.x=Math.PI/2;return g;}
- makeCar(){const g=new T.Group(),paint=this.mat(0x253c35,.28,.6),glass=this.mat(0x78938e,.15,.4);this.round(2.05,.65,4.7,0,.83,0,paint,g);this.round(1.85,.86,2.3,0,1.5,.3,paint,g);this.box(1.7,.55,.03,0,1.56,-.87,glass,g);this.box(1.7,.5,.03,0,1.56,1.47,glass,g);for(const x of[-.94,.94]){this.box(.02,.5,1.95,x,1.57,.3,glass,g);this.box(.05,.61,.09,x,1.56,.2,paint,g);for(const z of[-1.45,1.45]){const tire=this.cyl(.43,.43,.24,x*1.1,.46,z,this.mats.black,g,24);tire.rotation.z=Math.PI/2;const hub=this.cyl(.23,.23,.26,x*1.13,.46,z,this.mats.gold,g,18);hub.rotation.z=Math.PI/2;}this.box(.06,.06,.27,x,1.19,.45,this.mats.gold,g);}this.box(1.25,.47,.1,0,.8,-2.4,this.mats.black,g);for(let i=0;i<10;i++)this.box(.035,.4,.12,-.53+i*.118,.8,-2.46,this.mats.gold,g);for(const x of[-.78,.78]){const h=this.cyl(.17,.17,.12,x,1,-2.3,this.mats.cream,g);h.rotation.x=Math.PI/2;}this.box(2.1,.12,.14,0,.48,-2.47,this.mats.gold,g);this.box(2.1,.12,.14,0,.48,2.47,this.mats.gold,g);return g;}
+ makeCar(){return makeEstateSaloon(this);}
+
  makeHands(){const g=new T.Group(),coat=this.mat(0x605544),skin=this.mat(0xc8a987);for(const side of[-1,1]){const a=new T.Group();a.position.set(side*.3,-.72,-.42);a.rotation.set(-.5,0,-side*.22);this.round(.15,.38,.17,0,-.08,0,coat,a);this.round(.13,.16,.1,0,.18,0,skin,a);for(let i=0;i<4;i++)this.round(.025,.1,.03,-.047+i*.031,.27,.015,skin,a);g.add(a);}g.visible=false;return g;}
  private makePocketWatch(g:T.Group){
   this.cyl(.094,.094,.026,0,0,0,this.mats.gold,g,24);
@@ -377,7 +350,9 @@ export class Estate {
  animateCharacter(this,id,result.moving,dt,!playing&&!talking,a.activity??null,this.clock,dt>0?Math.hypot(a.root.position.x-before.x,a.root.position.z-before.z)/dt:0);
  }
 
- this.car.visible=s.arrival!=='absent'&&s.arrival!=='queued';if(s.arrival==='arriving')this.car.position.z=56-32*T.MathUtils.smoothstep(arrivalT,0,1);if(s.arrival==='present')this.car.position.z=24;this.car.position.y=this.groundHeight(this.car.position.x,this.car.position.z)-.03;
+ const previousCarZ=this.car.position.z;
+ this.car.visible=s.arrival!=='absent'&&s.arrival!=='queued';if(s.arrival==='arriving')this.car.position.z=56-32*T.MathUtils.smoothstep(arrivalT,0,1);if(s.arrival==='present')this.car.position.z=24;this.car.position.y=this.groundHeight(this.car.position.x,this.car.position.z)-.03;if(s.arrival==='arriving')rollCarWheels(this.car,this.car.position.z-previousCarZ);
+ const shears=this.targets.find(t=>t.id==='shed-secateurs');if(shears)poseSecateurs(shears.root,!!s.flags.shedShearsClosed);
  if(this.arrivalTea)this.arrivalTea.visible=s.arrival==='present';
  if(playing){this.delivery?.update(dt,s,this);this.updateLuggage(dt,s);}
  if(playing){

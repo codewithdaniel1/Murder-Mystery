@@ -45,6 +45,7 @@ export class EstateAudio {
  effect(type:string,pos?:Position){
  if(type==='phone'){this.phone=this.playClip('telephone-ring',.25,pos);if(this.phone)this.phone.source.stop(this.context!.currentTime+1.2);return}
  if(type==='bark'){const now=this.context?.currentTime??0;if(now-this.lastBark<8)return;this.lastBark=now;this.playClip('dog-bark',.45,pos);return}
+ if(type==='shears'){const clip=this.playClip('door-close',.16,pos,1.8);if(clip){clip.filter!.type='highpass';clip.filter!.frequency.value=900;clip.source.stop(this.context!.currentTime+.065);}return}
  if(type==='knock'){this.playClip('step-wood-2',.5,pos,.71);return}
  const mapping:Record<string,[string,number]>={paper:[Math.random()<.5?'paper-1':'paper-2',.48],door:['door-open',.65],'door-close':['door-close',.6],clue:['paper-1',.22],fountain:['fountain',.15]};const item=mapping[type];if(item)this.playClip(item[0],item[1],pos,.97+Math.random()*.06);
  }
