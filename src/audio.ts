@@ -28,8 +28,8 @@ export class EstateAudio {
  }
  position(p:PannerNode,xyz:Position){const time=this.context!.currentTime;p.positionX.setTargetAtTime(xyz[0],time,.08);p.positionY.setTargetAtTime(xyz[1],time,.08);p.positionZ.setTargetAtTime(xyz[2],time,.08)}
  loop(name:string,gain:number,position?:Position,cutoff=18000){let clip=this.loops.get(name);if(!clip){const created=this.playClip(name,0,position,1,true);if(!created)return;clip=created;this.loops.set(name,clip)}const t=this.context!.currentTime;clip.gain.gain.setTargetAtTime(gain,t,.65);clip.filter?.frequency.setTargetAtTime(cutoff,t,.55);if(position&&clip.pan)this.position(clip.pan,position)}
- nextVoice(person:string){
-  const kind=['june','mara','ada','beatrice'].includes(person)?'f':'m';
+ nextVoice(person:string,template=person){
+  const kind=['june','mara','ada','beatrice'].includes(template)?'f':'m';
   const available=VOICE_SYLLABLES.map(syllable=>`voice-${kind}-${syllable}`).filter(name=>this.buffers.has(name));
   if(!available.length)return 'murmur';
   let bag=this.voiceBags.get(person)?.filter(name=>available.includes(name))??[];
@@ -39,7 +39,7 @@ export class EstateAudio {
   this.voiceBags.set(person,bag);this.lastVoices.set(person,chosen);
   return chosen;
  }
- vocal(person:string,position?:Position){this.stopVoice();const rates:Record<string,number>={june:1.025,mara:.99,ada:1.04,beatrice:.97,rook:.96,tomas:.99,jonah:1.01};const rate=(rates[person]??1)*(.98+Math.random()*.04);this.voice=this.playClip(this.nextVoice(person),.38+Math.random()*.05,position,rate)}
+ vocal(person:string,position?:Position,template=person){this.stopVoice();const rates:Record<string,number>={june:1.025,mara:.99,ada:1.04,beatrice:.97,rook:.96,tomas:.99,jonah:1.01};const rate=(rates[template]??1)*(.98+Math.random()*.04);this.voice=this.playClip(this.nextVoice(person,template),.38+Math.random()*.05,position,rate)}
  stopVoice(){if(this.voice){this.stop(this.voice);this.voice=null}if(this.phone){this.stop(this.phone);this.phone=null}}
  stop(clip:Playing){try{clip.source.stop()}catch{}this.active.delete(clip)}
  effect(type:string,pos?:Position){

@@ -18,7 +18,7 @@ let state=freshState(), mode:'menu'|'play'|'pause'|'dialogue'|'inspect'|'noteboo
 const keys=new Set<string>();
 let talkingWitness:WitnessId|null=null;
 function toast(text:string){const el=document.querySelector<HTMLElement>('#toast')!;el.textContent=text;el.classList.add('show');clearTimeout(toastTimer);toastTimer=window.setTimeout(()=>el.classList.remove('show'),4200)}
-function record(...ids:EvidenceId[]){if(addEvidence(state,...ids)){toast('Evidence recorded in your notebook');sound.effect('clue')}refreshHUD()}
+function record(...ids:EvidenceId[]){if(addEvidence(state,...ids)&&mode!=='dialogue'){toast('Evidence recorded in your notebook');sound.effect('clue')}refreshHUD()}
 function refreshHUD(){const [title,detail]=objective(state);document.querySelector('#objective')!.innerHTML=`<span class="eyebrow">THE INVESTIGATION</span><strong>${title}</strong><p>${detail}</p>`}
 function saved(){try{return decodeSave(localStorage.getItem(SAVE_KEY)??'')}catch{return null}}
 function interrupt(){keys.clear();drag=false;talking=null;talkingWitness=null;sound.stopVoice();estate.clearHeld();prompt.textContent='';if(document.pointerLockElement)document.exitPointerLock()}
@@ -68,7 +68,35 @@ if(id==='jonah')t.push({label:'Where were you and Lady Beatrice?',reply:'On the 
 return [...t,...storyTopics(id,state).map(story=>({...story,run:()=>rememberStory(state,story.id)}))];
 }
 let currentTopics:Topic[]=[];
-function dialogue(id:PersonId,reply?:string){panel('dialogue');talking=id;sound.resume();const voicePosition=estate.actors.get(id)!.root.position;sound.vocal(id,[voicePosition.x,1.6,voicePosition.z]);const person=PEOPLE[id];currentTopics=topics(id);overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:${person.color}">${person.initials}</span><div><span class="eyebrow">${person.role}</span><h2>${person.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${reply??({june:'Good afternoon, Detective. Thank you for coming.',rook:'I trust this will not take long.',mara:'Oh, hello. Do mind Pip; he likes a new friend.',ada:'It is such a lovely day for something so awful.',tomas:'Afternoon. Looking for something?',beatrice:'Detective. Tell me what you need.',jonah:'At your service, Detective.'}[id])}”</p><div class="topics">${currentTopics.map((t,i)=>`<button data-topic="${i}"><span>${t.label}</span><span>↗</span></button>`).join('')}</div><small>Esc ends the conversation immediately.</small></section>`}
+const greetings:Record<PersonId,string>={
+ june:'Good afternoon, Detective. Thank you for coming.',
+ rook:'I trust this will not take long.',
+ mara:'Oh, hello. Do mind Pip; he likes a new friend.',
+ ada:'It is such a lovely day for something so awful.',
+ tomas:'Afternoon. Looking for something?',
+ beatrice:'Detective. Tell me what you need.',
+ jonah:'At your service, Detective.'
+};
+type Speaker={kind:'person';id:PersonId}|{kind:'witness';id:WitnessId};
+function dialogue(speaker:Speaker,reply?:string){
+ panel('dialogue');sound.resume();
+ const witness=speaker.kind==='witness'?WITNESSES[speaker.id]:undefined;
+ const person=speaker.kind==='person'?PEOPLE[speaker.id]:WITNESSES[speaker.id];
+ const actor=speaker.kind==='person'?estate.actors.get(speaker.id):estate.yard.witnesses.find(a=>a.id===speaker.id);
+ state.flags['met:'+speaker.id]=true;
+ if(speaker.kind==='person'){
+  talking=speaker.id;currentTopics=topics(speaker.id);
+ }else{
+  talkingWitness=speaker.id;
+  currentTopics=[
+   {label:witness!.question,reply:witness!.reply},
+   ...storyTopics(speaker.id,state).map(story=>({...story,run:()=>rememberStory(state,story.id)}))
+  ];
+ }
+ if(actor){const p=actor.root.position;sound.vocal(speaker.id,[p.x,p.y+1.58,p.z],witness?.template);}
+ const greeting=speaker.kind==='person'?greetings[speaker.id]:witness!.first;
+ overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:#c2ad87">${person.initials}</span><div><span class="eyebrow">${person.role}</span><h2>${person.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${reply??greeting}”</p><div class="topics">${currentTopics.map((t,i)=>`<button data-topic="${i}"><span>${t.label}</span><span aria-hidden="true">↗</span></button>`).join('')}<button data-action="resume">End conversation</button></div><small>Esc ends the conversation.</small></section>`;
+}
 const estateObjects:Record<string,[string,string,string]> = {
  'lodge-letters':['Garden lodge · former dormitory','Letters home','Elsie wrote that she had a peg of her own. Several letters are folded together and tied with string.'],
  'lodge-heights':['Garden lodge · former dormitory','Evacuees’ height chart','Three pencil marks on the wall are dated between October 1940 and July 1941. Elsie insisted the last mark counted, even with her shoes off.'],
@@ -124,16 +152,7 @@ function inspect(id:string){
  const eid=(id==='lexicon'?'translation':id) as EvidenceId;if(!(eid in EVIDENCE))return;
  panel('inspect');record(eid);if(id==='ledger')record('receipts');estate.present(id);sound.effect('paper');const e=EVIDENCE[eid];overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">${e.source}</span><h1>${e.title}</h1><p>${e.text}</p>${id==='ledger'?`<div class="inset">${EVIDENCE.receipts.text}</div>`:''}<div class="recorded">✓ Recorded in your notebook</div><button class="primary" data-action="resume">Return to the investigation →</button><small>Use ← / → to turn the object.</small></section>`;
 }
-let witnessTopics:Topic[]=[];
-function witnessDialogue(id:WitnessId,reply?:string){
- panel('dialogue');talkingWitness=id;state.flags['met:'+id]=true;
- const w=WITNESSES[id],actor=estate.yard.witnesses.find(a=>a.id===id);
- if(actor){const p=actor.root.position;sound.vocal(w.template,[p.x,p.y+1.58,p.z]);}
- const extras=storyTopics(id,state).map(story=>({...story,run:()=>rememberStory(state,story.id)}));
- witnessTopics=[{label:w.question,reply:w.reply},...extras];
- overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:#c2ad87">${w.initials}</span><div><span class="eyebrow">${w.role}</span><h2>${w.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${reply??w.first}”</p><div class="topics">${witnessTopics.map((t,i)=>`<button data-witness-topic="${i}">${t.label}</button>`).join('')}<button data-action="resume">End conversation</button></div><small>Esc ends the conversation.</small></section>`;
-}
-function interact(){if(mode!=='play')return;const t=estate.targetAt();if(!t)return;estate.gesture=1;if(t.id.startsWith('npc:')){const id=t.id.slice(4) as PersonId;state.flags['met:'+id]=true;dialogue(id);}else if(t.id.startsWith('witness:')){const id=t.id.slice(8) as WitnessId;if(WITNESSES[id].level===estate.staffLevel())witnessDialogue(id);}else if(t.id.startsWith('bulkhead:')){
+function interact(){if(mode!=='play')return;const t=estate.targetAt();if(!t)return;estate.gesture=1;if(t.id.startsWith('npc:')){const id=t.id.slice(4) as PersonId;dialogue({kind:'person',id});}else if(t.id.startsWith('witness:')){const id=t.id.slice(8) as WitnessId;if(WITNESSES[id].level===estate.staffLevel())dialogue({kind:'witness',id});}else if(t.id.startsWith('bulkhead:')){
  const opened=estate.toggleBulkhead(t.id.slice(9),state);
  if(opened===null){toast('Step clear of the doors first.');return}
  const position=t.root.getWorldPosition(estate.camera.position.clone());
@@ -172,8 +191,11 @@ app.addEventListener('click',e=>{const el=(e.target as HTMLElement).closest<HTML
  if(action==='menu'){overlay.innerHTML=`<section class="panel narrow"><h1>Leave the investigation?</h1><p>Unsaved progress will be lost when you begin or load another case.</p><button class="primary" data-action="save-title">Save and return to title</button><button data-action="title">Return without saving</button><button data-action="pause">Stay here</button></section>`}
  if(action==='save-title'){try{localStorage.setItem(SAVE_KEY,encodeSave(state,estate.pose()));mainMenu()}catch(e){toast((e as Error).message)}}
  if(action==='complete-call'){if(completeCall(state))toast('Message delivered. Lady Beatrice’s car will approach when you return.');play()}
- if(el.dataset.witnessTopic!==undefined&&talkingWitness){const t=witnessTopics[Number(el.dataset.witnessTopic)];t.run?.();witnessDialogue(talkingWitness,t.reply);}
- if(el.dataset.topic!==undefined&&talking){const id=talking,t=currentTopics[Number(el.dataset.topic)];t.run?.();if(mode==='dialogue')dialogue(id,t.reply);refreshHUD()}
+ if(el.dataset.topic!==undefined&&mode==='dialogue'){
+  const speaker:Speaker|null=talking?{kind:'person',id:talking}:talkingWitness?{kind:'witness',id:talkingWitness}:null;
+  const topic=currentTopics[Number(el.dataset.topic)];
+  if(speaker&&topic){topic.run?.();if(mode==='dialogue')dialogue(speaker,topic.reply);refreshHUD();}
+ }
  if(el.dataset.tab)notebook(el.dataset.tab);
  if(el.dataset.noteStep!==undefined)turnNotePage(notePage+Number(el.dataset.noteStep),`[data-note-step="${el.dataset.noteStep}"]`);
  if(el.dataset.deduction){const ok=solveDeduction(state,el.dataset.deduction as DeductionId,Number(el.dataset.choice));if(ok){sound.effect('clue');notebook('Connections');refreshHUD()}else toast('That conclusion goes beyond what the evidence supports. Compare the clues again.')}
