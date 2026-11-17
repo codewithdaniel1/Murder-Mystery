@@ -1,3 +1,4 @@
+import {rabbitModel,birdModel} from './wildlife-models';
 import {shedTools} from './craftsmanship';
 import * as T from 'three';
 import type {Estate} from './world';
@@ -96,7 +97,7 @@ export type StaffLevel=typeof WITNESSES[WitnessId]['level'];
 const staffFloor=(e:Estate,level:StaffLevel,x:number,z:number)=>
  level==='ground'?e.groundHeight(x,z):level==='cellar'?CELLAR_FLOOR:level==='upper'?UPPER_FLOOR:ATTIC_FLOOR;
 type Witness={id:WitnessId;root:T.Group;index:number;wait:number;motion?:CharacterMotion;driver?:Parameters<typeof animateCharacter>[0]};
-type Rabbit={root:T.Group;head:T.Group;home:T.Vector2;phase:number;heading:number};
+type Rabbit={root:T.Group;head:T.Group;feet:T.Group[];home:T.Vector2;phase:number;heading:number};
 type Bird={root:T.Group;wings:T.Group[];phase:number;x:number;z:number;height:number;radius:number};
 
 export function buildShed(e:Estate){
@@ -161,33 +162,12 @@ export class Yard {
    e.target(root,'witness:'+id,spec.name,'Speak to');
   }
   for(const [x,z] of [[-17,-37],[-24,-37],[17,-37],[-8,-75],[14,-75]]){
-   const root=new T.Group(),head=new T.Group();root.name='Wild rabbit';
-   const fur=e.mat(0x89745f,.98),dark=e.mat(0x302723,.97),pale=e.mat(0xc2b4a0,.98);
-   e.sphere(.19,0,.18,-.07,fur,root,.81,.82,1.21);
-   e.sphere(.105,0,.218,.126,fur,head,.88,.92,1.05);
-   e.sphere(.055,0,.179,.196,pale,head,.93,.68,.87);
-   e.sphere(.023,0,.197,.235,dark,head,1,.68,.61);
-   for(const side of [-1,1]){
-    e.sphere(.055,side*.091,.061,-.119,fur,root,1,.68,1.35);
-    e.sphere(.04,side*.068,.051,.11,fur,root,1,.58,1.21);
-    const ear=e.sphere(.047,side*.047,.358,.088,fur,head,.66,2.45,.57);ear.rotation.z=side*-.2;
-    e.sphere(.015,side*.078,.238,.156,dark,head,1,1,1);
-   }
-   e.sphere(.059,0,.174,-.266,pale,root,.93,.96,1.1);
+   const {root,head,feet}=rabbitModel(this.rabbits.length);
    root.add(head);root.position.set(x,e.groundHeight(x,z),z);e.scene.add(root);
-   this.rabbits.push({root,head,home:new T.Vector2(x,z),phase:0,heading:.35+x*.2});
+   this.rabbits.push({root,head,feet,home:new T.Vector2(x,z),phase:0,heading:.35+x*.2});
   }
   for(let i=0;i<6;i++){
-   const root=new T.Group(),wings:T.Group[]=[];root.name='Garden bird';
-   const feather=e.mat(i%2?0x4f514c:0x64675d,.96),wing=e.mat(0x353b35,.94);
-   e.sphere(.105,0,0,0,feather,root,.65,.71,1.55);
-   e.sphere(.052,0,.04,.122,feather,root);
-   e.sphere(.042,0,-.007,-.15,wing,root,.72,.38,1.65);
-   for(const side of [-1,1]){
-    const flap=new T.Group();flap.position.x=side*.045;
-    const primary=e.sphere(.12,side*.114,0,-.031,wing,flap,1.34,.17,.64);
-    primary.rotation.y=side*.29;root.add(flap);wings.push(flap);
-   }
+   const {root,wings}=birdModel(i);
    const phase=i*1.6,x=i<4?7:-5,z=i<4?-33:-74,height=i<4?5.5+i*.34:8.2+(i-4)*.48,radius=i<4?8+i*1.75:6+(i-4)*2;
    root.position.set(x+Math.cos(phase)*radius,height,z+Math.sin(phase)*radius*.62);
    e.scene.add(root);this.birds.push({root,wings,phase,x,z,height,radius});
@@ -263,13 +243,16 @@ export class Yard {
     p.y=e.groundHeight(p.x,p.z)+leap*(scared?.19:.095);
    }else{r.phase=0;p.y=e.groundHeight(p.x,p.z);}
    r.head.rotation.x=activity?-.04:Math.sin(this.time*3+i)*.07;
+   r.root.rotation.x=activity?Math.sin(r.phase*Math.PI*2)*.10:0;
+   for(const [j,foot]of r.feet.entries()){const hind=j<2;foot.rotation.x=activity?Math.sin(r.phase*Math.PI)*Math.cos(r.phase*Math.PI*2+(hind?1.1:0))*(hind?.65:.38):0;}
   }
   for(const [i,b] of this.birds.entries()){
    const t=this.time*.44+b.phase,r=b.radius;
    b.root.position.set(b.x+Math.cos(t)*r,b.height+Math.sin(t*2)*.38,b.z+Math.sin(t)*r*.62);
    b.root.rotation.y=Math.atan2(-Math.sin(t),Math.cos(t)*.62);
-   b.root.rotation.z=.24;
-   for(const [j,wing] of b.wings.entries())wing.rotation.z=(j?1:-1)*Math.sin(this.time*18+i)*.66;
+   b.root.rotation.z=.13+.035*Math.sin(t*2);
+   const flap=Math.sin(this.time*1.2+i)>.1?Math.sin(this.time*15+i)*.7:.10;
+   for(const [j,wing] of b.wings.entries())wing.rotation.z=(j?1:-1)*flap;
   }
  }
 }

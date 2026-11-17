@@ -1,3 +1,4 @@
+import {FIREPIT} from './firepit';
 import {inStair,onUpperDeck} from './upstairs';
 type Position=[number,number,number];
 type Playing={source:AudioBufferSourceNode;gain:GainNode;pan?:PannerNode;filter?:BiquadFilterNode};
@@ -28,7 +29,7 @@ export class EstateAudio {
  const clip={source,gain,pan,filter};this.active.add(clip);source.onended=()=>{source.disconnect();gain.disconnect();filter.disconnect();pan?.disconnect();this.active.delete(clip)};source.start(0,loop?Math.random()*buffer.duration:0);return clip;
  }
  position(p:PannerNode,xyz:Position){const time=this.context!.currentTime;p.positionX.setTargetAtTime(xyz[0],time,.08);p.positionY.setTargetAtTime(xyz[1],time,.08);p.positionZ.setTargetAtTime(xyz[2],time,.08)}
- loop(name:string,gain:number,position?:Position,cutoff=18000){let clip=this.loops.get(name);if(!clip){const created=this.playClip(name,0,position,1,true);if(!created)return;clip=created;this.loops.set(name,clip)}const t=this.context!.currentTime;clip.gain.gain.setTargetAtTime(gain,t,.65);clip.filter?.frequency.setTargetAtTime(cutoff,t,.55);if(position&&clip.pan)this.position(clip.pan,position)}
+ loop(name:string,gain:number,position?:Position,cutoff=18000,key=name){let clip=this.loops.get(key);if(!clip){const created=this.playClip(name,0,position,1,true);if(!created)return;clip=created;this.loops.set(key,clip)}const t=this.context!.currentTime;clip.gain.gain.setTargetAtTime(gain,t,.65);clip.filter?.frequency.setTargetAtTime(cutoff,t,.55);if(position&&clip.pan)this.position(clip.pan,position)}
  nextVoice(person:string,template=person){
   const kind=['june','mara','ada','beatrice'].includes(template)?'f':'m';
   const available=VOICE_SYLLABLES.map(syllable=>`voice-${kind}-${syllable}`).filter(name=>this.buffers.has(name));
@@ -54,6 +55,8 @@ export class EstateAudio {
  l.positionX.value=p.x;l.positionY.value=p.y;l.positionZ.value=p.z;l.forwardX.value=-Math.sin(yaw);l.forwardY.value=0;l.forwardZ.value=-Math.cos(yaw);l.upX.value=0;l.upY.value=1;l.upZ.value=0;
  this.loop('wind',inside?.025:.24,undefined,inside?650:8000);this.loop('birds',inside?.035:.26,undefined,inside?1100:10000);
  this.loop('fountain',p.y<0?0:inside?.02:.9,[0,.8,-30],inside?550:14000);this.loop('fireplace',p.y<0?0:inside&&p.x<-7?.65:inside?.12:.005,[-20,1,4.5],inside?11000:400);
+ const fireDistance=Math.hypot(p.x-FIREPIT.x,p.z-FIREPIT.z);
+ if(fireDistance<18||this.loops.has('yard-fire'))this.loop('fireplace',!inside&&p.y>0&&fireDistance<18?.55:0,[FIREPIT.x,.3,FIREPIT.z],10000,'yard-fire');
  this.loop('engine',car?(inside?.12:.9):0,car??[4,1,24],inside?850:9500);
  const current:Position=[p.x,p.y,p.z];if(this.lastPosition&&moving){const d=Math.hypot(p.x-this.lastPosition[0],p.z-this.lastPosition[2]);if(d<1)this.distance+=d;else this.distance=0;}else this.distance=0;this.lastPosition=current;
  if(this.distance>1.15){this.distance%=1.15;const surface=surfaceAt(p.x,p.z,p.y);this.stepIndex++;const n=this.stepIndex%2+1;const file=surface==='carpet'||surface==='wood'?'step-wood-'+n:surface==='grass'?'step-grass-'+n:surface==='stone'?'step-stone-1':'step-gravel-1';this.playClip(file,surface==='carpet'?.17:.48,undefined,.94+Math.random()*.12);}

@@ -12,13 +12,13 @@ Poly Haven fern, shrubs, tree and wooden armchair, with 1K material maps. The ac
 
 ## Characters and dog
 
-Innerscene Harper, Jordan, Sam and Maya models use MakeHuman/MPFB CC0 assets and original Innerscene styling and animation. All four include idle and walking clips. Pip uses an original Innerscene dog model, with a project-authored four-leg skeleton, skin weights and procedural trot added at load time. All are CC0. See [character credits](public/models/people/CREDITS.md).
+Innerscene Harper, Jordan, Sam and Maya models use MakeHuman/MPFB CC0 assets and original Innerscene styling and animation. All four include idle and walking clips. Pip now uses a project-authored terrier mesh with a four-leg skeleton, skin weights and procedural trot added at load time. The previously used CC0 Innerscene dog remains bundled and credited with the source models. See [character credits](public/models/people/CREDITS.md).
 
 The source figures wear contemporary civilian outfits. The game adapts them at runtime with matte utility colors, tailored skirts, Ada's fitted blouse sleeves and tucked hairstyle, June's apron and head covering, and period-style caps. These are 1942-inspired costumes, not verified reconstructions. Several NPCs share a base figure with different scale, fabric tint, hair colors and fitted accessories.
 
 ## Project-authored content
 
-Estate architecture, decorative geometry, remaining props and vehicle, interface, case text, geometric rug pattern were authored for this project. No GTA assets or paid fonts are included. The longcase clock, dial, costume accessories and planting layout are project-authored.
+Estate architecture, decorative geometry, remaining props and vehicle, interface, case text, geometric rug pattern were authored for this project. No GTA assets or paid fonts are included. The longcase clock, dial, costume accessories and planting layout are project-authored. The torn lining scrap, procedural weave and fur textures, rabbits, rats, birds, terrier mesh, and stone firepit with animated flames are also project-authored.
 
 ## Recorded environmental and interaction audio
 

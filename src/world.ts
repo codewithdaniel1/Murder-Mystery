@@ -1,3 +1,5 @@
+import {liningScrap} from './fabric';
+import {buildFirepit} from './firepit';
 import {buildCandidateObjects} from './case-options';
 import {craftedTable,poseSecateurs} from './craftsmanship';
 import {makeEstateSaloon,makeSaloonBoot,rollCarWheels} from './motorcar';
@@ -38,6 +40,7 @@ export class Estate {
  upperBarriers:Barrier[]=[];atticBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
  updateCellarRats?:(dt:number)=>void;
+ updateFirepit?:(dt:number)=>void;
  cellarLighting?:ReturnType<typeof bakeCellarLighting>;
  delivery?:EstateDelivery;
  arrivalTea?:T.Group;
@@ -54,7 +57,7 @@ export class Estate {
  this.scene.add(new T.HemisphereLight(0xc7def0,0x615241,.42));this.sun=new T.DirectionalLight(0xffe7c7,3.2);this.sun.position.set(-28,38,26);this.sun.castShadow=true;this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-44,right:44,top:44,bottom:-44,near:1,far:115});this.sun.shadow.bias=-.00008;this.sun.shadow.normalBias=.025;this.sun.shadow.radius=2;this.scene.add(this.sun);
  this.mats={dark:this.mat(0x26302a),gold:this.mat(0xaa8c51,.4,.7),black:this.mat(0x171c1a,.6),cream:this.mat(0xcdbfa3),leaf:this.mat(0x3c5631),red:this.mat(0x472d2c),paper:this.mat(0xe4d5b6),glass:this.mat(0xbac7c4)};
  const loaded=materials(this);
- this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();buildGardenLodge(this);buildCellar(this);buildShed(this);buildWartimeEstate(this);dressGroundRooms(this);buildCandidateObjects(this);this.yard=new Yard(this);
+ this.landscape();this.castle();this.interiors();interiorDetail(this);this.garden();this.updateFirepit=buildFirepit(this);buildGardenLodge(this);buildCellar(this);buildShed(this);buildWartimeEstate(this);dressGroundRooms(this);buildCandidateObjects(this);this.yard=new Yard(this);
  this.addActor('june',2,6,0x3b4943,0xd1b39c,true);this.addActor('rook',ROOK_HOME.x,ROOK_HOME.z,0x3f3e47,0xc2a48a,false);this.addActor('mara',13,1,0x7d6045,0xd2b7a1,true);this.addActor('ada',-9,-20,0x537b72,0xd7b79e,true);this.addActor('tomas',23,-21,0x66704b,0xc6a182,false);this.addActor('beatrice',4,20,0x664d56,0xd8b59b,true);this.addActor('jonah',7,24,0x3c4853,0xc7a085,false);
  this.actors.get('beatrice')!.root.visible=false;this.actors.get('jonah')!.root.visible=false;
  this.car=this.makeCar();this.car.position.set(4,0,56);this.car.visible=false;this.scene.add(this.car);
@@ -162,7 +165,7 @@ export class Estate {
  this.table(16,7,2.3,.8);for(let i=0;i<4;i++)this.box(.6,.07,.85,15.6+i*.2,1+i*.07,7,this.mats.red);
  // Bell alcove, garment snag and office display.
  const mechanism=new T.Group();mechanism.position.set(-17,1.8,-15.5);this.box(1.3,1.2,.22,0,0,0,this.mats.wood,mechanism);for(const x of[-.28,.28]){const gear=this.cyl(.23,.23,.12,x,0,.16,this.mats.gold,mechanism,12);gear.rotation.x=Math.PI/2;}this.box(.045,.7,.045,0,-1,.18,this.mats.cream,mechanism);this.scene.add(mechanism);this.target(mechanism,'bell','Bell mechanism & repair notice');this.sign('MANUAL ROPE REMOVED',-17,2.9,-15.15,2.3);
- const latch=new T.Group();latch.position.set(-10.43,1.5,-9.75);this.box(.12,.3,.1,0,0,0,this.mats.gold,latch);this.box(.18,.23,.04,.08,-.04,.07,this.mat(0x73506d),latch);this.scene.add(latch);this.target(latch,'lining','Fabric caught on the latch');
+ const latch=new T.Group();latch.position.set(-10.43,1.5,-9.75);this.box(.12,.3,.1,0,0,0,this.mats.gold,latch);const scrap=liningScrap();scrap.position.set(.075,.075,.058);latch.add(scrap);this.scene.add(latch);this.target(latch,'lining','Fabric caught on the latch');
  this.table(14,-13.5,2.2,.8);const plinth=new T.Group();plinth.position.set(14,1.04,-13.5);this.box(.75,.1,.6,0,0,0,this.mats.black,plinth);this.scene.add(plinth);this.target(plinth,'display','An empty bronze-falcon display');
  }
  garden(){const stone=this.mats.trim,gravel=this.mats.gravel;this.floor(5,.04,20,0,-.02,-25,gravel);this.floor(31,.04,3,13,-.01,-23,gravel);this.floor(3,.04,13,25,-.01,-29,gravel);this.floor(29,.04,3,12,-.01,-35,gravel);
@@ -234,7 +237,7 @@ export class Estate {
   this.box(.006,.005,.072,0,.02,-.016,this.mats.dark,g).rotation.y=-.72;
   this.sphere(.013,0,.004,-.119,this.mats.gold,g);
  }
- present(id:string){this.clearHeld();const g=new T.Group();if(id==='hall-watch'){this.makePocketWatch(g);g.rotation.x=.8;}else if(id==='wine-bottle'){this.cyl(.074,.074,.24,0,.03,0,this.mats.dark,g,16);this.cyl(.032,.074,.072,0,.186,0,this.mats.dark,g,16);this.cyl(.03,.032,.087,0,.265,0,this.mats.dark,g,16);this.cyl(.075,.075,.095,0,.05,0,this.mats.paper,g,16);this.box(.056,.043,.012,0,.02,.072,this.mats.cream,g);g.position.y=-.1;}else if(id==='fragment'){this.cyl(.02,.08,.18,0,0,0,this.mats.gold,g).rotation.z=.6;}else if(id==='falcon'){this.falcon(g);g.scale.setScalar(.5);}else if(id==='lining'){this.box(.22,.26,.02,0,0,0,this.mat(0x73506d),g);}else{const data:Record<string,[string,string[]]>={note:['E. VALE',['Compare the original invoice.','We must speak tonight.']],ledger:['ESTATE ACCOUNTS',['£60  /  £180  /  £120','vel aran si']],bell:['REPAIR NOTICE',['Manual rope removed.','Automatic chime operating.']],display:['BRONZE FALCON',['Presented to Edmund Rook']],lexicon:['AVELLIC REGISTER',['vel aran si','received personally','by the steward']]};const [title,lines]=data[id]??['CASE NOTES',['Bramblewick Estate']];this.paper(title,lines,0,0,0,id==='ledger'||id==='lexicon',g);g.rotation.x=.9;g.scale.setScalar(.65);}g.position.set(-.24,-.2,-.72);this.camera.add(g);this.held=g;this.hands.visible=true;this.hands.position.y=.06;}
+ present(id:string){this.clearHeld();const g=new T.Group();if(id==='hall-watch'){this.makePocketWatch(g);g.rotation.x=.8;}else if(id==='wine-bottle'){this.cyl(.074,.074,.24,0,.03,0,this.mats.dark,g,16);this.cyl(.032,.074,.072,0,.186,0,this.mats.dark,g,16);this.cyl(.03,.032,.087,0,.265,0,this.mats.dark,g,16);this.cyl(.075,.075,.095,0,.05,0,this.mats.paper,g,16);this.box(.056,.043,.012,0,.02,.072,this.mats.cream,g);g.position.y=-.1;}else if(id==='fragment'){this.cyl(.02,.08,.18,0,0,0,this.mats.gold,g).rotation.z=.6;}else if(id==='falcon'){this.falcon(g);g.scale.setScalar(.5);}else if(id==='lining'){const scrap=liningScrap();scrap.scale.setScalar(1.35);scrap.position.y=.12;g.add(scrap);}else{const data:Record<string,[string,string[]]>={note:['E. VALE',['Compare the original invoice.','We must speak tonight.']],ledger:['ESTATE ACCOUNTS',['£60  /  £180  /  £120','vel aran si']],bell:['REPAIR NOTICE',['Manual rope removed.','Automatic chime operating.']],display:['BRONZE FALCON',['Presented to Edmund Rook']],lexicon:['AVELLIC REGISTER',['vel aran si','received personally','by the steward']]};const [title,lines]=data[id]??['CASE NOTES',['Bramblewick Estate']];this.paper(title,lines,0,0,0,id==='ledger'||id==='lexicon',g);g.rotation.x=.9;g.scale.setScalar(.65);}g.position.set(-.24,-.2,-.72);this.camera.add(g);this.held=g;this.hands.visible=true;this.hands.position.y=.06;}
  clearHeld(){if(this.held){this.camera.remove(this.held);this.held.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.held=null;}this.hands.position.y=0;}
  private dogFollowLevel?:StaffLevel;
  resetDog(walking:boolean,doors:Record<string,boolean>){
@@ -421,6 +424,7 @@ export class Estate {
  }
  if(this.clockPendulum)this.clockPendulum.rotation.z=Math.sin(this.clock*2.7)*.085;
  this.fountainWater?.update(dt,this.camera.position);
+ if(playing)this.updateFirepit?.(dt);
  this.yard.update(dt,s,playing,witness);
  if(playing&&this.cellarInterior?.visible)this.updateCellarRats?.(dt);
  this.gesture=Math.max(0,this.gesture-dt*2);if(!this.held){this.hands.visible=this.gesture>0;this.hands.position.y=this.gesture*.16+(playing&&this.lastMove?Math.sin(this.clock*7)*.008:0);}

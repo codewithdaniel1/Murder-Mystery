@@ -1,3 +1,4 @@
+import {dogModel} from './wildlife-models';
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone} from 'three/addons/utils/SkeletonUtils.js';
@@ -60,9 +61,9 @@ export function alignLantern(motion:CharacterMotion,actor:T.Group){
 }
 export async function loadCharacters(e:Estate){
  const loader=new GLTFLoader();
- const names=['harper','jordan','sam','maya','pip'];const loaded=await Promise.all(names.map(name=>loader.loadAsync(import.meta.env.BASE_URL+'models/people/'+name+'.glb')));const sources=new Map(names.map((name,i)=>[name,loaded[i]])),dog=sources.get('pip')!;
+ const names=['harper','jordan','sam','maya'];const loaded=await Promise.all(names.map(name=>loader.loadAsync(import.meta.env.BASE_URL+'models/people/'+name+'.glb')));const sources=new Map(names.map((name,i)=>[name,loaded[i]]));
  const heights:Record<PersonId,number>={june:1.64,rook:1.81,mara:1.69,ada:1.72,tomas:1.77,beatrice:1.68,jonah:1.79};
- const prepareHuman=(source:typeof dog,height:number)=>{
+ const prepareHuman=(source:(typeof loaded)[number],height:number)=>{
  const model=clone(source.scene);model.updateMatrixWorld(true);
  const bounds=new T.Box3().setFromObject(model),size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3()),scale=height/size.y;
  model.scale.multiplyScalar(scale);model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
@@ -92,7 +93,7 @@ export async function loadCharacters(e:Estate){
   }
  }
  try{paintHouseholdPortraits(e)}catch(err){console.warn("The household portraits could not be rendered",err)}
- e.dogMotion=rigDog(dog.scene);e.dog.clear();e.dog.add(e.dogMotion.root);
+ e.dogMotion=rigDog(dogModel());e.dog.clear();e.dog.add(e.dogMotion.root);
 }
 type MotionScene={characterMotion:Map<PersonId,CharacterMotion>;actors:ReadonlyMap<PersonId,{root:T.Group}>;groundHeight(x:number,z:number):number};
 export function animateCharacter(e:MotionScene,id:PersonId,moving:boolean,dt:number,paused:boolean,activity:Activity|null=null,time=0,speed=.9){

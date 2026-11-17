@@ -102,6 +102,7 @@ function dialogue(speaker:Speaker,reply?:string){
 }
 const estateObjects:Record<string,[string,string,string]> = {
  ...CANDIDATE_OBJECTS,
+ 'garden-firepit':['Garden · east lawn','Stone garden firepit','A low stone ring holds ash, charred logs and a small warming fire. The gardeners use this clearing for their afternoon break. The surrounding grass and the garden paths are kept clear.'],
  'lodge-letters':['Garden lodge · former dormitory','Letters home','Elsie wrote that she had a peg of her own. Several letters are folded together and tied with string.'],
  'lodge-heights':['Garden lodge · former dormitory','Evacuees’ height chart','Three pencil marks on the wall are dated between October 1940 and July 1941. Elsie insisted the last mark counted, even with her shoes off.'],
  'fire-watch-rota':['Mansion · service passage','Fire-watch rota','Leonard Price was pencilled in from eight to half past. Beside his name, Arthur Hale initialled an amendment: “Relieved L.P. at 8:10.” The rota records the handover, not where Price went afterward.'],

@@ -1,4 +1,5 @@
 import {describe,it,expect} from 'vitest';
+import {FIREPIT} from '../src/firepit';
 import {EstateAudio,surfaceAt} from '../src/audio';
 class Param {value=0;setTargetAtTime(v:number){this.value=v}}
 class Node {gain=new Param();frequency=new Param();positionX=new Param();positionY=new Param();positionZ=new Param();connect(){}disconnect(){}}
@@ -19,5 +20,12 @@ describe('recorded audio mixing',()=>{
  });
  it('uses the original murmur if the new voice clips are still loading',()=>{const {audio,sources}=fixture();for(const name of [...audio.buffers.keys()])if(name.startsWith('voice-'))audio.buffers.delete(name);audio.vocal('june');expect(sources.at(-1)!.buffer.name).toBe('murmur')});
  it('does not repeat a bark on successive interactions',()=>{const {audio,sources}=fixture();audio.effect('bark');audio.effect('bark');expect(sources).toHaveLength(1)});
+ it('reuses one local firepit loop and muffles it when the player goes indoors',()=>{
+  const {audio,sources}=fixture();
+  for(let i=0;i<60;i++)audio.update(.016,{x:FIREPIT.x+2,y:1.7,z:FIREPIT.z},0,false,false,[100,0,100],null);
+  expect(sources).toHaveLength(6);expect(audio.loops.get('yard-fire')!.gain.gain.value).toBe(.55);
+  audio.update(.016,{x:0,y:1.7,z:5},0,false,true,[100,0,100],null);
+  expect(audio.loops.get('yard-fire')!.gain.gain.value).toBe(0);expect(sources).toHaveLength(6);
+ });
  it('uses different footsteps for carpet, wood, gravel, grass and stone',()=>{expect(surfaceAt(0,4)).toBe('carpet');expect(surfaceAt(5,4)).toBe('wood');expect(surfaceAt(-3.8,0,4)).toBe('wood');expect(surfaceAt(0,24)).toBe('gravel');expect(surfaceAt(15,28)).toBe('grass');expect(surfaceAt(26,-29)).toBe('wood');expect(surfaceAt(6,-8,-3)).toBe('stone')});
 });
