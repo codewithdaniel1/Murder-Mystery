@@ -162,8 +162,8 @@ export function buildGardenLodge(e:Estate){
   mould(e,1,.13,1,x,6.81,mid);
   // Interior partitions leave a wide opening from the central hall to each room.
   const divider=Math.sign(x)*3.3;
-  for(const dz of[-5,5])e.wall(.24,3.9,5,divider,2,mid+dz,e.mats.plaster);
-  e.wall(.24,1.1,5,divider,3.5,mid,e.mats.plaster);
+  for(const dz of[-5,5])e.wall(.24,3.9,5,divider,2,mid+dz,stone);
+  e.wall(.24,1.1,5,divider,3.5,mid,stone);
   if(x<0){
    lodgeEvacueeRoom(e,mid);
   }else{
