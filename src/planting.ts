@@ -2,8 +2,32 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import type {Estate} from './world';
 
+const sideBeds=[-1,1].flatMap(side=>[.5,10.5].map(z=>({
+ x:side*28,z,w:2.28,d:6.3,n:54,
+ palette:side<0?[0xc994af,0xad5d85,0xf2ddbf]:[0xe2b366,0xf2dfad,0xb5a0d4]
+})));
+
+export function mansionSideGardens(e:Estate){
+ const soil=e.mat(0x413528,.99),{gravel,trim}=e.mats;
+ for(const side of [-1,1]){
+  // Join the carriage court to a crosswalk between the flower beds and orchard.
+  e.floor(8,.025,2.1,side*27.8,-.052,17,gravel);
+  e.floor(2.1,.025,17.5,side*31,-.051,8.6,gravel);
+  e.floor(14,.025,2.1,side*38,-.05,5.5,gravel);
+ }
+ for(const {x,z,w,d} of sideBeds){
+  e.floor(w+.2,.17,d+.2,x,.005,z,soil);
+  for(const side of [-1,1]){
+   e.box(.12,.2,d+.32,x+side*(w/2+.11),.015,z,trim);
+   e.box(w+.1,.2,.12,x,.015,z+side*(d/2+.11),trim);
+  }
+  e.barrier(x,z,w+.32,d+.32);
+ }
+}
+
 export function flowerBorders(e:Estate){
  const beds=[
+  ...sideBeds,
   ...Array.from({length:6},(_,i)=>({x:-16+i*6,z:-40,w:3.65,d:1.68,n:40,palette:i%2?[0xf4dfc3,0xb44b62,0xd5818f]:[0xf3d49b,0xb9a1dc,0x8062ae]})),
   ...[-1,1].flatMap(side=>[
    {x:side*12,z:-29,w:1.67,d:7.6,n:66,palette:[0xf0d6cb,0xaf626f,0xdfac67]},
@@ -40,9 +64,14 @@ export function flowerBorders(e:Estate){
  bloom.name='Garden flower borders';e.scene.add(greens,bloom,centers);
 }
 
-export const ORCHARD=Array.from({length:8},(_,i)=>({
- x:19+(i%4)*6,z:i<4?-58:-67,pear:i>=4,angle:i*2.4,scale:.86+(i%3)*.1
-}));
+export const ORCHARD=[
+ ...Array.from({length:8},(_,i)=>({
+  x:19+(i%4)*6,z:i<4?-58:-67,pear:i>=4,angle:i*2.4,scale:.86+(i%3)*.1
+ })),
+ ...[-1,1].flatMap(side=>[-4,1,10,15].map((z,i)=>({
+  x:side*(41+(i%2)*2),z,pear:i%2===0,angle:side*(i*2.4+.7),scale:.86+(i%3)*.08
+ })))
+];
 export const ORCHARD_HEIGHT=4.7,ORCHARD_WIDTH=1.42;
 
 export function orchardFruit(e:Estate,tree:T.Object3D){
@@ -58,7 +87,7 @@ export function orchardFruit(e:Estate,tree:T.Object3D){
  });
  if(!points.length)return;
  const poses=ORCHARD.flatMap(t=>points.slice(0,36).map((_,i)=>({
-  ...t,point:points[(i*7+Math.round(t.angle*10))%points.length]
+  ...t,point:points[T.MathUtils.euclideanModulo(i*7+Math.round(t.angle*10),points.length)]
  })));
  const stem=new T.InstancedMesh(new T.CylinderGeometry(.004,.005,.075,5),e.mat(0x5c442b),poses.length);
  const matrix=new T.Matrix4(),xyz=new T.Vector3(),up=new T.Vector3(0,1,0),color=new T.Color();

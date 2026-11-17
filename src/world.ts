@@ -1,4 +1,4 @@
-import {flowerBorders} from './planting';
+import {flowerBorders,mansionSideGardens} from './planting';
 import {buildShed,Yard,type StaffLevel,type WitnessId} from './yard';
 import {withinGrounds} from './grounds';
 import type {bakeCellarLighting} from './cellar-lighting';
@@ -228,6 +228,7 @@ export class Estate {
   for(const dx of [-1.95,1.95])this.box(.1,.085,1.8,x+dx,.233,-40,stone);
   this.barrier(x,-40,4,2);
  }
+ mansionSideGardens(this);
  flowerBorders(this);
  for(const x of [-10,8])gardenBench(this,x,-36);
  // Matching front and rear greenhouse entries connect both garden paths.

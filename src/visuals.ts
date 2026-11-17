@@ -357,7 +357,7 @@ export async function sceneryAssets(e:Estate){const loader=new GLTFLoader(),oute
  const tree=await load('garden-tree');if(tree){const poses:[number,number,number,number][]=[];
  for(const side of[-1,1])for(let z=-43;z<51;z+=10.5){const x=side*(33+(Math.round(z)%2?3:0));poses.push([x,z,.85+seeded()*.3,seeded()*6]);e.barrier(x,z,.7,.7);}
  for(let x=-42;x<=42;x+=9)poses.push([x,-49,.95+seeded()*.3,seeded()*6]);staticBatch(e,tree,poses,10,.03,false,1.25);
- staticBatch(e,tree,ORCHARD.map(t=>[t.x,t.z,t.scale,t.angle]),ORCHARD_HEIGHT,.035,false,ORCHARD_WIDTH);
+ staticBatch(e,tree,ORCHARD.map(t=>[t.x,t.z,t.scale,t.angle]),ORCHARD_HEIGHT,.035,true,ORCHARD_WIDTH);
  orchardFruit(e,normalized(tree,ORCHARD_HEIGHT));
  for(const {x,z,scale} of ORCHARD)e.barrier(x,z,.53*scale,.53*scale);
  staticBatch(e,tree,outer.trees,10,.045,true);
