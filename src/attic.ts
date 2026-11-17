@@ -93,7 +93,30 @@ export function buildAttic(e:Estate){
  e.round(1.06,.16,.47,12.7,ATTIC_FLOOR+.76,-6.72,linen,e.scene);
  solid(2,.85,11.8,3.45);item(2,.14,.85,11.8,.86,3.45,panel);
  for(const dx of [-.82,.82])for(const dz of [-.31,.31])item(.095,.81,.095,11.8+dx,.405,3.45+dz,wood);
- item(.51,.032,.37,11.65,.949,3.4,linen);
+ const letter=e.paper('DEAR MOTHER',['There is a room under the eaves.','It rains on the slates at night.','I can see the orchard from here.'],11.65,ATTIC_FLOOR+.931,3.4);
+ letter.scale.set(.75,.75,.75);e.target(letter,'attic-letter','Unfinished letter home','Read');
+ const tag=e.paper('A. ASHCOMBE',['Family keepsakes','Moved away from the leak.'],-13.6,ATTIC_FLOOR+.717,-5.3);
+ tag.scale.set(.6,.7,.6);e.target(tag,'attic-trunk','Ada’s trunk label','Read');
+ const postcard=new T.Group();postcard.position.set(9.7,ATTIC_FLOOR+1.45,4.37);
+ postcard.rotation.y=Math.PI;e.scene.add(postcard);
+ e.box(.67,.82,.045,0,0,0,panel,postcard);
+ const card=document.createElement('canvas');card.width=240;card.height=300;
+ const ink=card.getContext('2d')!;
+ ink.fillStyle='#e2cea5';ink.fillRect(0,0,240,300);
+ ink.fillStyle='#afa181';ink.fillRect(12,12,216,243);
+ ink.fillStyle='#8e8a69';ink.fillRect(12,120,216,135);
+ ink.fillStyle='#c5b58d';ink.beginPath();ink.moveTo(116,120);ink.lineTo(124,120);ink.lineTo(202,255);ink.lineTo(38,255);ink.closePath();ink.fill();
+ for(let depth=0;depth<7;depth++)for(const side of [-1,1]){
+  const t=(depth+1)/7,tx=120+side*(8+72*t),ty=123+114*t,h=24+104*t;
+  ink.fillStyle='#5c513c';ink.fillRect(tx-3*t,ty-h,6*t, h);
+  ink.fillStyle=side<0?'#626646':'#727451';ink.beginPath();
+  ink.ellipse(tx,ty-h*.86,h*.24,h*.34,side*.12,0,Math.PI*2);ink.fill();
+ }
+ ink.fillStyle='#574733';ink.font='16px Georgia';ink.fillText('THE LIME WALK · 1912',28,281);
+ const texture=new T.CanvasTexture(card);texture.colorSpace=T.SRGBColorSpace;
+ const print=new T.Mesh(new T.PlaneGeometry(.57,.72),new T.MeshStandardMaterial({map:texture,roughness:.94}));
+ print.position.z=.028;postcard.add(print);
+ e.target(postcard,'attic-postcard','Framed estate postcard','Inspect');
  item(2.9,.016,1.5,12.3,.012,-2.9,brickRed);
  // Fixtures light the landing, store and bedroom without adding shadow lights.
  const bulb=e.mat(0xffdeae);bulb.emissive.setHex(0xc38e50);bulb.emissiveIntensity=.9;

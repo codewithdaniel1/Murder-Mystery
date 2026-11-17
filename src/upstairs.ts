@@ -129,6 +129,8 @@ export function buildUpstairs(e:Estate){
      upholstered(.71,.12,.79,x+dx,y+.103,z+dz,dz<0?linen:blue);
    }
    chest(x+3.1,-14);rug(x,-9.5,3.2,1.65,blue);
+   const tally=e.paper('LINEN COUNT',['Two sheets to mend','Four pillowcases returned','R. Miller'] ,x+3.1,UPPER_FLOOR+1.07,-14);
+   tally.scale.set(.7,.7,.7);e.target(tally,'upper-linen','Linen inventory','Read');
    continue;
   }
   item(2.23,.31,3.22,x,.36,z,panel);item(2.2,1.25,.17,x,.67,z-1.54,panel);
@@ -148,16 +150,20 @@ export function buildUpstairs(e:Estate){
  rug(-13,6.9,5.6,4.2,green);seat(-15.5,8.9,green);
  solid(2.2,.94,-13,6.8);item(2.2,.12,.94,-13,.82,6.8,wood);
  for(const dx of [-.94,.94])for(const dz of [-.35,.35])item(.11,.79,.11,-13+dx,.4,6.8+dz,panel);
- item(.46,.06,.35,-13, .92,6.76,rose);item(.41,.035,.3,-13,.966,6.76,linen);
+ const reading=e.paper('LIBRARY LOANS',['A. Ashcombe · orchard notes','E. Vale · repair accounts','Return before Sunday'],-13,UPPER_FLOOR+.91,6.76,true);
+ reading.scale.set(.8,.8,.8);e.target(reading,'upper-reading','Library borrowing book','Read');
  rug(13,6.3,5.6,4.65,rose);seat(11,4,rose);seat(15,4,rose);chest(17,9);
- upholstered(1.02,.09,1,15,1.16,4,linen);
- const cover=item(1.04,.68,.086,15,.81,3.53,linen);cover.rotation.x=.11;
- for(const dx of [-.41,.41])item(.125,.53,.91,15+dx,.66,4,linen);
- const tag=e.paper('REPAIR',['Loose arm','Keep covered'],15,UPPER_FLOOR+1.21,4.06);tag.scale.set(.29,1,.29);
+ // A folded cloth sits on the cushion, clear of the arms and backrest.
+ upholstered(.49,.045,.35,15,.624,4.15,linen);
+ upholstered(.47,.026,.31,15,.657,4.15,linen);
+ const tag=e.paper('REPAIR',['Loose arm','Awaiting glue'],15,UPPER_FLOOR+.657,4.17);
+ tag.scale.set(.29,.36,.29);
  e.target(tag,'chair-repair','Repair tag','Read');
  upperHomeFront(e,UPPER_FLOOR);
  solid(1.35,1.35,13,6.8);e.cyl(.68,.68,.1,13,UPPER_FLOOR+.64,6.8,wood);
  e.cyl(.09,.24,.57,13,UPPER_FLOOR+.31,6.8,panel);
+ const invite=e.paper('TEA AT THE LODGE',['Friday · four o’clock','Bring a cup if you have one'],13,UPPER_FLOOR+.685,6.8);
+ invite.scale.set(.68,.68,.68);e.target(invite,'upper-invitation','Tea invitation','Read');
  rug(.9,6.8,3.4,6.2,blue);
  for(const [x,z] of [[0,-10],[0,5],[-14,-10],[14,-10],[-14,6],[14,6]]){
   e.cyl(.035,.035,.46,x,8.35,z,gold);

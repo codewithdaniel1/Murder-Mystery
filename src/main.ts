@@ -1,3 +1,4 @@
+import {Mesh,MeshStandardMaterial} from 'three';
 import {WITNESSES,type WitnessId} from './yard';
 import {rememberStory,storyNotes,storyTopics} from './stories';
 import './style.css';
@@ -74,7 +75,13 @@ const estateObjects:Record<string,[string,string,string]> = {
  'fire-watch-rota':['Mansion · service passage','Fire-watch rota','Leonard Price was pencilled in from eight to half past. Beside his name, Arthur Hale initialled an amendment: “Relieved L.P. at 8:10.” The rota records the handover, not where Price went afterward.'],
  'orchard-tally':['Mansion · scullery','Orchard tally','Apples and pears for the preserve shelf. Tomas Reed added: “Windfalls, dusk. Saved the bruised ones for cooking.”'],
  'gatehouse-mail':['Gatehouse · dispatch desk','Gatehouse messages','The postmistress asks June to send back a count of the lodge blankets. A pencilled note says Peter brought the envelope by bicycle.'],
- 'chair-repair':['Mansion · upstairs sitting room','Repair tag','“Loose arm. Keep covered until we can get glue.” Someone has tucked the sheet around both arms of the chair.'],
+ 'chair-repair':['Mansion · upstairs sitting room','Repair tag','“Loose arm. Awaiting glue.” The clean dust cloth has been folded on the seat.'],
+ 'upper-reading':['Mansion · upstairs reading room','Library borrowing book','Ada borrowed a book about orchard planting. Elias signed out the estate repair accounts and underlined the date twice.'],
+ 'upper-linen':['Mansion · upstairs linen room','Linen inventory','Ruth counted the returned pillowcases and put two worn sheets aside for mending. A note in the margin asks that any spare linen go to the lodge.'],
+ 'upper-invitation':['Mansion · upstairs sitting room','Tea invitation','Tea at the lodge, Friday at four. “Bring a cup if you have one.” It’s written on the back of an old invitation to a garden party.'],
+ 'attic-letter':['Mansion · staff bedroom','Unfinished letter home','“There is a room under the eaves. It rains on the slates at night. I can see the orchard from here.” The writer has left space for one more line.'],
+ 'attic-trunk':['Mansion · storage loft','Ada’s trunk label','“A. Ashcombe. Family keepsakes.” Below it, Elias pencilled in a reminder that the trunk had been moved away from a leak.'],
+ 'attic-postcard':['Mansion · staff bedroom','Framed estate postcard','A postcard dated 1912 shows a double row of lime trees. Its sender complains that the walk is too long in Sunday shoes.'],
  'family-photos':['Mansion · upstairs landing','Painted portraits of the household','Lady Beatrice, Ada Ashcombe, and Edmund Rook sit for three portraits in a single walnut frame.'],
  'vehicle-log':['Gatehouse · dispatch desk','Gatehouse vehicle log','Yesterday, 8:12 p.m. — Grocer’s van, “Pantry · BW–12” (crossed out). Departed 8:16 p.m. No estate saloon was logged at that time.'],
  'shelter-crate':['Cellar · air-raid shelter','Marked supply crate','Chalk on the side reads BW–12. The crate holds folded blankets and spare wireless batteries.'],
@@ -96,11 +103,19 @@ function inspect(id:string){
   const detail=id==='vehicle-log'&&state.flags.deliveryParked?entry+' Today — Grocer’s van checked in by Elsie Briggs.':entry;
   if(id==='vehicle-log')state.flags.vehicleLogRead=true;
   if(id==='shelter-crate')state.flags.shelterCrateRead=true;
-  if(['lodge-letters','lodge-heights','fire-watch-rota','orchard-tally','gatehouse-mail'].includes(id))state.flags['read:'+id]=true;
+  if(['lodge-letters','lodge-heights','fire-watch-rota','orchard-tally','gatehouse-mail','upper-linen','attic-trunk','attic-letter'].includes(id))state.flags['read:'+id]=true;
   panel('inspect');
   if(id==='wine-bottle'||id==='hall-watch')estate.present(id);
   if(id==='workshop-bench')sound.effect('knock',[7.55,-3.7,-35]);else if(id!=='garden-tools')sound.effect('paper');
-  overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">${location}</span><h1>${title}</h1><p>${detail}</p>${estate.held?'<small>Use ← / → to turn the object.</small>':''}<button class="primary" data-action="resume">Back to the estate →</button></section>`;return;
+  let closeup='';
+  if(id==='family-photos'||id==='attic-postcard'){
+   const art=estate.targets.find(t=>t.id===id)?.root.children.find(o=>o instanceof Mesh&&o.material instanceof MeshStandardMaterial&&o.material.map?.image instanceof HTMLCanvasElement) as Mesh|undefined;
+   if(art&&art.material instanceof MeshStandardMaterial){
+    const picture=art.material.map!.image as HTMLCanvasElement;
+    closeup=`<img class="inspect-art" src="${picture.toDataURL()}" alt="${title}">`;
+   }
+  }
+  overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">${location}</span><h1>${title}</h1>${closeup}<p>${detail}</p>${estate.held?'<small>Use ← / → to turn the object.</small>':''}<button class="primary" data-action="resume">Back to the estate →</button></section>`;return;
  }
  if(id==='phone'||id==='gate-phone'){
  panel('inspect');sound.effect('phone');const allowed=canCall(state)&&state.arrival==='absent';overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">TELEPHONE · LINE 2</span><h1>Telephone</h1><p>${allowed?'“Gatehouse speaking. Yes, Detective. Lady Beatrice is expected shortly. Shall I send her car up to the house?”':state.arrival!=='absent'?'“Your message has been passed on, Detective.”':'“Good afternoon. Please check with Mrs Bell before making your report.”'}</p>${allowed?'<button class="primary" data-action="complete-call">Send her up. Thank you. Replace receiver.</button>':''}<button data-action="resume">${allowed?'End call without a message':'Replace receiver'}</button></section>`;return;}
