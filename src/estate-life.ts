@@ -1,3 +1,4 @@
+import {windowCurtains} from './curtains';
 import {groundHomeFront} from './home-front';
 import * as T from 'three';
 import type {Estate} from './world';
@@ -120,10 +121,7 @@ export function buildWartimeEstate(e:Estate){
  e.addDoor('gatehouse',gx+2.8,gz-.9,-Math.PI/2,true,floor,1.8,2.15,'Gatehouse door');
  for(const x of[-.83,0,.83])e.box(.065,1.06,.07,gx+x,1.72,gz+2.6,panel);
  for(const y of[1.21,1.72,2.24])e.box(1.74,.067,.08,gx,y,gz+2.6,panel);
- for(const side of[-1,1]){
-  e.cyl(.024,.024,.88,gx+side*.61,2.27,gz+2.21,wood).rotation.z=Math.PI/2;
-  for(let i=0;i<6;i++)e.cyl(.036,.043,1.04,gx+side*(.58+i*.043),1.72,gz+2.2,dark,e.scene,7);
- }
+ windowCurtains(e,gx,1.72,gz+2.26,1.6,.94,Math.PI,1.08,0x696b59);
  const roofPitch=.27,roofCenterY=3.05,roofOffset=1.28;
  for(const side of[-1,1])
   e.box(5.95,.14,2.87,gx,roofCenterY,gz+side*roofOffset,slate).rotation.x=side*roofPitch;

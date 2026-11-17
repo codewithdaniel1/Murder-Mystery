@@ -1,3 +1,4 @@
+import {windowCurtains} from './curtains';
 import {ORCHARD,ORCHARD_HEIGHT,ORCHARD_WIDTH,orchardFruit} from './planting';
 import {lodgeEvacueeRoom} from './home-front';
 import {wallSocket} from './detail';
@@ -144,6 +145,7 @@ export function buildGardenLodge(e:Estate){
      const frame=new T.Group();frame.position.set(wx,wy,z+face*.245);frame.rotation.y=face>0?0:Math.PI;e.scene.add(frame);
      windowDetail(e,0,0,0,ww,wh,null,frame);
     }
+    windowCurtains(e,wx,wy,z+(z===front?-.24:.24),ww,wh,z===front?Math.PI:0,.075,z===front?0x7b7762:0x8c7c63,.47);
     edge=right;
    }
    e.wall(halfWidth-edge,h,.48,side*(edge+halfWidth)/2,h/2,z,stone);
@@ -238,6 +240,7 @@ export function castle(e:Estate){
    const group=new T.Group();group.position.set(x,6.65,z+Math.sign(z)*.4);
    if(z<0)group.rotation.y=Math.PI;e.scene.add(group);
    windowDetail(e,0,0,.02,1.45,2.15,null,group);
+   windowCurtains(e,x,6.65,z-Math.sign(z)*.3,1.45,2.15,z>0?Math.PI:0,UPPER_FLOOR,Math.abs(x)>6?(x<0?0x69735e:0x785d54):0x897b62);
    const pane=e.box(1.45,2.15,.035,x,6.65,z,glass,e.scene,false);e.walls.push(pane);
   }
   e.wall(21-edge,2.15,.6,(21+edge)/2,6.65,z,stone);
@@ -306,8 +309,8 @@ export function interiorDetail(e:Estate){
  for(let i=0;i<6;i++){const a=i*Math.PI/3,dx=Math.cos(a),dz=Math.sin(a);tube(e,[new T.Vector3(0,0,0),new T.Vector3(dx*.4,-.25,dz*.4),new T.Vector3(dx*.7,-.1,dz*.7),new T.Vector3(dx*.7,.12,dz*.7)],.018,e.mats.gold,g);e.cyl(.065,.065,.25,dx*.7,.23,dz*.7,e.mats.cream,g,12);const glow=new T.MeshStandardMaterial({color:0xffe3ac,emissive:0xffbd6e,emissiveIntensity:2});e.sphere(.045,dx*.7,.38,dz*.7,glow,g,.7,1.5,.7);}
  const lamp=new T.PointLight(0xffd9a0,45,14,2);lamp.position.copy(g.position);e.scene.add(lamp);
  }
- // Book spines, brass hardware, curtain rods, linen curtains and tiebacks.
- const linen=e.mat(0xa79579,.95);for(const x of[-17,-11,11,17]){e.cyl(.025,.025,3.1,x,3.98,11.48,e.mats.gold).rotation.z=Math.PI/2;for(const side of[-1,1])for(let i=0;i<7;i++){const xx=x+side*(1.12+i*.045);e.cyl(.06,.085,2.82,xx,2.45,11.45+Math.sin(i)*.035,linen,e.scene,9);}e.box(3,.22,.2,x,4.05,11.42,panel);}
+ // Drawn-back drapes replace the old cylindrical curtain placeholders.
+ for(const x of[-17,-11,11,17])windowCurtains(e,x,2.45,11.7,2,2.7,Math.PI,.075,x<0?0x79715e:0x69745f);
  // Detailed fireplace mantel and hearth.
  e.box(.8,.1,3.4,-20.2,.16,4.5,e.mats.slate);for(const z of[3.12,5.88]){e.box(.9,1.9,.25,-20.15,1.12,z,paint);for(const y of[.3,1.9])e.box(1,.12,.38,-20.1,y,z,paint);}
  e.box(1.1,.18,3.7,-20.1,2.17,4.5,e.mats.panel);
