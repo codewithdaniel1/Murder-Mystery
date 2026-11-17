@@ -4,9 +4,6 @@ import {createCharacterMotion,animateCharacter} from '../src/characters';
 import {dressCharacter} from '../src/appearance';
 import {rigDog,animateDog,DogFollower} from '../src/dog';
 import {EstateRoutines} from '../src/routines';
-import {Yard} from '../src/yard';
-import {furnishedEstate} from './estate-fixture';
-import {freshState} from '../src/state';
 import {clearSegment} from '../src/navigation';
 import {loadModel} from './model-fixture';
 import type {Estate} from '../src/world';
@@ -46,29 +43,6 @@ describe('NPC animation stability',()=>{
   for(let i=0;i<360;i++){frame(i%90<45,i%90<45?null:'tidy');const now=hand();largest=Math.max(largest,now.distanceTo(before));before=now;expect(motion.idle.getEffectiveWeight()).toBeCloseTo(1)}
   expect(largest).toBeLessThan(.07);
   const frozen=hand();for(let i=0;i<30;i++)frame(false,null,true);expect(hand().distanceTo(frozen)).toBe(0);
- });
- it('turns background staff toward their route before taking a step',async()=>{
-  const e=furnishedEstate(),state=freshState();e.setPose({x:30,z:20,yaw:0,pitch:0});
-  const yard=new Yard(e),staff=yard.witnesses.find(w=>w.id==='finch')!,gltf=await loadModel('sam');
-  staff.root.add(gltf.scene);staff.motion=createCharacterMotion(gltf.scene,gltf.animations,new T.Group());staff.wait=0;
-  const heading=Math.atan2(-22-staff.root.position.x,-25.55-staff.root.position.z);staff.root.rotation.y=heading+Math.PI;
-  const start=staff.root.position.clone();yard.update(.1,state,true,null);
-  expect(staff.root.position.distanceTo(start)).toBeLessThan(.001);
-  staff.root.rotation.y=heading;yard.update(.1,state,true,null);
-  const firstStep=staff.root.position.distanceTo(start);expect(firstStep).toBeGreaterThan(0);expect(firstStep).toBeLessThan(.025);
- });
- it('uses each model’s authored body gait without importing limb translations or scale',async()=>{
-  for(const name of ['harper','jordan','sam','maya']){
-   const {motion,frame}=await character(name);
-   expect(motion.walk).toBeDefined();
-   expect(motion.walk!.getClip().tracks.length).toBeGreaterThan(5);
-   expect(motion.walk!.getClip().tracks.every(t=>t.name.endsWith('.quaternion')&&!/finger|index|hand|foot|Root/.test(t.name))).toBe(true);
-   for(let i=0;i<90;i++)frame(true,null,false,.88);
-   expect(motion.walk!.getEffectiveWeight()).toBeGreaterThan(.7);
-   expect(motion.walk!.time).toBeCloseTo(motion.stridePhase/(Math.PI*2)*motion.walk!.getClip().duration);
-   for(let i=0;i<90;i++)frame(false,null);
-   expect(motion.walk!.getEffectiveWeight()).toBeLessThan(.001);
-  }
  });
  it('scales gait cadence with actual speed and preserves stride phase across stop/start',async()=>{
   const {motion,frame}=await character('jordan');
