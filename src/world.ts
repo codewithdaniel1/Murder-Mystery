@@ -32,6 +32,7 @@ export class Estate {
  surfaces:{x:number;z:number;w:number;d:number;y:number}[]=[];routines=new EstateRoutines();characterMotion=new Map<PersonId,CharacterMotion>();targets:Target[]=[];barriers:Barrier[]=[];walls:T.Object3D[]=[];actors=new Map<PersonId,Actor>();doors=new Map<string,{pivot:T.Group;frame:T.Group;angle:number;open:number}>();
  upperBarriers:Barrier[]=[];atticBarriers:Barrier[]=[];stairBarriers:Barrier[]=[];private playerElevation?:number;
  cellarBarriers:Barrier[]=[];cellarInterior?:T.Group;
+ updateCellarRats?:(dt:number)=>void;
  cellarLighting?:ReturnType<typeof bakeCellarLighting>;
  delivery?:EstateDelivery;
  private carBoot?:T.Group;
@@ -366,6 +367,7 @@ export class Estate {
  if(this.clockPendulum)this.clockPendulum.rotation.z=Math.sin(this.clock*2.7)*.085;
  this.fountainWater?.update(dt,this.camera.position);
  this.yard.update(dt,s,playing,witness);
+ if(playing&&this.cellarInterior?.visible)this.updateCellarRats?.(dt);
  this.gesture=Math.max(0,this.gesture-dt*2);if(!this.held){this.hands.visible=this.gesture>0;this.hands.position.y=this.gesture*.16+(playing&&this.lastMove?Math.sin(this.clock*7)*.008:0);}
  if(menu){this.updateCellarView(true);this.camera.position.set(17+Math.sin(this.clock*.016)*1.2,4.4,46);this.camera.lookAt(0,6.1,2);this.hands.visible=false;this.clock+=dt;}
  this.composer.render(dt);

@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type {Estate} from './world';
+import {buildCellarRats} from './cellar-rats';
 import {bakeCellarLighting,type CellarLamp} from './cellar-lighting';
 
 export const CELLAR_FLOOR=-4.8;
@@ -290,6 +291,7 @@ export function buildCellar(e:Estate){
 
  const interior=new T.Group();interior.name='Cellar and garden tunnel';
  for(const object of [...e.scene.children])if(!existing.has(object))interior.add(object);
+ e.updateCellarRats=buildCellarRats(interior,CELLAR_FLOOR);
  interior.visible=false;e.scene.add(interior);e.cellarInterior=interior;
  // Each metal leaf hinges along a long edge of the stone stairwell.
  const frame=e.mats.trim,paint=e.mat(0x292421,.73,.2);
