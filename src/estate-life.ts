@@ -1,3 +1,4 @@
+import {buildKitchenGarden} from './kitchen-garden';
 import {windowCurtains} from './curtains';
 import {groundHomeFront} from './home-front';
 import * as T from 'three';
@@ -213,21 +214,7 @@ export function buildWartimeEstate(e:Estate){
 
  groundHomeFront(e);
  // Productive garden beneath the lodge windows, with the fountain visible beyond.
- const leaf=e.mats.leaf,bean=e.mat(0x697649,.96);
- for(const x of[-16,-20.2,-24.4]){
-  e.floor(2.95,.14,7,x,-.03,-58,soil);
-  for(const dx of[-1.45,1.45])e.box(.12,.17,7,x+dx,-.006,-58,wood);
-  for(let j=0;j<5;j++){
-   const z=-60.7+j*1.3;
-   for(const side of[-1,1]){
-    const cane=e.cyl(.024,.031,2.14,x+side*.46,1.04,z,wood,e.scene,6);cane.rotation.z=side*.31;
-    for(let k=0;k<4;k++){
-     const group=e.sphere(.16,x+side*(.65-k*.12),.34+k*.37,z+.04*(k%2),k%2?leaf:bean,e.scene,1.5,.25,.92);
-     group.rotation.z=side*.42;group.castShadow=false;
-    }
-   }
-  }
- }
+ buildKitchenGarden(e);
  e.table(-16.5,-52.7,1.75,.85,.88);
  for(const dx of[-.49,0,.46])e.cyl(.18,.126,.28,-16.5+dx,1.08,-52.7,soil,e.scene,12);
  e.box(2.45,.13,.65,-18.45,.45,-50.9,panel);

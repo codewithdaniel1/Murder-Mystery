@@ -96,7 +96,7 @@ export type WitnessId=keyof typeof WITNESSES;
 export type StaffLevel=typeof WITNESSES[WitnessId]['level'];
 const staffFloor=(e:Estate,level:StaffLevel,x:number,z:number)=>
  level==='ground'?e.groundHeight(x,z):level==='cellar'?CELLAR_FLOOR:level==='upper'?UPPER_FLOOR:ATTIC_FLOOR;
-type Witness={id:WitnessId;root:T.Group;index:number;wait:number;motion?:CharacterMotion;driver?:Parameters<typeof animateCharacter>[0]};
+type Witness={id:WitnessId;root:T.Group;index:number;wait:number;routeKey?:string;motion?:CharacterMotion;driver?:Parameters<typeof animateCharacter>[0]};
 type Rabbit={root:T.Group;head:T.Group;feet:T.Group[];home:T.Vector2;phase:number;heading:number};
 type Bird={root:T.Group;wings:T.Group[];phase:number;x:number;z:number;height:number;radius:number};
 
@@ -180,7 +180,7 @@ export class Yard {
  }
  reset(){
   for(const w of this.witnesses){
-   const spec=WITNESSES[w.id],[x,z]=spec.route[0];w.root.position.set(x,staffFloor(this.e,spec.level,x,z),z);w.index=1;w.wait=3;
+   const spec=WITNESSES[w.id],[x,z]=spec.route[0];w.root.position.set(x,staffFloor(this.e,spec.level,x,z),z);w.index=1;w.wait=3;w.routeKey=undefined;
   }
  }
  update(dt:number,state:GameState,playing:boolean,active:WitnessId|null){
@@ -203,6 +203,11 @@ export class Yard {
    ]:w.id==='hale'&&state.arrival==='present'?[[.7,9.4],[-.7,7.1],[2.2,8.6]]:w.id==='cartwright'&&state.flags.deliveryParked?[
     [-15.6,-13.4],[-17.45,-13.25],[-16.9,-11.65],[-14.5,-13.38],[-7.5,-13.38],[-14.5,-13.38]
    ]:spec.route;
+   // Arrival can shorten the cook's six-stop delivery route to four stops.
+   // Reset the destination when duties change, before indexing the new route.
+   const routeKey=w.id==='cartwright'?(state.arrival==='present'?'tea':state.flags.deliveryParked?'delivery':'kitchen'):w.id==='hale'&&state.arrival==='present'?'tea':'normal';
+   if(w.routeKey!==undefined&&w.routeKey!==routeKey){w.index=0;w.wait=0;}
+   w.routeKey=routeKey;w.index%=route.length;
    const [tx,tz]=route[w.index],p=w.root.position;
    const near=e.staffLevel()===spec.level&&Math.hypot(player.x-p.x,player.z-p.z)<2.65;
    let distance=0,angle=w.root.rotation.y;

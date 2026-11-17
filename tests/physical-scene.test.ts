@@ -170,6 +170,18 @@ describe('walkable surfaces and physical obstacles',()=>{
   expect(finch.root.position.distanceTo(location)).toBeLessThan(.001);
   expect(s.evidence).toEqual([]);
  });
+ it('keeps staff updates running when Beatrice arrives during either delivery errand',async()=>{
+  const e=furnishedEstate(),s=freshState(),yard=new Yard(e);e.car=new T.Group();e.car.position.set(4,0,24);
+  e.setPose({x:40,z:40,yaw:0,pitch:0});
+  const cook=yard.witnesses.find(w=>w.id==='cartwright')!,source=await loadModel('harper');
+  cook.root.add(source.scene);cook.motion=createCharacterMotion(source.scene,source.animations,new T.Group());
+  s.flags.deliveryParked=true;
+  for(const index of [4,5]){
+   cook.index=index;s.arrival='arriving';yard.update(.016,s,true,null);
+   s.arrival='present';expect(()=>yard.update(.016,s,true,null)).not.toThrow();
+   expect(cook.index).toBeLessThan(4);expect(Number.isFinite(cook.root.position.length())).toBe(true);
+  }
+ });
  it('places staff on their assigned levels with unobstructed routes and local collision',()=>{
   const e=furnishedEstate(),s=freshState();landscape(e);buildShed(e);buildGardenLodge(e);buildCellar(e);buildWartimeEstate(e);e.yard=new Yard(e);
   for(const id of ['gatehouse','lodge-front']){s.doors[id]=true;e.doors.get(id)!.pivot.rotation.y=-Math.PI/2;}
