@@ -5,6 +5,7 @@ import type {Estate} from './world';
 import type {Activity} from './routines';
 import type {PersonId} from './state';
 import {rigDog} from './dog';
+import {paintHouseholdPortraits} from './home-front';
 import {CAST,dressCharacter,updateAdaLegCover} from './appearance';
 import {plantFoot} from './locomotion';
 function updateRig(root:T.Object3D){root.updateWorldMatrix(true,false);root.updateMatrixWorld(true)}
@@ -88,6 +89,7 @@ export async function loadCharacters(e:Estate){
    alignLantern(witness.motion,witness.root);
   }
  }
+ try{paintHouseholdPortraits(e)}catch(err){console.warn("The household portraits could not be rendered",err)}
  e.dogMotion=rigDog(dog.scene);e.dog.clear();e.dog.add(e.dogMotion.root);
 }
 type MotionScene={characterMotion:Map<PersonId,CharacterMotion>;actors:ReadonlyMap<PersonId,{root:T.Group}>;groundHeight(x:number,z:number):number};

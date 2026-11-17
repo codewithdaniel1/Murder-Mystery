@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type {Estate} from './world';
+import {clone} from 'three/addons/utils/SkeletonUtils.js';
 
 function notice(e:Estate,id:string,label:string,title:string,lines:string[],x:number,y:number,z:number,yaw=0){
  const g=new T.Group();g.position.set(x,y,z);g.rotation.y=yaw;e.scene.add(g);
@@ -90,22 +91,59 @@ export function groundHomeFront(e:Estate){
  e.cyl(.05,.05,.028,-14.39,1.06,44.328,gold).rotation.x=Math.PI/2;
 }
 
+const portraitNames=['beatrice','ada','rook'] as const;
+const portraitW=144,portraitH=195,portraitMargin=8;
 export function upperHomeFront(e:Estate,y:number){
- const cv=document.createElement('canvas');cv.width=256;cv.height=128;
- const ctx=cv.getContext('2d')!;
- ctx.fillStyle='#5c4a37';ctx.fillRect(0,0,256,128);
- for(let i=0;i<3;i++){
-  const x=6+i*84;ctx.fillStyle='#ddc8a1';ctx.fillRect(x,7,77,114);
-  ctx.fillStyle=['#9d896b','#827d65','#a18b71'][i];ctx.fillRect(x+5,12,67,91);
-  for(let j=0;j<=i;j++){
-   const px=x+38+(j-i/2)*18,py=47+(j%2)*12;
-   ctx.fillStyle='#4a3a31';ctx.beginPath();ctx.ellipse(px,py+24,15,22,0,0,Math.PI*2);ctx.fill();
-   ctx.fillStyle='#d3b48a';ctx.beginPath();ctx.ellipse(px,py,8,11,0,0,Math.PI*2);ctx.fill();
-  }
- }
+ const cv=document.createElement('canvas');
+ cv.width=portraitNames.length*(portraitW+portraitMargin)+portraitMargin;
+ cv.height=portraitH+2*portraitMargin;
  const tex=new T.CanvasTexture(cv);tex.colorSpace=T.SRGBColorSpace;
- const frame=e.box(1.75,.92,.05,3.5,y+1.6,-15.59,e.mats.panel);
- const photo=new T.Mesh(new T.PlaneGeometry(1.62,.81),new T.MeshStandardMaterial({map:tex,roughness:.89}));
- photo.position.z=.029;frame.add(photo);
- e.target(frame,'family-photos','Framed family photographs');
+ // The rear window bay centers are x=0 and x=5.
+ const frame=e.box(1.89,.92,.058,2.5,y+1.6,-15.65,e.mats.panel);
+ const photo=new T.Mesh(new T.PlaneGeometry(1.76,.8),new T.MeshStandardMaterial({map:tex,roughness:.93}));
+ photo.position.z=.033;frame.add(photo);
+ e.target(frame,'family-photos','Painted portraits of the household');
+}
+
+export function paintHouseholdPortraits(e:Estate){
+ const frame=e.targets.find(t=>t.id==='family-photos')?.root;
+ const art=frame?.children[0];
+ if(!(art instanceof T.Mesh)||!(art.material instanceof T.MeshStandardMaterial)||!art.material.map)return;
+ const tex=art.material.map,canvas=tex.image as HTMLCanvasElement,ctx=canvas.getContext('2d');
+ if(!ctx)return;
+ const renderer=e.renderer,oldTarget=renderer.getRenderTarget(),oldColor=renderer.getClearColor(new T.Color()),oldAlpha=renderer.getClearAlpha();
+ const target=new T.WebGLRenderTarget(portraitW,portraitH);
+ const pixels=new Uint8Array(portraitW*portraitH*4);
+ const scene=new T.Scene(),camera=new T.OrthographicCamera(-.28,.28,.38,-.38,.1,10);
+ scene.add(new T.HemisphereLight(0xffe8cd,0x807570,1.65));
+ const key=new T.DirectionalLight(0xffe5c0,2.3);key.position.set(-2,3,3);scene.add(key);
+ const fill=new T.DirectionalLight(0xd7def0,.65);fill.position.set(2,2,-1);scene.add(fill);
+ ctx.fillStyle='#a18b64';ctx.fillRect(0,0,canvas.width,canvas.height);
+ try{
+  for(const [i,id] of portraitNames.entries()){
+   const original=e.characterMotion.get(id)?.root;
+   if(!original)continue;
+   const model=clone(original);scene.add(model);model.updateMatrixWorld(true);
+   const head=model.getObjectByName('head')?.getWorldPosition(new T.Vector3())??new T.Vector3(0,1.54,0);
+   const center=head.clone().add(new T.Vector3(0,-.10,0));
+   camera.position.copy(center).add(new T.Vector3([.28,-.36,.17][i],.07,2));
+   camera.lookAt(center);
+   scene.background=new T.Color([0x514840,0x495247,0x59463d][i]);
+   renderer.setRenderTarget(target);renderer.render(scene,camera);
+   renderer.readRenderTargetPixels(target,0,0,portraitW,portraitH,pixels);
+   const image=ctx.createImageData(portraitW,portraitH);
+   for(let y=0;y<portraitH;y++)for(let x=0;x<portraitW;x++){
+    const src=((portraitH-y-1)*portraitW+x)*4,dst=(y*portraitW+x)*4;
+    const vignette=1-.29*Math.hypot((x-portraitW/2)/portraitW,(y-portraitH/2)/portraitH);
+    const grain=((Math.imul(x+1,1561)^Math.imul(y+1,761))&15)-7;
+    for(let c=0;c<3;c++)image.data[dst+c]=(Math.pow(pixels[src+c]/255,1/2.2)*255*[1.04,.91,.76][c]*vignette)+grain*.46;
+    image.data[dst+3]=255;
+   }
+   ctx.putImageData(image,portraitMargin+i*(portraitW+portraitMargin),portraitMargin);
+   scene.remove(model);
+  }
+  tex.needsUpdate=true;
+ }finally{
+  renderer.setRenderTarget(oldTarget);renderer.setClearColor(oldColor,oldAlpha);target.dispose();
+ }
 }

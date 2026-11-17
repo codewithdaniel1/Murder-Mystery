@@ -254,8 +254,16 @@ export function castle(e:Estate){
  for(const yy of[2.5,6.7,10])for(const angle of[0,Math.PI/2,Math.PI,Math.PI*1.5]){const g=new T.Group();g.position.set(x+Math.sin(angle)*2.82,yy,z+Math.cos(angle)*2.82);g.rotation.y=angle;e.scene.add(g);windowDetail(e,0,0,0,.7,1.65,true,g);}
  }
  // Projecting portico, arched entrance and a small stone balcony.
- for(const x of[-2.7,2.7]){e.box(.7,.24,.7,x,.15,14.2,trim);e.cyl(.22,.27,3.25,x,1.9,14.2,trim,e.scene,24);for(const y of[.48,3.48])e.cyl(.34,.34,.18,x,y,14.2,trim,e.scene,24);e.barrier(x,14.2,.55,.55);}
- arch(e,0,1.7,14.1,2.35,.36,trim);e.box(6.2,.35,3.25,0,4.18,13.1,trim);mould(e,6.35,.12,3.4,0,4.4,13.1);
+ const soffitY=4.18,soffitThickness=.35,capHeight=.18;
+ const capY=soffitY-soffitThickness/2-capHeight/2+.01;
+ const shaftBase=.275,shaftTop=capY+capHeight/2;
+ for(const x of [-2.7,2.7]){
+  e.box(.7,.24,.7,x,.15,14.2,trim);
+  e.cyl(.22,.27,shaftTop-shaftBase,x,(shaftTop+shaftBase)/2,14.2,trim,e.scene,24);
+  for(const y of [.48,capY])e.cyl(.34,.34,capHeight,x,y,14.2,trim,e.scene,24);
+  e.barrier(x,14.2,.55,.55);
+ }
+ arch(e,0,1.7,14.1,2.35,.36,trim);e.box(6.2,soffitThickness,3.25,0,soffitY,13.1,trim);mould(e,6.35,.12,3.4,0,4.4,13.1);
  const depth=BALCONY.front+.15-12,center=12+depth/2;
  e.walls.push(e.box(6.2,.6,depth,0,UPPER_FLOOR-.3,center,trim));
  const railY=UPPER_FLOOR+.93;

@@ -75,7 +75,7 @@ const estateObjects:Record<string,[string,string,string]> = {
  'orchard-tally':['Mansion · scullery','Orchard tally','Apples and pears for the preserve shelf. Tomas Reed added: “Windfalls, dusk. Saved the bruised ones for cooking.”'],
  'gatehouse-mail':['Gatehouse · dispatch desk','Gatehouse messages','The postmistress asks June to send back a count of the lodge blankets. A pencilled note says Peter brought the envelope by bicycle.'],
  'chair-repair':['Mansion · upstairs sitting room','Repair tag','“Loose arm. Keep covered until we can get glue.” Someone has tucked the sheet around both arms of the chair.'],
- 'family-photos':['Mansion · upstairs landing','Family photographs','Three sepia portraits show the Ashcombes at different ages. A small pencilled date on the mount reads 1928.'],
+ 'family-photos':['Mansion · upstairs landing','Painted portraits of the household','Lady Beatrice, Ada Ashcombe, and Edmund Rook sit for three portraits in a single walnut frame.'],
  'vehicle-log':['Gatehouse · dispatch desk','Gatehouse vehicle log','Yesterday, 8:12 p.m. — Grocer’s van, “Pantry · BW–12” (crossed out). Departed 8:16 p.m. No estate saloon was logged at that time.'],
  'shelter-crate':['Cellar · air-raid shelter','Marked supply crate','Chalk on the side reads BW–12. The crate holds folded blankets and spare wireless batteries.'],
  'hall-watch':['Mansion · entrance hall','Stopped pocket watch','The pocket watch has run down. Its hands disagree with the grandfather clock. A loose watch is no proof of when the bell rang.'],
