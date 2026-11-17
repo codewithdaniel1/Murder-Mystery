@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {clearSegment,findPath} from './navigation';
+import {clearAt,clearSegment,findPath} from './navigation';
 import type {Point,Obstacle} from './navigation';
 
 interface Leg {
@@ -94,8 +94,46 @@ export function animateDog(motion:DogMotion,distance:number,dt:number) {
 
 /** Shared follow behavior for walking with the detective and following Mara. */
 export class DogFollower {
- private path:Point[]=[];private replan=0;private following=false;private speed=0;
- reset(){this.path=[];this.replan=0;this.following=false;this.speed=0}
+ private stuck=0;private lastTarget?:Point;private path:Point[]=[];private replan=0;private following=false;private speed=0;
+ reset(){this.stuck=0;this.lastTarget=undefined;this.path=[];this.replan=0;this.following=false;this.speed=0}
+ accompany(position:Point,heading:number,target:Point,yaw:number,dt:number,barriers:Obstacle[],doors:Record<string,boolean>,valid:(p:Point)=>boolean,changedFloor=false){
+  const hold={position:{...position},heading,distance:0,recovered:false};
+  if(dt<=0)return hold;
+  const gap=Math.hypot(target.x-position.x,target.z-position.z);
+  const pace=this.lastTarget?Math.min(4.5,Math.hypot(target.x-this.lastTarget.x,target.z-this.lastTarget.z)/dt):0;
+  this.lastTarget={x:target.x,z:target.z};
+  if(changedFloor||gap>6.5||!valid(position)||this.stuck>1.05){
+   for(const radius of [1.55,1.15,.85,.62])for(const angle of [0,.65,-.65,1.57,-1.57,2.4,-2.4,Math.PI]){
+    const a=yaw+angle,p={x:target.x+Math.sin(a)*radius,z:target.z+Math.cos(a)*radius};
+    if(valid(p)&&clearAt(p,barriers,doors,.22)&&clearSegment(target,p,barriers,doors,.12)){
+     this.path=[];this.stuck=0;this.replan=0;this.speed=0;
+     return {position:p,heading:Math.atan2(target.x-p.x,target.z-p.z),distance:0,recovered:true};
+    }
+   }
+   if(changedFloor||!valid(position))return hold;
+  }
+  const separation=1.5;
+  if(gap<separation+.08){this.path=[];this.speed=0;this.replan=0;this.stuck=0;return hold;}
+  const goal={x:target.x+(position.x-target.x)*separation/gap,z:target.z+(position.z-target.z)*separation/gap};
+  this.replan-=dt;
+  if(valid(goal)&&clearSegment(position,goal,barriers,doors,.22)){this.path=[goal];this.replan=0;}
+  else if(this.replan<=0){
+   this.path=valid(goal)&&clearAt(goal,barriers,doors,.22)?findPath(position,goal,barriers,doors,.22,false):[];
+   this.replan=.45;
+  }
+  while(this.path.length&&Math.hypot(this.path[0].x-position.x,this.path[0].z-position.z)<.055)this.path.shift();
+  const next=this.path[0];
+  if(!next){this.stuck+=dt;this.speed=0;return hold;}
+  const dx=next.x-position.x,dz=next.z-position.z,length=Math.hypot(dx,dz);
+  const angle=Math.atan2(dx,dz),turn=Math.atan2(Math.sin(angle-heading),Math.cos(angle-heading));
+  heading+=T.MathUtils.clamp(turn,-dt*12,dt*12);
+  const speed=Math.min(6.2,Math.max(.55,pace+(gap-separation-.08)*2.8));
+  const distance=Math.min(length,speed*dt);
+  const p={x:position.x+dx*distance/length,z:position.z+dz*distance/length};
+  if(!valid(p)||!clearSegment(position,p,barriers,doors,.22)){this.stuck+=dt;this.path=[];return {...hold,heading};}
+  this.stuck=Math.max(0,this.stuck-dt*2);
+  return {position:p,heading,distance,recovered:false};
+ }
  update(position:Point,heading:number,target:Point,dt:number,barriers:Obstacle[],doors:Record<string,boolean>,paused:boolean){
   const still={position:{...position},heading,distance:0};if(paused||dt<=0)return still;
   dt=Math.min(dt,.1);

@@ -174,6 +174,27 @@ describe('Pip locomotion',()=>{
   expect(travel).toBeGreaterThan(7);expect(Math.hypot(p.x-target.x,p.z-target.z)).toBeLessThan(1.5);
   const frozen=follower.update(p,heading,{x:20,z:20},1,barriers,{},true);expect(frozen.position).toEqual(p);expect(frozen.distance).toBe(0);
  });
+ it('keeps pace with a brisk player and catches up on the clear side of a blocked passage',()=>{
+  const pip=new DogFollower(),dt=1/60,valid=()=>true;
+  let result={position:{x:0,z:1.5},heading:Math.PI,distance:0,recovered:false};
+  for(let i=0;i<360;i++){
+   const player={x:0,z:-i*dt*4.5};
+   result=pip.accompany(result.position,result.heading,player,0,dt,[],{},valid);
+   expect(result.recovered).toBe(false);
+   expect(Math.abs(result.position.z-player.z)).toBeLessThan(1.9);
+  }
+  const blockers=[{x:0,z:0,w:1,d:200,door:'rear'}],player={x:3,z:0};
+  pip.reset();result={position:{x:-3,z:0},heading:Math.PI/2,distance:0,recovered:false};
+  let recovered=false;
+  for(let i=0;i<120;i++){
+   const previous=result.position;
+   result=pip.accompany(previous,result.heading,player,0,dt,blockers,{},valid);
+   if(result.recovered){recovered=true;expect(result.distance).toBe(0);}
+   else expect(clearSegment(previous,result.position,blockers,{},.22)).toBe(true);
+  }
+  expect(recovered).toBe(true);
+  expect(Math.hypot(result.position.x-player.x,result.position.z-player.z)).toBeLessThan(1.7);
+ });
  it('waits behind a closed door and resumes when it opens',()=>{
   const follower=new DogFollower(),barriers=[{x:0,z:0,w:.2,d:200,door:'rear'}],target={x:3,z:0};let p={x:-3,z:0},heading=Math.PI/2;
   for(let i=0;i<60;i++){const r=follower.update(p,heading,target,1/60,barriers,{},false);p=r.position;heading=r.heading}expect(p.x).toBe(-3);

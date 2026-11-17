@@ -255,8 +255,9 @@ export class Estate {
  }
  present(id:string){this.clearHeld();const g=new T.Group();if(id==='hall-watch'){this.makePocketWatch(g);g.rotation.x=.8;}else if(id==='wine-bottle'){this.cyl(.074,.074,.24,0,.03,0,this.mats.dark,g,16);this.cyl(.032,.074,.072,0,.186,0,this.mats.dark,g,16);this.cyl(.03,.032,.087,0,.265,0,this.mats.dark,g,16);this.cyl(.075,.075,.095,0,.05,0,this.mats.paper,g,16);this.box(.056,.043,.012,0,.02,.072,this.mats.cream,g);g.position.y=-.1;}else if(id==='fragment'){this.cyl(.02,.08,.18,0,0,0,this.mats.gold,g).rotation.z=.6;}else if(id==='falcon'){this.falcon(g);g.scale.setScalar(.5);}else if(id==='lining'){this.box(.22,.26,.02,0,0,0,this.mat(0x73506d),g);}else{const data:Record<string,[string,string[]]>={note:['E. VALE',['Compare the original invoice.','We must speak tonight.']],ledger:['ESTATE ACCOUNTS',['£60  /  £180  /  £120','vel aran si']],bell:['REPAIR NOTICE',['Manual rope removed.','Automatic chime operating.']],display:['BRONZE FALCON',['Presented to Edmund Rook']],lexicon:['AVELLIC REGISTER',['vel aran si','received personally','by the steward']]};const [title,lines]=data[id]??['CASE NOTES',['Bramblewick Estate']];this.paper(title,lines,0,0,0,id==='ledger'||id==='lexicon',g);g.rotation.x=.9;g.scale.setScalar(.65);}g.position.set(-.24,-.2,-.72);this.camera.add(g);this.held=g;this.hands.visible=true;this.hands.position.y=.06;}
  clearHeld(){if(this.held){this.camera.remove(this.held);this.held.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.held=null;}this.hands.position.y=0;}
+ private dogFollowLevel?:StaffLevel;
  resetDog(walking:boolean,doors:Record<string,boolean>){
- this.dogFollower.reset();const target=walking&&this.onGroundLevel()?this.camera.position:this.actors.get('mara')!.root.position;
+ this.dogFollowLevel=undefined;this.dogFollower.reset();const target=walking&&this.onGroundLevel()?this.camera.position:this.actors.get('mara')!.root.position;
  for(const radius of[1.4,.8,.4,0]){let placed=false;for(let i=0;i<8;i++){const p={x:target.x+Math.sin(i*Math.PI/4)*radius,z:target.z+Math.cos(i*Math.PI/4)*radius};if(!inStair(p.x,p.z)&&clearAt(p,this.barriers,doors,.22)){this.dog.position.set(p.x,.08,p.z);placed=true;break}}if(placed)break}
  if(this.dogMotion){this.dogMotion.weight=0;this.dogMotion.phase=0;animateDog(this.dogMotion,0,1/60)}
  }
@@ -380,11 +381,33 @@ export class Estate {
  if(this.arrivalTea)this.arrivalTea.visible=s.arrival==='present';
  if(playing){this.delivery?.update(dt,s,this);this.updateLuggage(dt,s);}
  if(playing){
- const target=s.dog==='walking'?(this.onGroundLevel()?this.camera.position:this.dog.position):this.actors.get('mara')!.root.position;
- const follow=this.dogFollower.update(this.dog.position,this.dog.rotation.y,target,dt,solid,s.doors,false);
- this.dog.position.x=follow.position.x;this.dog.position.z=follow.position.z;this.dog.rotation.y=follow.heading;
- this.dog.position.y=this.groundHeight(this.dog.position.x,this.dog.position.z);
- if(this.dogMotion)animateDog(this.dogMotion,follow.distance,dt);
+ if(s.dog==='walking'){
+  const level=this.staffLevel(),player=this.camera.position,playerY=this.playerElevation??this.groundHeight(player.x,player.z);
+  const blockers=level==='attic'?this.atticBarriers:level==='upper'?this.collisionBarriers(s,true):level==='cellar'?[...this.cellarBarriers]:solid;
+  const solidForPip=[...blockers];
+  if(level==='ground')for(const tree of this.woodlandTrunks){
+   if(Math.abs(tree.x-player.x)<9&&Math.abs(tree.z-player.z)<9)solidForPip.push(tree);
+  }
+  if(level==='ground'||level==='cellar')for(const entry of BULKHEADS){
+   if(s.doors[entry.id]!==true||(this.cellarDoors.get(entry.id)?.amount??1)<.83)solidForPip.push(bulkheadGate(entry,level==='cellar'));
+  }
+  const height=(p:{x:number;z:number})=>this.playerSurface(p.x,p.z,playerY);
+  const valid=(p:{x:number;z:number})=>withinGrounds(p.x,p.z)&&Math.abs(height(p)-playerY)<1.2&&
+   (level!=='attic'||onAtticDeck(p.x,p.z))&&(level!=='upper'||onUpperDeck(p.x,p.z)||inAtticStair(p.x,p.z));
+  const needsPlacement=(this.dogFollowLevel??'ground')!==level||Math.abs(this.dog.position.y-height(this.dog.position))>1.2;
+  const r=this.dogFollower.accompany(this.dog.position,this.dog.rotation.y,player,this.camera.rotation.y,dt,solidForPip,s.doors,valid,needsPlacement);
+  if(!needsPlacement||r.recovered){
+   this.dogFollowLevel=level;this.dog.position.set(r.position.x,height(r.position),r.position.z);this.dog.rotation.y=r.heading;
+  }
+  if(this.dogMotion)animateDog(this.dogMotion,r.distance,dt);
+ }else{
+  if(this.dogFollowLevel!==undefined&&this.dogFollowLevel!=='ground')this.resetDog(false,s.doors);
+  else if(this.dogFollowLevel!==undefined){this.dogFollowLevel=undefined;this.dogFollower.reset();}
+  const follow=this.dogFollower.update(this.dog.position,this.dog.rotation.y,this.actors.get('mara')!.root.position,dt,solid,s.doors,false);
+  this.dog.position.set(follow.position.x,this.groundHeight(follow.position.x,follow.position.z),follow.position.z);
+  this.dog.rotation.y=follow.heading;
+  if(this.dogMotion)animateDog(this.dogMotion,follow.distance,dt);
+ }
  }
  if(this.clockPendulum)this.clockPendulum.rotation.z=Math.sin(this.clock*2.7)*.085;
  this.fountainWater?.update(dt,this.camera.position);
