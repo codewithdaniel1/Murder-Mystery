@@ -35,6 +35,7 @@ export class Estate {
  updateCellarRats?:(dt:number)=>void;
  cellarLighting?:ReturnType<typeof bakeCellarLighting>;
  delivery?:EstateDelivery;
+ arrivalTea?:T.Group;
  private carBoot?:T.Group;
  private suitcase?:T.Group;
  private luggageLifted=false;
@@ -166,6 +167,9 @@ export class Estate {
  const phone=new T.Group();phone.position.set(3.55,1.05,8);this.round(.55,.13,.42,0,0,0,this.mats.black,phone);this.cyl(.15,.15,.035,0,.09,.02,this.mats.gold,phone);this.cyl(.09,.09,.05,0,.12,.02,this.mats.black,phone);this.box(.45,.065,.09,0,.26,-.1,this.mats.black,phone);for(const x of[-.23,.23])this.sphere(.08,x,.23,-.1,this.mats.black,phone);this.scene.add(phone);this.target(phone,'phone','Telephone','Use');
  // Hall clock and paintings.
  grandfatherClock(this,HALL_CLOCK.x,HALL_CLOCK.z);
+ this.table(4,-7.35,.75,.55);
+ const watch=new T.Group();watch.position.set(4,1.045,-7.35);this.scene.add(watch);this.makePocketWatch(watch);
+ this.target(watch,'hall-watch','Stopped pocket watch','Inspect');
 
  this.table(-15,0,3.6,1.5);this.lamp(-16.25,1.02,0);this.target(this.paper('TO LADY BEATRICE',['Before another payment,','compare the original invoice.','We must speak tonight.','                         E. Vale'],-15,1.02,.15),'note','Elias’s unfinished letter');this.target(this.paper('ESTATE ACCOUNTS',['Supplier invoice       £60','Estate claim            £180','Personal receipt       £120','','vel aran si'],-14,1.04,-.1,true),'ledger','The ledger & receipts');
  const fragment=new T.Group();fragment.position.set(-13.4,.18,1.25);const claw=this.cyl(.03,.09,.22,0,.05,0,this.mats.gold,fragment);claw.rotation.z=.7;this.scene.add(fragment);this.target(fragment,'fragment','A bronze fragment','Pick up');this.barrier(-15,0,3.6,1.5);
@@ -232,7 +236,14 @@ export class Estate {
  makeDog(){const g=new T.Group(),fur=this.mat(0xd1c4a5),patch=this.mat(0x786047);this.round(.3,.33,.65,0,.35,0,fur,g);this.sphere(.17,0,.55,.32,fur,g,.9,1,1);this.round(.16,.11,.2,0,.5,.48,fur,g);this.sphere(.045,0,.52,.59,this.mats.black,g);for(const x of[-.13,.13]){this.sphere(.08,x,.64,.3,patch,g,.6,1.5,.7);this.sphere(.02,x*.55,.58,.47,this.mats.black,g);for(const z of[-.22,.22]){const leg=this.cyl(.04,.05,.3,x,.16,z,fur,g,7);}}const tail=this.cyl(.035,.06,.35,0,.55,-.38,fur,g,7);tail.rotation.x=-.6;this.cyl(.18,.18,.045,0,.42,.27,this.mats.red,g).rotation.x=Math.PI/2;return g;}
  makeCar(){const g=new T.Group(),paint=this.mat(0x253c35,.28,.6),glass=this.mat(0x78938e,.15,.4);this.round(2.05,.65,4.7,0,.83,0,paint,g);this.round(1.85,.86,2.3,0,1.5,.3,paint,g);this.box(1.7,.55,.03,0,1.56,-.87,glass,g);this.box(1.7,.5,.03,0,1.56,1.47,glass,g);for(const x of[-.94,.94]){this.box(.02,.5,1.95,x,1.57,.3,glass,g);this.box(.05,.61,.09,x,1.56,.2,paint,g);for(const z of[-1.45,1.45]){const tire=this.cyl(.43,.43,.24,x*1.1,.46,z,this.mats.black,g,24);tire.rotation.z=Math.PI/2;const hub=this.cyl(.23,.23,.26,x*1.13,.46,z,this.mats.gold,g,18);hub.rotation.z=Math.PI/2;}this.box(.06,.06,.27,x,1.19,.45,this.mats.gold,g);}this.box(1.25,.47,.1,0,.8,-2.4,this.mats.black,g);for(let i=0;i<10;i++)this.box(.035,.4,.12,-.53+i*.118,.8,-2.46,this.mats.gold,g);for(const x of[-.78,.78]){const h=this.cyl(.17,.17,.12,x,1,-2.3,this.mats.cream,g);h.rotation.x=Math.PI/2;}this.box(2.1,.12,.14,0,.48,-2.47,this.mats.gold,g);this.box(2.1,.12,.14,0,.48,2.47,this.mats.gold,g);return g;}
  makeHands(){const g=new T.Group(),coat=this.mat(0x605544),skin=this.mat(0xc8a987);for(const side of[-1,1]){const a=new T.Group();a.position.set(side*.3,-.72,-.42);a.rotation.set(-.5,0,-side*.22);this.round(.15,.38,.17,0,-.08,0,coat,a);this.round(.13,.16,.1,0,.18,0,skin,a);for(let i=0;i<4;i++)this.round(.025,.1,.03,-.047+i*.031,.27,.015,skin,a);g.add(a);}g.visible=false;return g;}
- present(id:string){this.clearHeld();const g=new T.Group();if(id==='fragment'){this.cyl(.02,.08,.18,0,0,0,this.mats.gold,g).rotation.z=.6;}else if(id==='falcon'){this.falcon(g);g.scale.setScalar(.5);}else if(id==='lining'){this.box(.22,.26,.02,0,0,0,this.mat(0x73506d),g);}else{const data:Record<string,[string,string[]]>={note:['E. VALE',['Compare the original invoice.','We must speak tonight.']],ledger:['ESTATE ACCOUNTS',['£60  /  £180  /  £120','vel aran si']],bell:['REPAIR NOTICE',['Manual rope removed.','Automatic chime operating.']],display:['BRONZE FALCON',['Presented to Edmund Rook']],lexicon:['AVELLIC REGISTER',['vel aran si','received personally','by the steward']]};const [title,lines]=data[id]??['CASE NOTES',['Bramblewick Estate']];this.paper(title,lines,0,0,0,id==='ledger'||id==='lexicon',g);g.rotation.x=.9;g.scale.setScalar(.65);}g.position.set(-.24,-.2,-.72);this.camera.add(g);this.held=g;this.hands.visible=true;this.hands.position.y=.06;}
+ private makePocketWatch(g:T.Group){
+  this.cyl(.094,.094,.026,0,0,0,this.mats.gold,g,24);
+  this.cyl(.078,.078,.006,0,.015,0,this.mats.cream,g,24);
+  this.box(.008,.005,.054,0,.02,.017,this.mats.dark,g).rotation.y=.5;
+  this.box(.006,.005,.072,0,.02,-.016,this.mats.dark,g).rotation.y=-.72;
+  this.sphere(.013,0,.004,-.119,this.mats.gold,g);
+ }
+ present(id:string){this.clearHeld();const g=new T.Group();if(id==='hall-watch'){this.makePocketWatch(g);g.rotation.x=.8;}else if(id==='wine-bottle'){this.cyl(.074,.074,.24,0,.03,0,this.mats.dark,g,16);this.cyl(.032,.074,.072,0,.186,0,this.mats.dark,g,16);this.cyl(.03,.032,.087,0,.265,0,this.mats.dark,g,16);this.cyl(.075,.075,.095,0,.05,0,this.mats.paper,g,16);this.box(.056,.043,.012,0,.02,.072,this.mats.cream,g);g.position.y=-.1;}else if(id==='fragment'){this.cyl(.02,.08,.18,0,0,0,this.mats.gold,g).rotation.z=.6;}else if(id==='falcon'){this.falcon(g);g.scale.setScalar(.5);}else if(id==='lining'){this.box(.22,.26,.02,0,0,0,this.mat(0x73506d),g);}else{const data:Record<string,[string,string[]]>={note:['E. VALE',['Compare the original invoice.','We must speak tonight.']],ledger:['ESTATE ACCOUNTS',['£60  /  £180  /  £120','vel aran si']],bell:['REPAIR NOTICE',['Manual rope removed.','Automatic chime operating.']],display:['BRONZE FALCON',['Presented to Edmund Rook']],lexicon:['AVELLIC REGISTER',['vel aran si','received personally','by the steward']]};const [title,lines]=data[id]??['CASE NOTES',['Bramblewick Estate']];this.paper(title,lines,0,0,0,id==='ledger'||id==='lexicon',g);g.rotation.x=.9;g.scale.setScalar(.65);}g.position.set(-.24,-.2,-.72);this.camera.add(g);this.held=g;this.hands.visible=true;this.hands.position.y=.06;}
  clearHeld(){if(this.held){this.camera.remove(this.held);this.held.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.held=null;}this.hands.position.y=0;}
  resetDog(walking:boolean,doors:Record<string,boolean>){
  this.dogFollower.reset();const target=walking&&this.onGroundLevel()?this.camera.position:this.actors.get('mara')!.root.position;
@@ -356,6 +367,7 @@ export class Estate {
  }
 
  this.car.visible=s.arrival!=='absent'&&s.arrival!=='queued';if(s.arrival==='arriving')this.car.position.z=56-32*T.MathUtils.smoothstep(arrivalT,0,1);if(s.arrival==='present')this.car.position.z=24;this.car.position.y=this.groundHeight(this.car.position.x,this.car.position.z)-.03;
+ if(this.arrivalTea)this.arrivalTea.visible=s.arrival==='present';
  if(playing){this.delivery?.update(dt,s,this);this.updateLuggage(dt,s);}
  if(playing){
  const target=s.dog==='walking'?(this.onGroundLevel()?this.camera.position:this.dog.position):this.actors.get('mara')!.root.position;

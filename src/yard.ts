@@ -217,7 +217,9 @@ export class Yard {
   for(const w of this.witnesses){
    if(!w.motion)continue;
    const spec=WITNESSES[w.id];
-   const route=w.id==='cartwright'&&state.flags.deliveryParked?[
+   const route=w.id==='cartwright'&&state.arrival==='present'?[
+    [-15.6,-13.4],[-17.45,-13.25],[-16.9,-11.65],[-18.1,-12.7]
+   ]:w.id==='hale'&&state.arrival==='present'?[[.7,9.4],[-.7,7.1],[2.2,8.6]]:w.id==='cartwright'&&state.flags.deliveryParked?[
     [-15.6,-13.4],[-17.45,-13.25],[-16.9,-11.65],[-14.5,-13.38],[-7.5,-13.38],[-14.5,-13.38]
    ]:spec.route;
    const [tx,tz]=route[w.index],p=w.root.position;

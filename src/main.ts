@@ -69,7 +69,10 @@ return [...t,...storyTopics(id,state).map(story=>({...story,run:()=>rememberStor
 let currentTopics:Topic[]=[];
 function dialogue(id:PersonId,reply?:string){panel('dialogue');talking=id;sound.resume();const voicePosition=estate.actors.get(id)!.root.position;sound.vocal(id,[voicePosition.x,1.6,voicePosition.z]);const person=PEOPLE[id];currentTopics=topics(id);overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:${person.color}">${person.initials}</span><div><span class="eyebrow">${person.role}</span><h2>${person.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${reply??({june:'Good afternoon, Detective. Thank you for coming.',rook:'I trust this will not take long.',mara:'Oh, hello. Do mind Pip; he likes a new friend.',ada:'It is such a lovely day for something so awful.',tomas:'Afternoon. Looking for something?',beatrice:'Detective. Tell me what you need.',jonah:'At your service, Detective.'}[id])}”</p><div class="topics">${currentTopics.map((t,i)=>`<button data-topic="${i}"><span>${t.label}</span><span>↗</span></button>`).join('')}</div><small>Esc ends the conversation immediately.</small></section>`}
 const estateObjects:Record<string,[string,string,string]> = {
- 'vehicle-log':['Gatehouse · dispatch desk','Gatehouse vehicle log','Yesterday, 8:12 p.m. — Grocer’s van, pantry delivery. Departed 8:16 p.m. No estate saloon was logged at that time.'],
+ 'vehicle-log':['Gatehouse · dispatch desk','Gatehouse vehicle log','Yesterday, 8:12 p.m. — Grocer’s van, “Pantry · BW–12” (crossed out). Departed 8:16 p.m. No estate saloon was logged at that time.'],
+ 'shelter-crate':['Cellar · air-raid shelter','Marked supply crate','Chalk on the side reads BW–12. The crate holds folded blankets and spare wireless batteries.'],
+ 'hall-watch':['Mansion · entrance hall','Stopped pocket watch','The pocket watch has run down. Its hands disagree with the grandfather clock. A loose watch is no proof of when the bell rang.'],
+ 'wine-bottle':['Cellar · wine vault','Cellared claret','The paper label is worn. Underneath, chalk reads W–6, the wine steward’s rack mark. The cork is intact.'],
  'ration-book':['Mansion · kitchen','Household ration book','Several coupons have been clipped. A pencilled reminder beside the tea allowance reads: “Lodge tray: half a spoon each.”'],
  'shelter-register':['Cellar · air-raid shelter','Shelter visitors’ register','“All clear. Blankets aired, kettle returned and spare wireless batteries checked.” June signed off at the bottom of the page.'],
  'garden-tools':['Lodge · kitchen garden','Mended garden spade','The handle has been wrapped where the wood split. The blade has been sharpened so often that one side is shorter.'],
@@ -85,9 +88,11 @@ function inspect(id:string){
   const [location,title,entry]=estateObjects[id];
   const detail=id==='vehicle-log'&&state.flags.deliveryParked?entry+' Today — Grocer’s van checked in by Elsie Briggs.':entry;
   if(id==='vehicle-log')state.flags.vehicleLogRead=true;
+  if(id==='shelter-crate')state.flags.shelterCrateRead=true;
   panel('inspect');
+  if(id==='wine-bottle'||id==='hall-watch')estate.present(id);
   if(id==='workshop-bench')sound.effect('knock',[7.55,-3.7,-35]);else if(id!=='garden-tools')sound.effect('paper');
-  overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">${location}</span><h1>${title}</h1><p>${detail}</p><button class="primary" data-action="resume">Back to the estate →</button></section>`;return;
+  overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">${location}</span><h1>${title}</h1><p>${detail}</p>${estate.held?'<small>Use ← / → to turn the object.</small>':''}<button class="primary" data-action="resume">Back to the estate →</button></section>`;return;
  }
  if(id==='phone'||id==='gate-phone'){
  panel('inspect');sound.effect('phone');const allowed=canCall(state)&&state.arrival==='absent';overlay.innerHTML=`<section class="panel inspect-card"><span class="eyebrow">TELEPHONE · LINE 2</span><h1>Telephone</h1><p>${allowed?'“Gatehouse speaking. Yes, Detective. Lady Beatrice is expected shortly. Shall I send her car up to the house?”':state.arrival!=='absent'?'“Your message has been passed on, Detective.”':'“Good afternoon. Please check with Mrs Bell before making your report.”'}</p>${allowed?'<button class="primary" data-action="complete-call">Send her up. Thank you. Replace receiver.</button>':''}<button data-action="resume">${allowed?'End call without a message':'Replace receiver'}</button></section>`;return;}
@@ -186,7 +191,8 @@ function frame(now:number){requestAnimationFrame(frame);const dt=Math.min((now-l
   const p=estate.camera.position,van=estate.delivery?.van;
   const engine:[number,number,number]|null=state.arrival==='arriving'?[4,1,estate.car.position.z]:van?.visible&&!state.flags.deliveryParked?[van.position.x,1,van.position.z]:null;
   sound.update(dt,p,estate.camera.rotation.y,mode==='play'&&estate.lastMove,estate.inCellar()||(p.z<12&&p.z>-16&&Math.abs(p.x)<21),[estate.dog.position.x,.4,estate.dog.position.z],engine);
-  sound.wireless(!!state.flags.wirelessOn&&!estate.inCellar(),[KITCHEN_RADIO.x,1.2,KITCHEN_RADIO.z]);
+  const shelterAudible=estate.inCellar()&&p.x>0&&p.z>-20&&p.z<-15&&Math.hypot(p.x-8.9,p.z+14.5)<9;
+  sound.wireless(shelterAudible||!!state.flags.wirelessOn&&!estate.inCellar(),shelterAudible?[8.9,-3.55,-14.5]:[KITCHEN_RADIO.x,1.2,KITCHEN_RADIO.z],shelterAudible?.19:.36);
  }
  estate.update(dt,state,mode==='play'||mode==='dialogue'||mode==='inspect',talking,arrivalT,mode==='menu',talkingWitness);
  if(!estate.inCellar()&&(mode==='play'||mode==='dialogue'||mode==='inspect'))sound.updateActors(dt,[...estate.actors.values()].filter(a=>a.root.visible).map(a=>({id:a.id,x:a.root.position.x,z:a.root.position.z,moving:!!a.isWalking})),estate.camera.position);

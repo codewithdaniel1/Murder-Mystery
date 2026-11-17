@@ -8,11 +8,11 @@ export function surfaceAt(x:number,z:number,elevation=1.65){
  if(elevation<0)return 'stone';
  if(inStair(x,z)&&elevation>1.8&&!onUpperDeck(x,z))return 'wood';
  if(z>-16&&z<12&&Math.abs(x)<21){
-  if(elevation>5.6)return 'stone';
+  if(elevation>5.6)return 'wood';
   if((Math.abs(x)<1.5&&z>-5.6&&z<9.5)||(Math.abs(x+15)<2.1&&Math.abs(z-3.5)<2.7)||(Math.abs(x-15)<2&&Math.abs(z-4)<2.5))return 'carpet';
-  return 'stone';
+  return 'wood';
  }
- if(x>21&&x<31&&z<-25&&z>-33)return 'stone';
+ if((x>21&&x<31&&z<-25&&z>-33)||(Math.abs(x+12.5)<2.8&&Math.abs(z-44.5)<2.4)||(Math.abs(x)<12&&z>-69&&z<-54) )return 'wood';
  if((z>12&&Math.abs(x)<4)||(z>12.8&&z<21.2&&Math.abs(x)<24)||(z<-16&&z>-35&&Math.abs(x)<2.5)||(Math.abs(z+23)<1.5&&x>0&&x<29)||(Math.abs(x-25)<1.5&&z<-23&&z>-35))return 'gravel';
  return 'grass';
 }
@@ -51,14 +51,14 @@ export class EstateAudio {
  update(dt:number,p:{x:number;y:number;z:number},yaw:number,moving:boolean,inside:boolean,dog:Position,car:Position|null){const c=this.context;if(!c||this.paused)return;const l=c.listener;
  l.positionX.value=p.x;l.positionY.value=p.y;l.positionZ.value=p.z;l.forwardX.value=-Math.sin(yaw);l.forwardY.value=0;l.forwardZ.value=-Math.cos(yaw);l.upX.value=0;l.upY.value=1;l.upZ.value=0;
  this.loop('wind',inside?.025:.24,undefined,inside?650:8000);this.loop('birds',inside?.035:.26,undefined,inside?1100:10000);
- this.loop('fountain',inside?.02:.75,[0,.8,-30],inside?550:14000);this.loop('fireplace',p.y<0?0:inside&&p.x<-7?.65:inside?.12:.005,[-20,1,4.5],inside?11000:400);
+ this.loop('fountain',p.y<0?0:inside?.02:.9,[0,.8,-30],inside?550:14000);this.loop('fireplace',p.y<0?0:inside&&p.x<-7?.65:inside?.12:.005,[-20,1,4.5],inside?11000:400);
  this.loop('engine',car?(inside?.12:.9):0,car??[4,1,24],inside?850:9500);
  const current:Position=[p.x,p.y,p.z];if(this.lastPosition&&moving){const d=Math.hypot(p.x-this.lastPosition[0],p.z-this.lastPosition[2]);if(d<1)this.distance+=d;else this.distance=0;}else this.distance=0;this.lastPosition=current;
  if(this.distance>1.15){this.distance%=1.15;const surface=surfaceAt(p.x,p.z,p.y);this.stepIndex++;const n=this.stepIndex%2+1;const file=surface==='carpet'||surface==='wood'?'step-wood-'+n:surface==='grass'?'step-grass-'+n:surface==='stone'?'step-stone-1':'step-gravel-1';this.playClip(file,surface==='carpet'?.17:.48,undefined,.94+Math.random()*.12);}
  this.barkAt-=dt;if(this.barkAt<0){this.barkAt=24+Math.random()*22;if(Math.hypot(p.x-dog[0],p.z-dog[2])<12)this.effect('bark',dog)}
 
  }
- wireless(on:boolean,position:Position){
+ wireless(on:boolean,position:Position,gain=.36){
   const context=this.context;if(!context||this.paused)return;
   if(on&&!this.buffers.has('wireless')){
    // A short original instrumental phrase with the thin bandwidth of a small radio.
@@ -74,7 +74,7 @@ export class EstateAudio {
    }
    this.buffers.set('wireless',buffer);
   }
-  if(on||this.loops.has('wireless'))this.loop('wireless',on?.36:0,position,1800);
+  if(on||this.loops.has('wireless'))this.loop('wireless',on?gain:0,position,1800);
  }
  updateActors(dt:number,actors:{id:string;x:number;z:number;moving:boolean}[],player:{x:number;z:number}){if(this.paused)return;for(const a of actors){let time=(this.npcSteps.get(a.id)??.3)-dt;if(a.moving&&time<=0&&Math.hypot(a.x-player.x,a.z-player.z)<11){const surface=surfaceAt(a.x,a.z);const file=surface==='carpet'||surface==='wood'?'step-wood-1':surface==='grass'?'step-grass-1':surface==='stone'?'step-stone-1':'step-gravel-1';this.playClip(file,surface==='carpet'?.09:.22,[a.x,.1,a.z],.95+Math.random()*.1);time=.58+Math.random()*.1;}this.npcSteps.set(a.id,Math.max(time,-.1));}}
  pause(){this.stopVoice();for(const clip of [...this.active])if(!clip.source.loop)this.stop(clip);this.paused=true;this.lastPosition=null;this.distance=0;if(this.context)void this.context.suspend()}

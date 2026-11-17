@@ -127,7 +127,7 @@ export function buildWartimeEstate(e:Estate){
  e.box(.61,1.1,.63,gx-1.6,3.16,gz-.86,stone);
  e.table(gx-1.65,gz,1.23,1.9);
  e.target(phone(e,gx-1.64,1.12,gz-.62),'gate-phone','Gatehouse telephone','Use');
- e.target(e.paper('VEHICLE LOG',['Yesterday · 8.12 pm','Grocer’s van · pantry call','Saloon: no entry at that time'],gx-1.52,1.041,gz+.5,true),'vehicle-log','Gatehouse vehicle log','Read');
+ e.target(e.paper('VEHICLE LOG',['Yesterday · 8.12 pm','Grocer’s van · BW–12','Pantry entry crossed out'],gx-1.52,1.041,gz+.5,true),'vehicle-log','Gatehouse vehicle log','Read');
 
  // The scullery is off the passage, with the kitchen around the corner.
  // Build the partition to the underside of the upstairs slab.
@@ -158,6 +158,17 @@ export function buildWartimeEstate(e:Estate){
  const wireless=radio(e,KITCHEN_RADIO.x,1.185,KITCHEN_RADIO.z);wireless.rotation.y=Math.PI;
  e.target(wireless,'kitchen-wireless','Kitchen wireless','Tune');
  e.target(e.paper('RATION BOOK',['SUGAR · TEA · BUTTER','Household coupons'],-19.25,1.04,-11.7,true),'ration-book','Household ration book','Read');
+ const tray=new T.Group();tray.name='Tea for Lady Beatrice';tray.position.set(wallX,1.064,(hatchNear+hatchFar)/2);tray.visible=false;e.scene.add(tray);e.arrivalTea=tray;
+ e.box(.42,.027,.38,0,0,0,panel,tray);
+ for(const x of [-.1,.11]){
+  e.cyl(.07,.07,.016,x,.024,.105,cream,tray,12);
+  e.cyl(.047,.034,.068,x,.064,.105,cream,tray,12);
+  e.cyl(.039,.039,.008,x,.1,.105,iron,tray,12);
+ }
+ e.sphere(.094,-.025,.1,-.079,enamel,tray,1,.88,1);
+ e.cyl(.044,.06,.022,-.025,.185,-.079,enamel,tray,12);
+ const flour=e.mat(0xd7cbb3,.98);
+ for(let i=0;i<8;i++)e.sphere(.023+(i%3)*.009,-19.6+i*.027,1.031,-11.43+Math.sin(i*2)*.04,flour,e.scene,1,.1,1);
  const mending=new T.Group();mending.position.set(-18.38,1.031,-11.69);e.scene.add(mending);
  const cloth=e.mat(0x777d58,.96),patch=e.mat(0x62694d,.98);
  e.round(.39,.05,.32,0,.018,0,cloth,mending);

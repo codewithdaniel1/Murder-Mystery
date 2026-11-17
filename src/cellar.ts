@@ -237,6 +237,13 @@ export function buildCellar(e:Estate){
    item(1.46,.06,1.12,x,y+.33,z,wood);
   }
  }
+ const claret=new T.Group();claret.position.set(-9.7,CELLAR_FLOOR+1.05,-5.25);e.scene.add(claret);
+ for(const [top,bottom,h,y,mat] of [[.069,.073,.25,.125,e.mats.dark],[.031,.069,.072,.286,e.mats.dark],[.029,.03,.087,.362,e.mats.dark],[.073,.073,.09,.136,e.mats.paper]] as const)e.cyl(top,bottom,h,0,y,0,mat,claret,12);
+ e.target(claret,'wine-bottle','Cellared claret','Inspect');
+ const marked=new T.Group();marked.position.set(9.7,CELLAR_FLOOR+.28,-16);e.scene.add(marked);
+ e.box(.96,.56,.64,0,0,0,wood,marked);e.box(1,.052,.68,0,.28,0,crate,marked);
+ const mark=e.paper('BW–12',['Blankets','Wireless batteries'],0,.28,0,false,marked);mark.scale.setScalar(.62);
+ solid(.96,.64,9.7,-16);e.target(marked,'shelter-crate','Marked supply crate','Inspect');
  // The shelter has canvas cots, a radio desk and supply lockers.
  for(const x of [6.2,9.1]){
   solid(2.6,1.05,x,-18.2);
