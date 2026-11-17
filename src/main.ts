@@ -69,6 +69,13 @@ return [...t,...storyTopics(id,state).map(story=>({...story,run:()=>rememberStor
 let currentTopics:Topic[]=[];
 function dialogue(id:PersonId,reply?:string){panel('dialogue');talking=id;sound.resume();const voicePosition=estate.actors.get(id)!.root.position;sound.vocal(id,[voicePosition.x,1.6,voicePosition.z]);const person=PEOPLE[id];currentTopics=topics(id);overlay.innerHTML=`<section class="dialogue-card"><div class="dialogue-heading"><span class="portrait" style="--portrait:${person.color}">${person.initials}</span><div><span class="eyebrow">${person.role}</span><h2>${person.name}</h2></div><button class="close" data-action="resume" aria-label="End conversation">×</button></div><p class="speech">“${reply??({june:'Good afternoon, Detective. Thank you for coming.',rook:'I trust this will not take long.',mara:'Oh, hello. Do mind Pip; he likes a new friend.',ada:'It is such a lovely day for something so awful.',tomas:'Afternoon. Looking for something?',beatrice:'Detective. Tell me what you need.',jonah:'At your service, Detective.'}[id])}”</p><div class="topics">${currentTopics.map((t,i)=>`<button data-topic="${i}"><span>${t.label}</span><span>↗</span></button>`).join('')}</div><small>Esc ends the conversation immediately.</small></section>`}
 const estateObjects:Record<string,[string,string,string]> = {
+ 'lodge-letters':['Garden lodge · former dormitory','Letters home','Elsie wrote that she had a peg of her own. Several letters are folded together and tied with string.'],
+ 'lodge-heights':['Garden lodge · former dormitory','Evacuees’ height chart','Three pencil marks on the wall are dated between October 1940 and July 1941. Elsie insisted the last mark counted, even with her shoes off.'],
+ 'fire-watch-rota':['Mansion · service passage','Fire-watch rota','Leonard Price was pencilled in from eight to half past. Beside his name, Arthur Hale initialled an amendment: “Relieved L.P. at 8:10.” The rota records the handover, not where Price went afterward.'],
+ 'orchard-tally':['Mansion · scullery','Orchard tally','Apples and pears for the preserve shelf. Tomas Reed added: “Windfalls, dusk. Saved the bruised ones for cooking.”'],
+ 'gatehouse-mail':['Gatehouse · dispatch desk','Gatehouse messages','The postmistress asks June to send back a count of the lodge blankets. A pencilled note says Peter brought the envelope by bicycle.'],
+ 'chair-repair':['Mansion · upstairs sitting room','Repair tag','“Loose arm. Keep covered until we can get glue.” Someone has tucked the sheet around both arms of the chair.'],
+ 'family-photos':['Mansion · upstairs landing','Family photographs','Three sepia portraits show the Ashcombes at different ages. A small pencilled date on the mount reads 1928.'],
  'vehicle-log':['Gatehouse · dispatch desk','Gatehouse vehicle log','Yesterday, 8:12 p.m. — Grocer’s van, “Pantry · BW–12” (crossed out). Departed 8:16 p.m. No estate saloon was logged at that time.'],
  'shelter-crate':['Cellar · air-raid shelter','Marked supply crate','Chalk on the side reads BW–12. The crate holds folded blankets and spare wireless batteries.'],
  'hall-watch':['Mansion · entrance hall','Stopped pocket watch','The pocket watch has run down. Its hands disagree with the grandfather clock. A loose watch is no proof of when the bell rang.'],
@@ -89,6 +96,7 @@ function inspect(id:string){
   const detail=id==='vehicle-log'&&state.flags.deliveryParked?entry+' Today — Grocer’s van checked in by Elsie Briggs.':entry;
   if(id==='vehicle-log')state.flags.vehicleLogRead=true;
   if(id==='shelter-crate')state.flags.shelterCrateRead=true;
+  if(['lodge-letters','lodge-heights','fire-watch-rota','orchard-tally','gatehouse-mail'].includes(id))state.flags['read:'+id]=true;
   panel('inspect');
   if(id==='wine-bottle'||id==='hall-watch')estate.present(id);
   if(id==='workshop-bench')sound.effect('knock',[7.55,-3.7,-35]);else if(id!=='garden-tools')sound.effect('paper');

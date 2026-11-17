@@ -1,3 +1,4 @@
+import {groundHomeFront} from './home-front';
 import * as T from 'three';
 import type {Estate} from './world';
 import type {GameState} from './state';
@@ -194,6 +195,7 @@ export function buildWartimeEstate(e:Estate){
  }
  for(const x of[-19.9,-19.15,-18.4])e.box(.64,1.24,.028,x,2.82,-10.19,dark);
 
+ groundHomeFront(e);
  // Productive garden beneath the lodge windows, with the fountain visible beyond.
  const leaf=e.mats.leaf,bean=e.mat(0x697649,.96);
  for(const x of[-16,-20.2,-24.4]){

@@ -1,4 +1,5 @@
 import {ORCHARD,ORCHARD_HEIGHT,ORCHARD_WIDTH,orchardFruit} from './planting';
+import {lodgeEvacueeRoom} from './home-front';
 import {wallSocket} from './detail';
 import {GROUNDS} from './grounds';
 import {cellarGroundOpenings,HALL_BULKHEAD} from './cellar';
@@ -164,18 +165,7 @@ export function buildGardenLodge(e:Estate){
   for(const dz of[-5,5])e.wall(.24,3.9,5,divider,2,mid+dz,e.mats.plaster);
   e.wall(.24,1.1,5,divider,3.5,mid,e.mats.plaster);
   if(x<0){
-   e.table(x,mid,1.7,1,.54);e.lamp(x,.64,mid);
-   const fabric=e.mats.leather??e.mats.red;
-   for(const z of[mid-2.6,mid+2.6]){
-    const g=new T.Group(),side=Math.sign(z-mid);e.scene.add(g);
-    e.round(2.65,.18,.79,x,.48,z,fabric,g);
-    e.round(2.65,.64,.22,x,.79,z+side*.31,fabric,g);
-    for(const dx of[-1.23,1.23]){
-     e.round(.21,.25,.77,x+dx,.64,z,fabric,g);
-     e.box(.15,.32,.57,x+dx,.24,z,wood,g);
-    }
-    e.barrier(x,z,2.65,.83);
-   }
+   lodgeEvacueeRoom(e,mid);
   }else{
    e.table(x,mid,2.8,1.3);
    for(const dx of[-.73,.73])for(const dz of[-1.27,1.27]){

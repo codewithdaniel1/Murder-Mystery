@@ -1,3 +1,4 @@
+import {upperHomeFront} from './home-front';
 import {wovenFabric} from './detail';
 import {buildAttic} from './attic';
 import * as T from 'three';
@@ -119,6 +120,17 @@ export function buildUpstairs(e:Estate){
  };
  for(const x of [-16,14]){
   const z=-12.2;solid(2.24,3.24,x,z);
+  if(x<0){
+   // Keep the former bedroom's furniture footprint while converting it to linen storage.
+   for(const dx of [-1.05,1.05])for(const dz of [-1.46,1.46])item(.1,2.06,.1,x+dx,1.03,z+dz,panel);
+   for(const y of [.28,.77,1.26,1.75]){
+    item(2.22,.085,3.05,x,y,z,wood);
+    for(const dx of [-.44,.44])for(const dz of [-.8,.5])
+     upholstered(.71,.12,.79,x+dx,y+.103,z+dz,dz<0?linen:blue);
+   }
+   chest(x+3.1,-14);rug(x,-9.5,3.2,1.65,blue);
+   continue;
+  }
   item(2.23,.31,3.22,x,.36,z,panel);item(2.2,1.25,.17,x,.67,z-1.54,panel);
   upholstered(2.06,.28,3.03,x,.59,z,linen);
   const quilt=x<0?blue:green;
@@ -138,6 +150,12 @@ export function buildUpstairs(e:Estate){
  for(const dx of [-.94,.94])for(const dz of [-.35,.35])item(.11,.79,.11,-13+dx,.4,6.8+dz,panel);
  item(.46,.06,.35,-13, .92,6.76,rose);item(.41,.035,.3,-13,.966,6.76,linen);
  rug(13,6.3,5.6,4.65,rose);seat(11,4,rose);seat(15,4,rose);chest(17,9);
+ upholstered(1.02,.09,1,15,1.16,4,linen);
+ const cover=item(1.04,.68,.086,15,.81,3.53,linen);cover.rotation.x=.11;
+ for(const dx of [-.41,.41])item(.125,.53,.91,15+dx,.66,4,linen);
+ const tag=e.paper('REPAIR',['Loose arm','Keep covered'],15,UPPER_FLOOR+1.21,4.06);tag.scale.set(.29,1,.29);
+ e.target(tag,'chair-repair','Repair tag','Read');
+ upperHomeFront(e,UPPER_FLOOR);
  solid(1.35,1.35,13,6.8);e.cyl(.68,.68,.1,13,UPPER_FLOOR+.64,6.8,wood);
  e.cyl(.09,.24,.57,13,UPPER_FLOOR+.31,6.8,panel);
  rug(.9,6.8,3.4,6.2,blue);

@@ -34,3 +34,22 @@ it('resolves the unlogged delivery through two physical clues and a corrected ac
  expect(storyNotes(restored).some(n=>n.note.startsWith('The Unlogged Delivery'))).toBe(true);
  expect(restored.evidence).toEqual([]);
 });
+
+it('uses home-front objects to open conversations without changing case evidence',()=>{
+ const state=freshState();
+ const offered=(id:'mercer'|'price'|'tomas'|'briggs',topic:string)=>storyTopics(id,state).some(t=>t.id===topic);
+ expect(offered('mercer','lodge-elsie')).toBe(false);
+ state.flags['read:lodge-heights']=true;
+ expect(offered('mercer','lodge-elsie')).toBe(true);
+ state.flags['read:fire-watch-rota']=true;
+ expect(offered('price','fire-watch-correction')).toBe(false);
+ rememberStory(state,'fire-watch-account');
+ expect(offered('price','fire-watch-correction')).toBe(true);
+ rememberStory(state,'fire-watch-correction');
+ expect(storyNotes(state).some(note=>note.speaker==='price'&&note.cleared)).toBe(true);
+ state.flags['read:orchard-tally']=true;
+ state.flags['read:gatehouse-mail']=true;
+ expect(offered('tomas','windfalls-at-dusk')).toBe(true);
+ expect(offered('briggs','blanket-message')).toBe(true);
+ expect(state.evidence).toEqual([]);
+});
