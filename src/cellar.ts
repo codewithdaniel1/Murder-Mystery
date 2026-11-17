@@ -164,11 +164,7 @@ export function buildCellar(e:Estate){
    e.target(item(.24,.063,.36,workX-.38,1.102,z+.63,wood),'workshop-bench','Hinge on the workbench','Inspect');
    item(.52,.054,.92,workX,1.1,z,canvas);
    for(const dz of[-.6,-.37,-.15,.07])item(.34,.053,.08,workX+.04,1.14,z+dz,brass);
-   item(.16,2.1,3.8,8.82,1.63,z,wood);
-   for(const dz of[-1.35,-.75,-.12,.5,1.15]){
-    item(.13,.63,.07,8.65,1.69,z+dz,iron);
-    item(.16,.11,.27,8.62,1.97,z+dz,iron);
-   }
+   buildWorkshopRack(e,z);
   }else{
    solid(.84,4.5,workX,z);
    item(.09,2.7,4.5,workX+side*.37,1.35,z,wood);
@@ -344,4 +340,40 @@ export function buildCellar(e:Estate){
  }
  e.cellarLighting=bakeCellarLighting(lamps);
  for(const object of e.scene.children)if(!existing.has(object))e.cellarLighting.apply(object);
+}
+
+
+export function buildWorkshopRack(e:Estate,z:number){
+ const rack=new T.Group();rack.name='Cellar carpenter’s tool rack';rack.position.set(8.82,CELLAR_FLOOR,z);e.scene.add(rack);
+ const painted=e.mat(0xb7baa0,.95),edge=e.mat(0x95754d,.94),handles=e.mat(0xba8652,.88);
+ const steel=e.mat(0xa5aba4,.48,.55),forged=e.mat(0x626e6c,.65,.35),brass=e.mat(0xc5a36b,.6,.35);
+ // Separate painted boards and a narrow timber frame break up the dark rectangle.
+ for(let i=0;i<6;i++)e.box(.095,1.48,.58,0,1.84,-1.5+i*.6,painted,rack);
+ for(const y of[1.08,2.6])e.box(.15,.07,3.75,-.025,y,0,edge,rack);
+ for(const dz of[-1.84,1.84])e.box(.15,1.58,.065,-.025,1.84,dz,edge,rack);
+ for(const dz of[-1.3,-.65,0,.65,1.3]){
+  e.cyl(.015,.015,.10,-.105,2.12,dz,brass,rack,8).rotation.z=Math.PI/2;
+  e.sphere(.023,-.16,2.12,dz,brass,rack);
+ }
+ // Two hammers: shaped steel heads with clearly contrasting wooden shafts.
+ for(const dz of[-1.3,-.65]){
+  e.cyl(.025,.032,.51,-.18,1.82,dz,handles,rack,10);
+  e.round(.14,.12,.32,-.18,2.065,dz,steel,rack);
+  e.box(.16,.135,.035,-.18,2.065,dz-.17,forged,rack);
+ }
+ // Open-ended spanner and a wood-handled screwdriver, rather than identical silhouettes.
+ e.round(.055,.43,.06,-.18,1.84,0,steel,rack);
+ e.box(.07,.05,.19,-.18,2.055,0,steel,rack);
+ for(const dz of[-.079,.079])e.box(.07,.095,.036,-.18,2.105,dz,steel,rack);
+ e.cyl(.035,.03,.20,-.18,1.65,.65,handles,rack,10);
+ e.box(.018,.27,.018,-.18,1.88,.65,steel,rack);
+ e.box(.018,.07,.037,-.18,2.045,.65,steel,rack);
+ // Small hand saw with a toothed steel blade and an open wooden handle.
+ const shape=new T.Shape();shape.moveTo(0,.34);shape.lineTo(.28,.27);shape.lineTo(.28,0);
+ for(let i=7;i>=0;i--){shape.lineTo(i*.035,.025);shape.lineTo(i*.035-.017,0);}shape.lineTo(0,.34);
+ const blade=new T.Mesh(new T.ExtrudeGeometry(shape,{depth:.013,bevelEnabled:false}),steel);blade.rotation.y=-Math.PI/2;blade.position.set(-.18,1.47,1.13);rack.add(blade);
+ for(const dz of[1.16,1.38])e.round(.055,.23,.045,-.18,1.94,dz,handles,rack);
+ for(const y of[1.84,2.04])e.round(.055,.045,.26,-.18,y,1.27,handles,rack);
+ for(const dz of[-1.72,1.72])for(const y of[1.22,2.45])e.sphere(.019,-.06,y,dz,forged,rack);
+ return rack;
 }

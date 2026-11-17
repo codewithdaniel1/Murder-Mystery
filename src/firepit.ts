@@ -4,7 +4,13 @@ import type {Estate} from './world';
 export const FIREPIT={x:18,z:-43,radius:1.05};
 export function buildFirepit(e:Estate){
  const root=new T.Group();root.name='Garden firepit';const {x,z,radius}=FIREPIT,y=e.groundHeight(x,z);
- root.position.set(x,y,z);e.scene.add(root);e.barrier(x,z,radius*2,radius*2);
+ root.position.set(x,y,z);e.scene.add(root);
+ // Follow the round stone rim; a single square leaves invisible blocked corners.
+ const rim=1.2,strips=16,step=2*rim/strips;
+ for(let i=0;i<strips;i++){
+  const dz=-rim+(i+.5)*step,inner=Math.max(0,Math.abs(dz)-step/2);
+  e.barrier(x,z+dz,2*Math.sqrt(rim*rim-inner*inner),step);
+ }
  const stone=gardenSurface('stone',0xa69c8a),ash=e.mat(0x38332d,1),charcoal=e.mat(0x201c18,1);
  e.cyl(radius+.12,radius+.2,.035,0,.018,0,ash,root,48);
  const basin=new T.Mesh(new T.CircleGeometry(.84,48),ash);basin.rotation.x=-Math.PI/2;basin.position.y=.045;root.add(basin);
@@ -47,7 +53,7 @@ export function buildFirepit(e:Estate){
  // Four slatted armchairs leave broad gaps to approach the fire.
  const timber=e.mats.wood.clone();timber.roughness=.96;
  for(let i=0;i<4;i++){
-  const a=Math.PI/4+i*Math.PI/2,cx=x+Math.sin(a)*2.65,cz=z+Math.cos(a)*2.65;
+  const a=Math.PI/4+i*Math.PI/2,cx=x+Math.sin(a)*3,cz=z+Math.cos(a)*3;
   const chair=new T.Group();chair.name='Firepit garden armchair';chair.position.set(cx,e.groundHeight(cx,cz),cz);chair.rotation.y=a+Math.PI;e.scene.add(chair);
   for(const dx of[-.29,.29])for(const dz of[-.27,.27])e.box(.065,.5,.065,dx,.25,dz,timber,chair);
   for(let j=0;j<6;j++)e.box(.65,.045,.087,0,.48,-.27+j*.105,timber,chair);

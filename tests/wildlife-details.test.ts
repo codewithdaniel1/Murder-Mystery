@@ -6,7 +6,7 @@ import {liningScrap} from '../src/fabric';
 import {buildKitchenGarden} from '../src/kitchen-garden';
 import {buildFirepit,FIREPIT} from '../src/firepit';
 import {furnishedEstate} from './estate-fixture';
-import {clearAt} from '../src/navigation';
+import {clearAt,clearSegment} from '../src/navigation';
 import {buildCellarRats} from '../src/cellar-rats';
 
 it('keeps the detailed animals within a small geometry budget with finite normals',()=>{
@@ -32,10 +32,13 @@ it('makes the lining thin, folded and frayed while preserving the stitched clue'
 });
 it('keeps a firepit clear of routes, solid to players, and lit without another scene light',()=>{
  const e=furnishedEstate(),before=e.barriers.length,update=buildFirepit(e);
- expect(e.barriers).toHaveLength(before+5);
+ expect(e.barriers.length).toBeGreaterThan(before);
  const chairs=e.scene.children.filter(c=>c.name==='Firepit garden armchair');expect(chairs).toHaveLength(4);
  for(const chair of chairs){expect(clearAt(chair.position,e.barriers,{},.26)).toBe(false);expect(new T.Box3().setFromObject(chair).min.y).toBeCloseTo(e.groundHeight(chair.position.x,chair.position.z));}
  expect(clearAt(FIREPIT,e.barriers,{},.26)).toBe(false);
+ // A player can circle between the visible stones and every chair, including diagonals.
+ const ring=Array.from({length:65},(_,i)=>({x:FIREPIT.x+Math.sin(i*Math.PI/32)*1.72,z:FIREPIT.z+Math.cos(i*Math.PI/32)*1.72}));
+ for(let i=1;i<ring.length;i++)expect(clearSegment(ring[i-1],ring[i],e.barriers,{},.26)).toBe(true);
  for(const side of[-1,1])expect(clearAt({x:FIREPIT.x+side*1.8,z:FIREPIT.z},e.barriers,{},.26)).toBe(true);
  const fire=e.targets.find(t=>t.id==='garden-firepit')!.root;let triangles=0;fire.traverse(o=>{if(o instanceof T.Mesh)triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3});expect(triangles).toBeLessThan(7000);let lights=0;fire.traverse(o=>{if(o instanceof T.Light)lights++});expect(lights).toBe(0);
  update(.1);const flame=fire.getObjectByName('Firepit flames')!.children[0] as T.Mesh<T.BufferGeometry,T.ShaderMaterial>;
