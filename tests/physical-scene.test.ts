@@ -74,6 +74,16 @@ describe('walkable surfaces and physical obstacles',()=>{
   for(const [x,z] of [[-5,-27],[5,-35],[-5,-43]])expect(lit(x,-4.75,z)).toBeGreaterThan(0);
   expect(e.scene.getObjectByName('Cellar lighting')).toBeUndefined();
  });
+ it('connects both mansion side walks to the rear garden without crossing the cellar entry',()=>{
+  const e=furnishedEstate(),s=freshState();buildCellar(e);
+  for(const x of [-31,31]){
+   e.setPose({x,z:16,yaw:0,pitch:0});
+   e.move(0,-39,s);expect(e.pose().z).toBeCloseTo(-23);
+   e.move(-x,0,s);expect(e.pose().x).toBeCloseTo(0);
+   for(let z=-23;z<=16;z+=.5)expect(e.groundHeight(x,z)).toBeGreaterThan(-.05);
+   for(let px=Math.min(0,x);px<=Math.max(0,x);px+=.5)expect(e.groundHeight(px,-23)).toBeGreaterThan(-.05);
+  }
+ });
  it('connects the garden through the lodge and out to the woodland loop',()=>{
   const e=furnishedEstate(),s=freshState();landscape(e);buildGardenLodge(e);buildCellar(e);
   for(const x of[-7,5]){

@@ -12,9 +12,13 @@ export function mansionSideGardens(e:Estate){
  for(const side of [-1,1]){
   // Join the carriage court to a crosswalk between the flower beds and orchard.
   e.floor(8,.025,2.1,side*27.8,-.052,17,gravel);
-  e.floor(2.1,.025,17.5,side*31,-.051,8.6,gravel);
+  e.floor(2.1,.025,41.4,side*31,-.051,-3.35,gravel);
   e.floor(14,.025,2.1,side*38,-.05,5.5,gravel);
  }
+ // The west link passes behind the cellar stairs; the east link meets
+ // the existing greenhouse walk without changing the rear garden layout.
+ e.floor(30.55,.025,2.1,-16.775,-.049,-23,gravel);
+ e.floor(4.05,.025,2.1,30.025,-.049,-23,gravel);
  for(const {x,z,w,d} of sideBeds){
   e.floor(w+.2,.17,d+.2,x,.005,z,soil);
   for(const side of [-1,1]){
