@@ -23,7 +23,7 @@ function toast(text:string){const el=document.querySelector<HTMLElement>('#toast
 function record(...ids:EvidenceId[]){if(addEvidence(state,...ids)&&mode!=='dialogue'){toast('Evidence recorded in your notebook');sound.effect('clue')}refreshHUD()}
 function refreshHUD(){const [title,detail]=objective(state);document.querySelector('#objective')!.innerHTML=`<span class="eyebrow">THE INVESTIGATION</span><strong>${title}</strong><p>${detail}</p>`}
 function saved(){try{return decodeSave(localStorage.getItem(SAVE_KEY)??'')}catch{return null}}
-function interrupt(){keys.clear();drag=false;talking=null;talkingWitness=null;sound.stopVoice();estate.clearHeld();prompt.textContent='';if(document.pointerLockElement)document.exitPointerLock()}
+function interrupt(){keys.clear();drag=false;talking=null;talkingWitness=null;sound.stopVoice();estate.clearHeld();prompt.textContent='';shownPrompt='';promptTimer=0;document.querySelector('#reticle')!.classList.remove('target');if(document.pointerLockElement)document.exitPointerLock()}
 function panel(next:typeof mode){mode=next;interrupt();hud.hidden=next==='menu';overlay.className=next;overlay.innerHTML=''}
 function lock(){try{const r=estate.renderer.domElement.requestPointerLock();if(r)r.catch(()=>toast('Drag the scene to look around. Click it to capture the mouse.'))}catch{toast('Drag the scene to look around.')}}
 function play(){sound.stopVoice();mode='play';overlay.className='';overlay.innerHTML='';talking=null;talkingWitness=null;estate.clearHeld();hud.hidden=false;sound.start();keys.clear();refreshHUD();lock()}
@@ -233,7 +233,8 @@ addEventListener('mousemove',e=>{if(mode==='play'&&(document.pointerLockElement|
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement&&mode==='play')pause()});
 addEventListener('blur',()=>{if(mode==='play'||mode==='dialogue'||mode==='inspect')pause()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&mode!=='menu')pause()});
-function frame(now:number){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.05);last=now;if(!estateReady)return;
+let promptTimer=0,shownPrompt='';
+function frame(now:number){requestAnimationFrame(frame);const elapsed=(now-last)/1000,dt=Math.min(elapsed,.05);last=now;if(!estateReady)return;estate.adaptQuality(elapsed,mode==='play');
  if(mode==='play'){
  let x=Number(keys.has('KeyD'))-Number(keys.has('KeyA')),z=Number(keys.has('KeyS'))-Number(keys.has('KeyW'));const len=Math.hypot(x,z)||1,speed=(keys.has('ShiftLeft')?4.5:2.9)*dt,y=estate.camera.rotation.y;x=x/len*speed;z=z/len*speed;estate.move(Math.cos(y)*x+Math.sin(y)*z,-Math.sin(y)*x+Math.cos(y)*z,state);
  if(state.arrival==='queued'){state.arrival='arriving';arrivalT=0;toast('A motorcar is coming up the front drive.')}if(state.arrival==='arriving'){arrivalT=estate.advanceArrival(arrivalT,dt,state);if(arrivalT>=1){state.arrival='present';state.doors.front=true;toast('Lady Beatrice and Jonah have arrived.');refreshHUD()}}
@@ -243,7 +244,11 @@ function frame(now:number){requestAnimationFrame(frame);const dt=Math.min((now-l
  if(state.flags.fountain&&state.flags.glasshouse&&!state.flags.walkNotice){state.flags.walkNotice=true;toast('A splendid walk. Return Pip to Mara in the library.')}
  }
  if(estate.inCellar()&&!state.flags.heardWorkshop&&Math.abs(p.x)<1.2&&Math.abs(p.z+34)<3){state.flags.heardWorkshop=true;sound.effect('knock',[7.55,-3.7,-35]);}
- const t=estate.targetAt();prompt.innerHTML=t?`<kbd>E</kbd><span>${t.verb}<strong>${t.label}</strong></span>`:'';document.querySelector('#reticle')!.classList.toggle('target',!!t);
+ promptTimer-=dt;
+ if(promptTimer<=0){
+  promptTimer=1/12;const t=estate.targetAt(),next=t?`<kbd>E</kbd><span>${t.verb}<strong>${t.label}</strong></span>`:'';
+  if(next!==shownPrompt){shownPrompt=next;prompt.innerHTML=next;document.querySelector('#reticle')!.classList.toggle('target',!!t);}
+ }
 
  }
  if(mode==='play'||mode==='dialogue'||mode==='inspect'){

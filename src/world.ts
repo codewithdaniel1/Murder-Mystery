@@ -1,3 +1,4 @@
+import {AutoResolution,renderPixelRatio,prepareScene} from './render-performance';
 import {liningScrap} from './fabric';
 import {buildFirepit} from './firepit';
 import {buildCandidateObjects} from './case-options';
@@ -50,9 +51,9 @@ export class Estate {
  cellarDoors=new Map<string,{leaves:T.Group[];amount:number}>();
  yard:Yard;
  ray=new T.Raycaster();clock=0;clockPendulum?:T.Group;fountainWater?:FountainWater;car:T.Group;dog:T.Group;dogMotion?:DogMotion;dogFollower=new DogFollower();hands:T.Group;held:T.Group|null=null;gesture=0;weather=0;
- composer:EffectComposer;ao:GTAOPass;sun:T.DirectionalLight; mats:Record<string,T.MeshStandardMaterial>={}; pointer=new T.Vector2(0,0);lastMove=false;inspectRotation=0;ready:Promise<void>;quality='Auto';
+ composer:EffectComposer;ao:GTAOPass;sun:T.DirectionalLight; mats:Record<string,T.MeshStandardMaterial>={}; pointer=new T.Vector2(0,0);lastMove=false;inspectRotation=0;ready:Promise<void>;quality='Auto';private autoResolution=new AutoResolution();
  constructor(container:HTMLElement){
- this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));this.renderer.setSize(innerWidth,innerHeight);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;this.renderer.localClippingEnabled=true;this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.95;container.appendChild(this.renderer.domElement);
+ this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});this.renderer.setPixelRatio(renderPixelRatio('Auto',innerWidth,innerHeight,devicePixelRatio));this.renderer.setSize(innerWidth,innerHeight);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.autoUpdate=false;this.renderer.shadowMap.type=T.PCFSoftShadowMap;this.renderer.localClippingEnabled=true;this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.95;container.appendChild(this.renderer.domElement);
  this.scene.background=new T.Color('#c4cbd0');this.scene.fog=new T.Fog('#bcc4c2',90,210);
  this.scene.add(new T.HemisphereLight(0xc7def0,0x615241,.42));this.sun=new T.DirectionalLight(0xffe7c7,3.2);this.sun.position.set(-28,38,26);this.sun.castShadow=true;this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-44,right:44,top:44,bottom:-44,near:1,far:115});this.sun.shadow.bias=-.00008;this.sun.shadow.normalBias=.025;this.sun.shadow.radius=2;this.scene.add(this.sun);
  this.mats={dark:this.mat(0x26302a),gold:this.mat(0xaa8c51,.4,.7),black:this.mat(0x171c1a,.6),cream:this.mat(0xcdbfa3),leaf:this.mat(0x3c5631),red:this.mat(0x472d2c),paper:this.mat(0xe4d5b6),glass:this.mat(0xbac7c4)};
@@ -68,13 +69,9 @@ export class Estate {
  this.hands=this.makeHands();this.camera.add(this.hands);this.scene.add(this.camera);this.camera.position.set(0,6.2,38);this.camera.lookAt(0,3,0);
  this.composer=new EffectComposer(this.renderer);this.composer.addPass(new RenderPass(this.scene,this.camera));this.ao=new GTAOPass(this.scene,this.camera,innerWidth,innerHeight);this.ao.blendIntensity=.35;this.ao.updateGtaoMaterial({radius:.45,distanceExponent:1.5,thickness:1,scale:1});this.composer.addPass(this.ao);this.composer.addPass(new OutputPass());this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));
  loaded.push(sceneryAssets(this),loadCharacters(this));batchDetail(this);this.ready=Promise.all(loaded).then(async()=>{
- // Compile every material before play, including rooms normally hidden from view.
- // First encounters must not synchronously compile shaders in the walking loop.
- const hidden=this.cellarInterior,wasVisible=hidden?.visible;
- if(hidden)hidden.visible=true;
- try{await this.renderer.compileAsync(this.scene,this.camera)}
- finally{if(hidden)hidden.visible=wasVisible!}
- });addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));});
+ this.resizeRendering();
+ await prepareScene(this.renderer,this.scene,this.camera);
+ });addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.resizeRendering();});
  }
  mat(c:number,roughness=.75,metalness=0){return new T.MeshStandardMaterial({color:c,roughness,metalness});}
  box(w:number,h:number,d:number,x:number,y:number,z:number,mat:T.Material,parent:T.Object3D=this.scene,shadow=true){const geo=new T.BoxGeometry(w,h,d);const uv=geo.attributes.uv,pos=geo.attributes.position,n=geo.attributes.normal;for(let i=0;i<uv.count;i++){const nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i)),brick=mat.userData.masonryUV;
@@ -370,7 +367,15 @@ export class Estate {
  }
  return best;
  }
-  setQuality(q:string){this.quality=q;const cap=q==='Low'?.85:q==='High'?1.8:q==='Medium'?1.25:Math.min(devicePixelRatio,1.25);this.renderer.setPixelRatio(Math.min(devicePixelRatio,cap));this.renderer.shadowMap.enabled=q!=='Low';this.ao.enabled=q!=='Low';this.renderer.setSize(innerWidth,innerHeight);this.composer.setPixelRatio(this.renderer.getPixelRatio());this.composer.setSize(innerWidth,innerHeight);this.ao.setSize(Math.round(innerWidth*.75),Math.round(innerHeight*.75));}
+  private resizeRendering(){
+ const ratio=renderPixelRatio(this.quality,innerWidth,innerHeight,devicePixelRatio,this.autoResolution.scale);
+ this.renderer.setPixelRatio(ratio);this.renderer.setSize(innerWidth,innerHeight);
+ this.composer.setPixelRatio(ratio);this.composer.setSize(innerWidth,innerHeight);
+ this.ao.setSize(Math.max(1,Math.round(innerWidth*ratio*.65)),Math.max(1,Math.round(innerHeight*ratio*.65)));
+ }
+ setQuality(q:string){this.quality=q;this.autoResolution.reset();this.renderer.shadowMap.enabled=q!=='Low';this.renderer.shadowMap.needsUpdate=true;this.ao.enabled=q!=='Low';this.resizeRendering();}
+ adaptQuality(seconds:number,active:boolean){if(this.quality==='Auto'&&this.autoResolution.sample(seconds,active))this.resizeRendering();}
+
  update(dt:number,s:GameState,playing:boolean,talking:PersonId|null,arrivalT:number,menu=false,witness:WitnessId|null=null){if(playing||talking)this.clock+=dt;
  this.syncBulkheads(s,dt);
  for(const[id,d]of this.doors){const goal=s.doors[id]?-Math.PI/2:0;d.angle=T.MathUtils.damp(d.angle,goal,10,dt);d.pivot.rotation.y=d.angle;}
@@ -429,6 +434,8 @@ export class Estate {
  if(playing&&this.cellarInterior?.visible)this.updateCellarRats?.(dt);
  this.gesture=Math.max(0,this.gesture-dt*2);if(!this.held){this.hands.visible=this.gesture>0;this.hands.position.y=this.gesture*.16+(playing&&this.lastMove?Math.sin(this.clock*7)*.008:0);}
  if(menu){this.updateCellarView(true);this.camera.position.set(17+Math.sin(this.clock*.016)*1.2,4.4,46);this.camera.lookAt(0,6.1,2);this.hands.visible=false;this.clock+=dt;}
+ // Render shadows once, rather than again for GTAO's normal/depth pass.
+ this.renderer.shadowMap.needsUpdate=true;
  this.composer.render(dt);
  }
 }

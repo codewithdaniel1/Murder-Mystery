@@ -1,3 +1,4 @@
+import {finishProp} from './craftsmanship';
 import {dogModel} from './wildlife-models';
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -48,7 +49,7 @@ function stormLantern(e:Estate){
  const handle=new T.Mesh(new T.TorusGeometry(.066,.006,6,16,Math.PI),iron);
  handle.position.y=-.106;handle.scale.y=1.6;lamp.add(handle);
  for(const x of[-.066,.066])e.cyl(.006,.006,.07,x,-.136,0,iron,lamp,6);
- return lamp;
+ return finishProp(lamp);
 }
 export function alignLantern(motion:CharacterMotion,actor:T.Group){
  const {lantern,bones}=motion;if(!lantern)return;

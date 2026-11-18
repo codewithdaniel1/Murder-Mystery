@@ -1,3 +1,4 @@
+import {finishProp} from './craftsmanship';
 import * as T from 'three';
 import type {Estate} from './world';
 import {cellarGroundOpenings} from './cellar';
@@ -47,7 +48,7 @@ export function gardenBench(e:Estate,x:number,z:number){
    e.cyl(.012,.012,.008,dx,.68+j*.102,-.26-j*.014,bolt,g,8).rotation.x=Math.PI/2;
   }
  }
- e.round(2.18,.073,.074,0,.27,0,iron,g);
+ e.round(2.18,.073,.074,0,.27,0,iron,g);finishProp(g);
 }
 
 export function gardenGroundDetail(e:Estate){

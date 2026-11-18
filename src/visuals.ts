@@ -1,3 +1,4 @@
+import {finishProp} from './craftsmanship';
 import {windowCurtains} from './curtains';
 import {ORCHARD,ORCHARD_HEIGHT,ORCHARD_WIDTH,orchardFruit} from './planting';
 import {lodgeEvacueeRoom} from './home-front';
@@ -44,6 +45,7 @@ function windowDetail(e:Estate,x:number,y:number,z:number,w=1.8,h=2.4,solid:bool
  box(.065,h,.08,x,y,z+.08,dark);for(const off of[-h/6,h/6])box(w,.045,.08,x,y+off,z+.08,dark);
  if(solid===false)box(w,h,.03,x,y,z,e.mats.glass);
  for(const side of[-1,1])box(.045,h,.07,x+side*w/4,y,z+.085,dark);
+ if(parent instanceof T.Group)finishProp(parent);
 }
 export function landscape(e:Estate){
  const holes=cellarGroundOpenings();
@@ -343,7 +345,7 @@ export function staticBatch(e:Estate,source:T.Object3D,positions:PlantPose[],hei
  if(!positions.length)return;
  const tiles=new Map<string,PlantPose[]>();
  for(const pose of positions){
-  const [x,z]=pose,key=woodland?`${Math.floor(x/42)},${Math.floor(z/42)}`:'garden';
+  const [x,z]=pose,tileSize=woodland?42:12,key=`${Math.floor(x/tileSize)},${Math.floor(z/tileSize)}`;
   if(!tiles.has(key))tiles.set(key,[]);
   tiles.get(key)!.push(pose);
  }
@@ -353,7 +355,7 @@ export function staticBatch(e:Estate,source:T.Object3D,positions:PlantPose[],hei
  for(const tile of tiles.values()){
   const inst=new T.InstancedMesh(geo,material,tile.length);
   tile.forEach(([x,z,s,angle],i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),angle);matrix.compose(new T.Vector3(x,e.groundHeight(x,z)-rootDepth*s,z),q,new T.Vector3(s*width,s,s*width));inst.setMatrixAt(i,matrix);if(height>5)inst.setColorAt(i,new T.Color().setHSL(.16+(i%4)*.024,.15+(i%3)*.032,.72+(i%5)*.051))});
-  inst.name='Grounded planting';inst.castShadow=!woodland;inst.receiveShadow=true;e.scene.add(inst);
+  inst.name='Grounded planting';inst.castShadow=!woodland;inst.receiveShadow=true;inst.instanceMatrix.needsUpdate=true;inst.computeBoundingSphere();e.scene.add(inst);
  }
  });}
 export async function sceneryAssets(e:Estate){const loader=new GLTFLoader(),outer=woodland();
