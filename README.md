@@ -28,6 +28,12 @@ Start by walking through the front entrance and speaking to June. The on-screen 
 
 Use **Menu → Save game**. There is one manual browser-local slot; saving replaces it. **Continue investigation** restores the case and player position. There is no autosave. Clearing browser storage or changing the site address loses access to that slot. Saving is temporarily unavailable while the arrival animation runs; resume until the car stops. The event pauses with the game.
 
+## Play online
+
+[Play The Last Bell at Bramblewick](https://codewithdaniel1.github.io/Murder-Mystery/).
+
+GitHub Pages hosts the game for free. Pushing to `main` runs the tests, builds the game and publishes `dist/` through [GitHub Actions](https://github.com/codewithdaniel1/Murder-Mystery/actions/workflows/pages.yml). You can also choose **Run workflow** there. The workflow uses the Pages base path so models, textures and audio load correctly under the repository address. The source stays in this one project; no separate deployment copy or branch is needed.
+
 ## Self-host
 
 ```sh
@@ -59,7 +65,7 @@ Low rendering quality disables ambient occlusion and shadows. Pixel ratio is cap
 
 This is not a finished photorealistic production game. The cast uses four base human models across seven NPCs, with different hair, clothing colors, fitted glasses and hats. Some faces and silhouettes are still shared. Their civilian clothes need a historically precise WWII costume pass. Some props, the vehicle and interaction hands still use prototype geometry. Pip’s gait is procedural and still needs visual review in motion. The updated library, clock, grounds and character fittings were inspected in rendered Chrome screenshots. Target-laptop performance measurements and a subjective listening review remain outstanding. Recorded nonverbal reactions currently share one performer with modest playback-rate differences. NPC routine positions restart on load; investigation state and player position retain the existing manual save behavior. The latest visual review used an isolated local Chrome session with software WebGL; it does not establish GPU performance on players’ hardware or AAA production quality.
 
-The 30–45 minute play length has not yet been validated. No mobile support or public deployment has been completed.
+The 30–45 minute play length has not yet been validated. Mobile support has not been completed. The public desktop version is deployed through GitHub Pages.
 
 ## Validation
 
