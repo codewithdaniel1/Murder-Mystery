@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {freshState,addEvidence,completeCall,canReport,solveDeduction,supportedCase,accuse,encodeSave,decodeSave,DEDUCTIONS} from '../src/state';
+import {freshState,addEvidence,completeCall,canReport,canAccuse,allCaseEvidence,EVIDENCE,solveDeduction,supportedCase,accuse,encodeSave,decodeSave,DEDUCTIONS} from '../src/state';
 
 it('restores notes on the first and last pages and opens older saves with blank pages',()=>{
  const s=freshState();
@@ -9,9 +9,9 @@ it('restores notes on the first and last pages and opens older saves with blank 
  const {notes:_,...oldSave}=s;
  expect(decodeSave(JSON.stringify(oldSave))?.notes).toEqual(Array(50).fill(''));
 });
-import type {DeductionId} from '../src/state';
+import type {DeductionId,EvidenceId} from '../src/state';
 function ready(){const s=freshState();s.flags.intro=true;addEvidence(s,'note');s.interviews.push('mara');s.flags.reported=true;return s}
-function caseState(route:DeductionId[]){const s=ready();s.arrival='present';for(const id of ['weapon','money',...route] as DeductionId[]){addEvidence(s,...DEDUCTIONS[id].needs);solveDeduction(s,id,DEDUCTIONS[id].correct)}addEvidence(s,'sighting');return s}
+function caseState(route:DeductionId[]){const s=ready();s.arrival='present';for(const id of ['weapon','money',...route] as DeductionId[]){addEvidence(s,...DEDUCTIONS[id].needs);solveDeduction(s,id,DEDUCTIONS[id].correct)}addEvidence(s,...Object.keys(EVIDENCE) as EvidenceId[]);return s}
 describe('arrival rules',()=>{
  it('requires introduction, study lead, interview, report, and completed call',()=>{const s=freshState();expect(completeCall(s)).toBe(false);s.flags.intro=true;expect(canReport(s)).toBe(false);addEvidence(s,'note');expect(canReport(s)).toBe(false);s.interviews.push('rook');expect(canReport(s)).toBe(true);expect(completeCall(s)).toBe(false);s.flags.reported=true;expect(s.arrival).toBe('absent');expect(completeCall(s)).toBe(true);expect(s.arrival).toBe('queued');expect(completeCall(s)).toBe(false)});
  it('does not replay an arrival restored from a save',()=>{const s=ready();s.arrival='present';const r=decodeSave(encodeSave(s,s.pose))!;expect(completeCall(r)).toBe(false);expect(r.arrival).toBe('present')});
@@ -27,4 +27,12 @@ describe('one-slot save data',()=>{
  it('refuses an approach mid-animation',()=>{const s=ready();s.arrival='arriving';expect(()=>encodeSave(s,s.pose)).toThrow();expect(decodeSave(JSON.stringify(s))).toBeNull()});
  it.each(['bad json','null','{}'])('rejects malformed save %s',raw=>expect(decodeSave(raw)).toBeNull());
  it('rejects unsupported versions, unknown clues and unsafe pose data',()=>{for(const change of [{version:2},{evidence:['unknown']},{pose:{x:999,z:0,yaw:0,pitch:0}},{pose:{x:0,z:0,yaw:null,pitch:0}},{flags:{intro:'true'}},{doors:[]}])expect(decodeSave(JSON.stringify({...freshState(),...change}))).toBeNull()});
+});
+
+it('locks every accusation combination until all case evidence and supporting connections are present',()=>{
+ const s=caseState(['falseAlibi','passage']);expect(canAccuse(s)).toBe(true);
+ for(const id of Object.keys(EVIDENCE) as EvidenceId[]){const incomplete={...s,evidence:s.evidence.filter(e=>e!==id)};expect(allCaseEvidence(incomplete)).toBe(false);expect(canAccuse(incomplete)).toBe(false);const right=accuse(incomplete,'rook','falcon','funds'),wrong=accuse(incomplete,'ada','poison','rivalry');expect(right).toEqual(wrong);expect(right.win).toBe(false);}
+});
+it('returns identical non-revealing feedback for every incorrect part of an unlocked accusation',()=>{
+ const s=caseState(['falseAlibi','passage']);const results=[accuse(s,'ada','falcon','funds'),accuse(s,'rook','poison','funds'),accuse(s,'rook','falcon','rivalry')];expect(new Set(results.map(r=>r.message)).size).toBe(1);expect(s.finished).toBe(false);
 });

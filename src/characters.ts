@@ -1,3 +1,4 @@
+import {placeVictim} from './victim';
 import {finishProp} from './craftsmanship';
 import {dogModel} from './wildlife-models';
 import * as T from 'three';
@@ -93,6 +94,11 @@ export async function loadCharacters(e:Estate){
    alignLantern(witness.motion,witness.root);
   }
  }
+ const victimSource=sources.get('jordan')!,victim=prepareHuman(victimSource,1.78);
+ new T.Group().add(victim);
+ createCharacterMotion(victim,victimSource.animations,new T.Group());
+ dressCharacter('rook',victim,{coat:0x665a49,hair:0x777064,glasses:false});
+ placeVictim(e,victim);
  try{paintHouseholdPortraits(e)}catch(err){console.warn("The household portraits could not be rendered",err)}
  e.dogMotion=rigDog(dogModel());e.dog.clear();e.dog.add(e.dogMotion.root);
 }

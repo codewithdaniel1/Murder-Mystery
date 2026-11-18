@@ -22,3 +22,10 @@
 #note-writing:focus-visible{outline:2px solid #777e5e;outline-offset:2px}
 
 .inspect-art{display:block;max-width:100%;max-height:38vh;width:auto;margin:0 auto 18px;border:4px solid #9c825a}
+
+#accusation fieldset{border:0;padding:0;margin:0;min-width:0;display:grid;gap:24px}
+#accusation fieldset:disabled{opacity:.5;filter:grayscale(1)}
+#accusation fieldset:disabled :is(select,button){cursor:not-allowed}
+#accusation fieldset:disabled .primary:hover{background:#d5c493;color:#1d3427}
+.notebook-shell nav button.locked{color:#aeb5ad}
+#accusation-requirement:not(:empty){padding:14px 16px;background:#dedbcd;border-left:3px solid #969a8b}

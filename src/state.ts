@@ -52,12 +52,18 @@ export function canCall(s:GameState){return canReport(s)&&!!s.flags.reported;}
 export function completeCall(s:GameState){if(!canCall(s)||s.arrival!=='absent')return false;s.arrival='queued';s.flags.called=true;return true;}
 export function solveDeduction(s:GameState,id:DeductionId,choice:number){const d=DEDUCTIONS[id];if(!d.needs.every(e=>has(s,e))||choice!==d.correct)return false;if(!s.deductions.includes(id))s.deductions.push(id);return true;}
 export function supportedCase(s:GameState){const d=(id:DeductionId)=>s.deductions.includes(id);const connection=(d('falseAlibi')&&d('passage'))||(d('falseAlibi')&&has(s,'sighting')&&d('provenance'))||(d('passage')&&has(s,'sighting')&&d('provenance'));return d('weapon')&&d('money')&&connection;}
+export function allCaseEvidence(s:GameState){return (Object.keys(EVIDENCE) as EvidenceId[]).every(id=>has(s,id));}
+export function canAccuse(s:GameState){return allCaseEvidence(s)&&supportedCase(s)&&s.arrival==='present';}
+export function accusationRequirement(s:GameState){
+ if(!allCaseEvidence(s))return 'Please find all the evidence before making an accusation.';
+ if(!supportedCase(s))return 'Establish your supporting connections in the notebook before making an accusation.';
+ if(s.arrival!=='present')return 'Wait for Lady Beatrice to arrive before presenting your accusation.';
+ return '';
+}
 export function accuse(s:GameState,person:string,method:string,motive:string):{win:boolean;message:string}{
- if(s.arrival!=='present')return {win:false,message:'Lady Beatrice must be here to hear the explanation. Finish June’s report and the gatehouse call.'};
- if(person!=='rook')return {win:false,message:'That accusation is not supported by the connections you have established. Review the suspect’s opportunity and the physical evidence.'};
- if(method!=='falcon')return {win:false,message:'The proposed method does not account for the physical evidence in the study.'};
- if(motive!=='funds')return {win:false,message:'The proposed motive does not explain what Elias intended to reveal that evening.'};
- if(!supportedCase(s))return {win:false,message:'A promising suspicion, but the explanation needs more support. Establish the weapon, the financial motive, and a convincing connection to Rook in your notebook.'};
+ if(!canAccuse(s))return {win:false,message:accusationRequirement(s)};
+ // Never reveal which individual selection was correct: an accusation is assessed as a whole.
+ if(person!=='rook'||method!=='falcon'||motive!=='funds')return {win:false,message:'The evidence does not support this explanation. Review your notes and reconsider the case.'};
  s.finished=true;return {win:true,message:'The case is explained.'};
 }
 export function objective(s:GameState):[string,string]{
@@ -70,6 +76,7 @@ export function objective(s:GameState):[string,string]{
  if(s.arrival==='queued'||s.arrival==='arriving')return ['The owner is arriving','Look toward the front drive, or continue investigating.'];
  if(!has(s,'falcon'))return ['Follow the garden lead','Ask Tomas about the greenhouse, or walk Pip for Mara.'];
  if(!has(s,'translation'))return ['Interpret the ledger','Return Pip to Mara, or inspect the library reference after speaking to Beatrice.'];
+ if(!allCaseEvidence(s))return ['Complete the investigation','Collect the remaining case evidence and hear the witnesses’ accounts.'];
  if(!supportedCase(s))return ['Connect the evidence','Open your notebook. Compare the bell, passage, weapon, and accounts.'];
  return ['Present your explanation','Speak to Lady Beatrice, or use the accusation page in your notebook.'];
 }

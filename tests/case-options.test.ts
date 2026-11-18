@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import * as T from 'three';
 import {SUSPECTS,METHODS,MOTIVES,CANDIDATE_OBJECTS,buildCandidateObjects} from '../src/case-options';
-import {PEOPLE,freshState,accuse,encodeSave,decodeSave,DEDUCTIONS,solveDeduction,addEvidence} from '../src/state';
+import {PEOPLE,EVIDENCE,type EvidenceId,freshState,accuse,encodeSave,decodeSave,DEDUCTIONS,solveDeduction,addEvidence} from '../src/state';
 import {WITNESSES,buildShed} from '../src/yard';
 import {buildCellar,CELLAR_FLOOR} from '../src/cellar';
 import {buildWartimeEstate} from '../src/estate-life';
@@ -14,6 +14,7 @@ describe('expanded accusation investigation',()=>{
   expect(Object.keys(SUSPECTS).sort()).toEqual([...Object.keys(PEOPLE),...Object.keys(WITNESSES)].sort());
   const s=freshState();s.arrival='present';
   for(const id of ['weapon','money','falseAlibi','passage'] as const){addEvidence(s,...DEDUCTIONS[id].needs);solveDeduction(s,id,DEDUCTIONS[id].correct)}
+  addEvidence(s,...Object.keys(EVIDENCE) as EvidenceId[]);
   for(const id of Object.keys(WITNESSES))expect(accuse(s,id,'falcon','funds').win).toBe(false);
   for(const method of Object.keys(METHODS).filter(id=>id!=='falcon'))expect(accuse(s,'rook',method,'funds').win).toBe(false);
   for(const motive of Object.keys(MOTIVES).filter(id=>id!=='funds'))expect(accuse(s,'rook','falcon',motive).win).toBe(false);

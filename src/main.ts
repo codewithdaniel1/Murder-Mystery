@@ -6,7 +6,7 @@ import {rememberStory,storyNotes,storyTopics} from './stories';
 import './style.css';
 import {Estate} from './world';
 import {EstateAudio} from './audio';
-import {freshState,PEOPLE,EVIDENCE,DEDUCTIONS,SAVE_KEY,has,addEvidence,canReport,canCall,completeCall,solveDeduction,accuse,objective,encodeSave,decodeSave} from './state';
+import {freshState,PEOPLE,EVIDENCE,DEDUCTIONS,SAVE_KEY,has,addEvidence,canReport,canAccuse,accusationRequirement,canCall,completeCall,solveDeduction,accuse,objective,encodeSave,decodeSave} from './state';
 import type {PersonId,EvidenceId,DeductionId} from './state';
 import {KITCHEN_RADIO} from './estate-life';
 import {NOTE_PAGES,NOTE_PAGE_LIMIT} from './state';
@@ -103,6 +103,7 @@ function dialogue(speaker:Speaker,reply?:string){
 }
 const estateObjects:Record<string,[string,string,string]> = {
  ...CANDIDATE_OBJECTS,
+ 'elias-body':['Mansion · study','Elias Vale','Elias lies motionless beside his writing desk, still dressed for the evening. His unfinished letter and the scattered accounts remain nearby. Leave the scene undisturbed and compare the surrounding evidence.'],
  'garden-firepit':['Garden · east lawn','Stone garden firepit','A low stone ring holds ash, charred logs and a small warming fire. The gardeners use this clearing for their afternoon break. The surrounding grass and the garden paths are kept clear.'],
  'lodge-letters':['Garden lodge · former dormitory','Letters home','Elsie wrote that she had a peg of her own. Several letters are folded together and tied with string.'],
  'lodge-heights':['Garden lodge · former dormitory','Evacuees’ height chart','Three pencil marks on the wall are dated between October 1940 and July 1941. Elsie insisted the last mark counted, even with her shoes off.'],
@@ -177,7 +178,7 @@ function notebook(next=tab){tab=next;panel('notebook');let content='';
   if(observations.length)content+=`<h2>Objects examined</h2><div class="evidence-grid">${observations.map(id=>{const [location,title,detail]=estateObjects[id];return `<article><span class="eyebrow">${location}</span><h3>${title}</h3><p>${detail}</p></article>`}).join('')}</div>`;
  }
  if(tab==='Connections')content=`<h1>Make the connections</h1><p class="page-intro">Evidence becomes useful when you can explain what it means.</p><div class="connection-list">${Object.entries(DEDUCTIONS).map(([id,d])=>{const done=state.deductions.includes(id as DeductionId),ready=d.needs.every(e=>has(state,e));return `<article><div class="page-heading"><h3>${d.title}</h3><span>${done?'✓ Established':d.needs.filter(e=>has(state,e)).length+' / '+d.needs.length+' clues'}</span></div><p class="clue-list">${d.needs.map(e=>has(state,e)?EVIDENCE[e].title:'Undiscovered evidence').join(' · ')}</p>${done?`<p>${d.text}</p>`:ready?d.options.map((o,i)=>`<button data-deduction="${id}" data-choice="${i}">${o}</button>`).join(''):'<p class="muted">Keep investigating to compare these clues.</p>'}</article>`}).join('')}</div>`;
- if(tab==='Accusation')content=`<h1>Present your explanation</h1><p class="page-intro">Name the person, the weapon, and the motive. Establish your supporting connections before making the case.</p><form id="accusation"><label>Who killed Elias Vale?<select name="person">${Object.entries(SUSPECTS).map(([id,p])=>`<option value="${id}">${p.name} · ${p.role}</option>`).join('')}</select></label><label>What was used?<select name="method">${Object.entries(METHODS).map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><label>Why?<select name="motive">${Object.entries(MOTIVES).map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><button class="primary" type="submit">Explain the case →</button><p id="accusation-result" role="status"></p></form>`;
+ if(tab==='Accusation')content=`<h1>Present your explanation</h1><p class="page-intro">Name the person, the weapon, and the motive. Establish your supporting connections before making the case.</p><p id="accusation-requirement" role="status">${accusationRequirement(state)}</p><form id="accusation" aria-describedby="accusation-requirement"><fieldset ${canAccuse(state)?'':'disabled'}><label>Who killed Elias Vale?<select name="person">${Object.entries(SUSPECTS).map(([id,p])=>`<option value="${id}">${p.name} · ${p.role}</option>`).join('')}</select></label><label>What was used?<select name="method">${Object.entries(METHODS).map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><label>Why?<select name="motive">${Object.entries(MOTIVES).map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><button class="primary" type="submit">Explain the case →</button></fieldset><p id="accusation-result" role="status"></p></form>`;
  if(tab==='People'){
   const notes=storyNotes(state);
   const card=(id:PersonId|WitnessId,name:string,role:string)=>{
@@ -189,7 +190,7 @@ function notebook(next=tab){tab=next;panel('notebook');let content='';
   };
   content=`<div class="people-directory"><h1>The people of Bramblewick</h1><h2>Case introductions</h2><div class="evidence-grid">${(Object.keys(PEOPLE) as PersonId[]).map(id=>card(id,PEOPLE[id].name,PEOPLE[id].role)).join('')}<article><span class="eyebrow">The victim</span><h3>Elias Vale</h3><p>Found in his study.</p></article></div><h2>Around the estate</h2><div class="evidence-grid">${(Object.keys(WITNESSES) as WitnessId[]).map(id=>card(id,WITNESSES[id].name,WITNESSES[id].role)).join('')}</div></div>`;
  }
- overlay.innerHTML=`<section class="notebook-shell"><aside><span class="eyebrow">DETECTIVE’S</span><h2>Casebook</h2><span class="case-number">BRAMBLEWICK / 01</span><nav>${['Notes','Evidence','People','Connections','Accusation'].map(t=>`<button class="${tab===t?'active':''}" data-tab="${t}">${t}</button>`).join('')}</nav><button data-action="resume">← Back to the estate</button><small>Progress is saved from the pause menu.</small></aside><div class="notebook-page">${content}</div></section>`;
+ overlay.innerHTML=`<section class="notebook-shell"><aside><span class="eyebrow">DETECTIVE’S</span><h2>Casebook</h2><span class="case-number">BRAMBLEWICK / 01</span><nav>${['Notes','Evidence','People','Connections','Accusation'].map(t=>`<button class="${tab===t?'active':''} ${t==='Accusation'&&!canAccuse(state)?'locked':''}" data-tab="${t}">${t}</button>`).join('')}</nav><button data-action="resume">← Back to the estate</button><small>Progress is saved from the pause menu.</small></aside><div class="notebook-page">${content}</div></section>`;
  const editor=overlay.querySelector<HTMLTextAreaElement>('#note-writing');if(editor)editor.value=state.notes[notePage];
 }
 function turnNotePage(page:number,focus:string){

@@ -1,0 +1,21 @@
+import {it,expect} from 'vitest';
+import * as T from 'three';
+import {estateFixture} from './estate-fixture';
+import {loadModel} from './model-fixture';
+import {createCharacterMotion} from '../src/characters';
+import {dressCharacter} from '../src/appearance';
+import {placeVictim} from '../src/victim';
+it('places a motionless dressed victim on the study floor clear of the desk and the bronze fragment',async()=>{
+ const e=estateFixture(),source=await loadModel('jordan'),model=source.scene;
+ const original=new T.Box3().setFromObject(model),size=original.getSize(new T.Vector3()),center=original.getCenter(new T.Vector3()),scale=1.78/size.y;
+ model.scale.multiplyScalar(scale);model.position.set(-center.x*scale,-original.min.y*scale,-center.z*scale);
+ new T.Group().add(model);createCharacterMotion(model,source.animations,new T.Group());dressCharacter('rook',model,{coat:0x665a49,hair:0x777064,glasses:false});
+ const body=placeVictim(e,model),bounds=new T.Box3().setFromObject(body),dimensions=bounds.getSize(new T.Vector3());
+ expect(bounds.min.y).toBeCloseTo(e.groundHeight(-18,3.05)+.012,5);
+ expect(dimensions.y).toBeLessThan(.9);expect(dimensions.z).toBeGreaterThan(1.3);
+ expect(bounds.max.x).toBeLessThan(-16.8);expect(bounds.min.z).toBeGreaterThan(.75);
+ expect(e.targets.find(t=>t.id==='elias-body')?.root).toBe(body);
+ expect([...e.actors.values()].some(a=>a.root===body)).toBe(false);
+ const hit=new T.Raycaster(new T.Vector3(-18,2,2.15),new T.Vector3(0,-1,0),0,3).intersectObject(body,true);
+ expect(hit.length).toBeGreaterThan(0);
+});
