@@ -314,7 +314,7 @@ export class Estate {
   this.camera.rotation.order='YXZ';this.camera.position.set(x,this.playerElevation+1.65,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,'YXZ');
   this.updateCellarView();
  }
- move(dx:number,dz:number,s:GameState){
+ move(dx:number,dz:number,s:GameState,seconds=1/60){
  const start=this.camera.position.clone(),ground=[...this.collisionBarriers(s),...(this.stairBarriers??[])];
  for(const tree of this.woodlandTrunks??[])if(Math.abs(tree.x-start.x)<=Math.abs(dx)+1&&Math.abs(tree.z-start.z)<=Math.abs(dz)+1)ground.push(tree);
  for(const a of this.actors.values())if(a.root.visible&&!upstairsPerson(a.id))ground.push({x:a.root.position.x,z:a.root.position.z,w:.4,d:.4});
@@ -338,7 +338,7 @@ export class Estate {
  for(let i=0;i<steps;i++){advance(p.x+dx/steps,p.z);advance(p.x,p.z+dz/steps);}
  this.playerElevation=elevation;
  this.lastMove=Math.hypot(p.x-start.x,p.z-start.z)>.0001;this.camera.position.x=p.x;this.camera.position.z=p.z;
- this.camera.position.y=T.MathUtils.lerp(this.camera.position.y,elevation+1.65,.35);
+ this.camera.position.y=T.MathUtils.damp(this.camera.position.y,elevation+1.65,26,seconds);
  this.updateCellarView();
  }
 

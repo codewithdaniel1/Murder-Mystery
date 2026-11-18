@@ -1,3 +1,4 @@
+import {playerStep} from './player-movement';
 import {SUSPECTS,METHODS,MOTIVES,CANDIDATE_OBJECTS} from './case-options';
 import {Mesh,MeshStandardMaterial} from 'three';
 import {WITNESSES,type WitnessId} from './yard';
@@ -236,7 +237,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&m
 let promptTimer=0,shownPrompt='';
 function frame(now:number){requestAnimationFrame(frame);const elapsed=(now-last)/1000,dt=Math.min(elapsed,.05);last=now;if(!estateReady)return;estate.adaptQuality(elapsed,mode==='play');
  if(mode==='play'){
- let x=Number(keys.has('KeyD'))-Number(keys.has('KeyA')),z=Number(keys.has('KeyS'))-Number(keys.has('KeyW'));const len=Math.hypot(x,z)||1,speed=(keys.has('ShiftLeft')?4.5:2.9)*dt,y=estate.camera.rotation.y;x=x/len*speed;z=z/len*speed;estate.move(Math.cos(y)*x+Math.sin(y)*z,-Math.sin(y)*x+Math.cos(y)*z,state);
+ const step=playerStep(keys,estate.camera.rotation.y,elapsed);estate.move(step.x,step.z,state,step.seconds);
  if(state.arrival==='queued'){state.arrival='arriving';arrivalT=0;toast('A motorcar is coming up the front drive.')}if(state.arrival==='arriving'){arrivalT=estate.advanceArrival(arrivalT,dt,state);if(arrivalT>=1){state.arrival='present';state.doors.front=true;toast('Lady Beatrice and Jonah have arrived.');refreshHUD()}}
  const p=estate.camera.position;if(state.dog==='walking'&&estate.onGroundLevel()){
  if(!state.flags.fountain&&Math.hypot(p.x,p.z+30)<6){state.flags.fountain=true;toast('Pip has visited the fountain.');sound.effect('bark')}
